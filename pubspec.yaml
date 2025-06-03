@@ -1,73 +1,58 @@
-name: untilted3
-description: Tu espacio de reflexión diaria - Versión Flutter
-
-# Versión de la app
+name: reflect_app
+description: Tu santuario zen para reflexión y mindfulness
+publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
-  flutter: ">=3.10.0"
+  sdk: '>=3.2.0 <4.0.0'
+  flutter: ">=3.19.0"
 
 dependencies:
   flutter:
     sdk: flutter
 
+  # 🎨 UI y Estado
+  provider: ^6.1.2
+  shared_preferences: ^2.2.3
 
-  # 🎨 UI y Material Design
-  cupertino_icons: ^1.0.2
-  flutter_animate: ^4.5.0
-  shimmer: ^3.0.0
+  # 🗄️ Base de Datos
+  sqflite: ^2.3.3+1
+  path_provider: ^2.1.3
+  path: ^1.9.0
 
-  # 🗄️ Base de Datos Local
-  sqflite: ^2.3.0
-  path: ^1.8.3
-  path_provider: ^2.1.1
-
-  # 🔐 Almacenamiento Seguro
-  shared_preferences: ^2.2.2
-  flutter_secure_storage: ^10.0.0-beta.4
-
-  # 🌐 Estado y Arquitectura
-  provider: ^6.1.1
-  get_it: ^8.0.3
-
-  # 📅 Fechas y Tiempo
-  intl: ^0.20.2
-
-  # 🎯 Utilidades
+  # 🔐 Seguridad
   crypto: ^3.0.3
-  uuid: ^4.1.0
 
-  # 🧩 JSON y Serialización
-  json_annotation: ^4.8.1
+  # 📝 Serialización
+  json_annotation: ^4.9.0
 
-  # 🔧 Logging
-  logger: ^2.0.2
+  # 📊 Logging
+  logger: ^2.0.2+1
+
+  # 🎭 Iconos
+  cupertino_icons: ^1.0.6
+
+  # 🔧 Inyección de Dependencias (¡Actualizar a 8.0.3!)
+  get_it: ^8.0.3 # Changed this line
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
-  build_runner: ^2.4.7
-  json_serializable: ^6.7.1
+  flutter_lints: ^6.0.0 # Changed this line
 
-# 📱 Configuración de Flutter
+  # 🔧 Code Generation
+  build_runner: ^2.4.9
+  json_serializable: ^6.8.0
+
 flutter:
   uses-material-design: true
 
-  # 🖼️ Assets
-  assets:
-    - assets/images/
-    - assets/icons/
+  # ❌ COMENTAMOS LOS ASSETS QUE NO EXISTEN
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/
 
-  # 🔤 Fuentes personalizadas (opcional)
-  fonts:
-    - family: Poppins
-      fonts:
-        - asset: assets/fonts/Poppins-Regular.ttf
-        - asset: assets/fonts/Poppins-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/Poppins-SemiBold.ttf
-          weight: 600
-        - asset: assets/fonts/Poppins-Bold.ttf
-          weight: 700
+  # fonts:
+  #   - family: Poppins
+  #     fonts:
+  #       - asset: assets/fonts/Poppins-Regular.ttf
