@@ -43,7 +43,9 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
   double _currentIntensity = 5.0;
 
   // Estado del timeline mode
-  int _selectedHour = DateTime.now().hour;
+  int _selectedHour = DateTime
+      .now()
+      .hour;
 
   @override
   void initState() {
@@ -104,7 +106,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, ThemeProvider themeProvider, AuthProvider authProvider) {
+  Widget _buildHeader(BuildContext context, ThemeProvider themeProvider,
+      AuthProvider authProvider) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -124,7 +127,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
             children: [
               // Botón volver
               TextButton(
-                onPressed: () => Navigator.of(context).pushReplacementNamed('/calendar'),
+                onPressed: () =>
+                    Navigator.of(context).pushReplacementNamed('/calendar'),
                 style: TextButton.styleFrom(foregroundColor: Colors.white),
                 child: const Row(
                   mainAxisSize: MainAxisSize.min,
@@ -165,13 +169,15 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
                   _buildHeaderActionButton(
                     '🎨',
                     'Temas',
-                        () => Navigator.of(context).pushNamed('/theme_selector'),
+                        () =>
+                        Navigator.of(context).pushNamed('/theme_selector'),
                   ),
                   const SizedBox(width: 8),
                   _buildHeaderActionButton(
                     '📅',
                     'Calendario',
-                        () => Navigator.of(context).pushReplacementNamed('/calendar'),
+                        () =>
+                        Navigator.of(context).pushReplacementNamed('/calendar'),
                   ),
                 ],
               ),
@@ -182,7 +188,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
     );
   }
 
-  Widget _buildHeaderActionButton(String emoji, String tooltip, VoidCallback onTap) {
+  Widget _buildHeaderActionButton(String emoji, String tooltip,
+      VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -200,7 +207,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
     return Consumer<InteractiveMomentsProvider>(
       builder: (context, momentsProvider, child) {
         final statsText = momentsProvider.totalCount > 0
-            ? ' • ${momentsProvider.positiveCount}+ ${momentsProvider.negativeCount}-'
+            ? ' • ${momentsProvider.positiveCount}+ ${momentsProvider
+            .negativeCount}-'
             : '';
 
         return Container(
@@ -258,7 +266,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
     );
   }
 
-  Widget _buildModeButton(Map<String, dynamic> mode, bool isActive, ThemeProvider themeProvider) {
+  Widget _buildModeButton(Map<String, dynamic> mode, bool isActive,
+      ThemeProvider themeProvider) {
     return GestureDetector(
       onTap: () => setState(() => _activeMode = mode['id'] as InteractiveMode),
       child: Container(
@@ -349,10 +358,12 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
                   return GestureDetector(
                     onTap: () => _quickTextController.text = phrase,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 6),
                       decoration: BoxDecoration(
                         color: themeProvider.currentColors.surface,
-                        border: Border.all(color: themeProvider.currentColors.borderColor),
+                        border: Border.all(
+                            color: themeProvider.currentColors.borderColor),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Text(
@@ -375,7 +386,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
         // Emojis positivos
         EmojiPicker(
           type: 'positive',
-          onEmojiSelected: (emoji) => _addQuickMoment(emoji, 'positive', 'quick'),
+          onEmojiSelected: (emoji) =>
+              _addQuickMoment(emoji, 'positive', 'quick'),
         ),
 
         const SizedBox(height: 8),
@@ -383,7 +395,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
         // Emojis negativos
         EmojiPicker(
           type: 'negative',
-          onEmojiSelected: (emoji) => _addQuickMoment(emoji, 'negative', 'quick'),
+          onEmojiSelected: (emoji) =>
+              _addQuickMoment(emoji, 'negative', 'quick'),
         ),
       ],
     );
@@ -458,7 +471,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(bubble['emoji'] as String, style: const TextStyle(fontSize: 28)),
+                Text(bubble['emoji'] as String,
+                    style: const TextStyle(fontSize: 28)),
                 const SizedBox(height: 4),
                 Text(
                   bubble['text'] as String,
@@ -478,7 +492,9 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
   }
 
   Widget _buildTimelineMode(ThemeProvider themeProvider) {
-    final currentHour = DateTime.now().hour;
+    final currentHour = DateTime
+        .now()
+        .hour;
     final hoursAround = [
       (currentHour - 2).clamp(0, 23),
       (currentHour - 1).clamp(0, 23),
@@ -514,7 +530,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
                       height: 35,
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? themeProvider.currentColors.accentPrimary.withOpacity(0.3)
+                            ? themeProvider.currentColors.accentPrimary
+                            .withOpacity(0.3)
                             : themeProvider.currentColors.surface,
                         border: Border.all(
                           color: isSelected
@@ -559,7 +576,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
                       onPressed: () => _addTimelineMoment('positive'),
                       type: ThemedButtonType.positive,
                       height: 45,
-                      child: const Text('✨ Positivo', style: TextStyle(color: Colors.white)),
+                      child: const Text(
+                          '✨ Positivo', style: TextStyle(color: Colors.white)),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -568,7 +586,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
                       onPressed: () => _addTimelineMoment('negative'),
                       type: ThemedButtonType.negative,
                       height: 45,
-                      child: const Text('🌧️ Difícil', style: TextStyle(color: Colors.white)),
+                      child: const Text(
+                          '🌧️ Difícil', style: TextStyle(color: Colors.white)),
                     ),
                   ),
                 ],
@@ -623,7 +642,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
                     ),
                     child: Row(
                       children: [
-                        Text(template['emoji'] as String, style: const TextStyle(fontSize: 20)),
+                        Text(template['emoji'] as String,
+                            style: const TextStyle(fontSize: 20)),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
@@ -697,13 +717,17 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
                     'Positivos',
                     themeProvider.currentColors.positiveMain,
                   ),
-                  Container(width: 2, height: 40, color: themeProvider.currentColors.borderColor),
+                  Container(width: 2,
+                      height: 40,
+                      color: themeProvider.currentColors.borderColor),
                   _buildStatColumn(
                     momentsProvider.negativeCount.toString(),
                     'Difíciles',
                     themeProvider.currentColors.negativeMain,
                   ),
-                  Container(width: 2, height: 40, color: themeProvider.currentColors.borderColor),
+                  Container(width: 2,
+                      height: 40,
+                      color: themeProvider.currentColors.borderColor),
                   _buildStatColumn(
                     momentsProvider.totalCount.toString(),
                     'Total',
@@ -719,20 +743,26 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
                 children: [
                   Expanded(
                     child: ThemedButton(
-                      onPressed: momentsProvider.isLoading ? null : _clearMoments,
+                      onPressed: momentsProvider.isLoading
+                          ? null
+                          : _clearMoments,
                       type: ThemedButtonType.negative,
                       height: 35,
-                      child: const Text('🗑️ Limpiar', style: TextStyle(color: Colors.white, fontSize: 12)),
+                      child: const Text('🗑️ Limpiar',
+                          style: TextStyle(color: Colors.white, fontSize: 12)),
                     ),
                   ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: ThemedButton(
-                      onPressed: momentsProvider.isLoading ? null : _saveMoments,
+                      onPressed: momentsProvider.isLoading
+                          ? null
+                          : _saveMoments,
                       type: ThemedButtonType.positive,
                       height: 35,
                       isLoading: momentsProvider.isLoading,
-                      child: const Text('💾 Guardar', style: TextStyle(color: Colors.white, fontSize: 12)),
+                      child: const Text('💾 Guardar',
+                          style: TextStyle(color: Colors.white, fontSize: 12)),
                     ),
                   ),
                 ],
@@ -759,7 +789,10 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
           label,
           style: TextStyle(
             fontSize: 10,
-            color: context.read<ThemeProvider>().currentColors.textHint,
+            color: context
+                .read<ThemeProvider>()
+                .currentColors
+                .textHint,
           ),
         ),
       ],
@@ -771,8 +804,11 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
   // ============================================================================
 
   void _addQuickMoment(String emoji, String type, String category) {
-    if (_quickTextController.text.trim().isEmpty) {
-      _showMessage('⚠️ Escribe qué pasó antes de seleccionar emoji', isError: true);
+    if (_quickTextController.text
+        .trim()
+        .isEmpty) {
+      _showMessage(
+          '⚠️ Escribe qué pasó antes de seleccionar emoji', isError: true);
       return;
     }
 
@@ -797,7 +833,9 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
   }
 
   void _addTimelineMoment(String type) {
-    if (_timelineTextController.text.trim().isEmpty) {
+    if (_timelineTextController.text
+        .trim()
+        .isEmpty) {
       _showMessage('⚠️ Describe qué pasó', isError: true);
       return;
     }
@@ -858,7 +896,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
 
     if (authProvider.currentUser == null) return;
 
-    final success = await momentsProvider.clearAllMoments(authProvider.currentUser!.id!);
+    final success = await momentsProvider.clearAllMoments(
+        authProvider.currentUser!.id!);
 
     if (success) {
       _showMessage('🗑️ Momentos eliminados');
@@ -903,7 +942,6 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
       } else {
         _showMessage('Error guardando momentos', isError: true);
       }
-
     } catch (e) {
       _logger.e('❌ Error guardando momentos: $e');
       _showMessage('Error guardando momentos', isError: true);
@@ -922,7 +960,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.clear, color: themeProvider.currentColors.negativeMain),
+                Icon(Icons.clear,
+                    color: themeProvider.currentColors.negativeMain),
                 const SizedBox(width: 8),
                 Text(
                   'Limpiar',
@@ -937,7 +976,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
         const SizedBox(width: 12),
         Expanded(
           child: ThemedButton(
-            onPressed: _saveMomentsAsEntry,  // ✅ Este método ya actualizado arriba
+            onPressed: _saveMomentsAsEntry,
+            // ✅ Este método ya actualizado arriba
             type: ThemedButtonType.positive,
             height: 50,
             child: const Row(
@@ -946,7 +986,7 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
                 Text('📝', style: TextStyle(fontSize: 16)),
                 SizedBox(width: 8),
                 Text(
-                  'Continuar reflexión',  // ✅ CAMBIO DE TEXTO
+                  'Continuar reflexión', // ✅ CAMBIO DE TEXTO
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -960,3 +1000,4 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
       ],
     );
   }
+}

@@ -1,580 +1,223 @@
 // ============================================================================
-// presentation/screens/interactive_moments_screen.dart - PANTALLA REAL
+// presentation/providers/interactive_moments_provider.dart - PROVIDER REAL
 // ============================================================================
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 
-import '../providers/auth_provider.dart';
-import '../providers/theme_provider.dart';
-import '../providers/interactive_moments_provider.dart';
-import '../widgets/gradient_header.dart';
-import '../widgets/themed_container.dart';
-import '../widgets/themed_button.dart';
-import '../widgets/emoji_picker.dart';
-import '../widgets/tag_chip.dart';
 import '../../data/models/interative_moment_model.dart';
+import '../../data/services/database_service.dart';
 
-class InteractiveMomentsScreen extends StatefulWidget {
-  const InteractiveMomentsScreen({Key? key}) : super(key: key);
-
-  @override
-  State<InteractiveMomentsScreen> createState() => _InteractiveMomentsScreenState();
-}
-
-class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
+class InteractiveMomentsProvider with ChangeNotifier {
+  final DatabaseService _databaseService;
   final Logger _logger = Logger();
-  final _textController = TextEditingController();
 
-  String _activeMode = "quick"; // quick, mood, timeline, templates
-  double _currentIntensity = 5.0;
-  int _selectedHour = DateTime.now().hour;
+  List<InteractiveMomentModel> _moments = [];
+  bool _isLoading = false;
+  String? _errorMessage;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadUserMoments();
-  }
+  // Getters
+  List<InteractiveMomentModel> get moments => List.unmodifiable(_moments);
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
 
-  @override
-  void dispose() {
-    _textController.dispose();
-    super.dispose();
-  }
+  int get totalCount => _moments.length;
+  int get positiveCount => _moments.where((m) => m.type == 'positive').length;
+  int get negativeCount => _moments.where((m) => m.type == 'negative').length;
 
-  Future<void> _loadUserMoments() async {
-    final authProvider = context.read<AuthProvider>();
-    final momentsProvider = context.read<InteractiveMomentsProvider>();
+  InteractiveMomentsProvider(this._databaseService);
 
-    if (authProvider.currentUser != null) {
-      await momentsProvider.loadTodayMoments(authProvider.currentUser!.id!);
+  /// Cargar momentos del día actual
+  Future<void> loadTodayMoments(int userId) async {
+    _logger.d('📚 Cargando momentos del día para usuario: $userId');
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final momentsData = await _databaseService.getInteractiveMomentsToday(userId);
+
+      _moments = momentsData.map((data) {
+        return InteractiveMomentModel.fromDatabase(data);
+      }).toList();
+
+      _logger.i('✅ Cargados ${_moments.length} momentos del día');
+
+    } catch (e) {
+      _logger.e('❌ Error cargando momentos: $e');
+      _setError('Error cargando momentos del día');
+    } finally {
+      _setLoading(false);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
-    final themeProvider = context.watch<ThemeProvider>();
-    final momentsProvider = context.watch<InteractiveMomentsProvider>();
+  /// Añadir nuevo momento
+  Future<bool> addMoment({
+    required int userId,
+    required String emoji,
+    required String text,
+    required String type,
+    int intensity = 5,
+    String category = 'general',
+    String? timeStr,
+  }) async {
+    _logger.d('💾 Añadiendo momento: $emoji $text');
 
-    if (authProvider.currentUser == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+    try {
+      final moment = InteractiveMomentModel.create(
+        emoji: emoji,
+        text: text,
+        type: type,
+        intensity: intensity,
+        category: category,
+        timeStr: timeStr,
       );
-    }
 
-    return Scaffold(
-      backgroundColor: themeProvider.currentColors.primaryBg,
-      body: Column(
-        children: [
-          _buildHeader(themeProvider, authProvider.currentUser!.name),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  _buildDescription(themeProvider, momentsProvider),
-                  const SizedBox(height: 12),
-                  _buildModeSelector(themeProvider),
-                  const SizedBox(height: 16),
-                  _buildActiveMode(themeProvider, momentsProvider),
-                  const SizedBox(height: 16),
-                  _buildMomentsSummary(themeProvider, momentsProvider),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+      // Guardar en base de datos
+      final momentId = await _databaseService.saveInteractiveMoment(userId, moment);
 
-  Widget _buildHeader(ThemeProvider themeProvider, String userName) {
-    return GradientHeader(
-      title: '🎮 Momentos',
-      leftButton: TextButton(
-        onPressed: () => Navigator.of(context).pushReplacementNamed('/calendar'),
-        style: TextButton.styleFrom(foregroundColor: Colors.white),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.arrow_back, color: Colors.white),
-            SizedBox(width: 4),
-            Text('Volver', style: TextStyle(color: Colors.white)),
-          ],
-        ),
-      ),
-      rightButton: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
-            onTap: () => Navigator.of(context).pushNamed('/theme_selector'),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text('🎨', style: TextStyle(fontSize: 16)),
-            ),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => Navigator.of(context).pushReplacementNamed('/calendar'),
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: const Text('📅', style: TextStyle(fontSize: 16)),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+      if (momentId != null) {
+        // Añadir al estado local
+        _moments.add(moment);
 
-  Widget _buildDescription(ThemeProvider themeProvider, InteractiveMomentsProvider momentsProvider) {
-    String statsText = "";
-    if (momentsProvider.totalCount > 0) {
-      statsText = " • ${momentsProvider.positiveCount}+ ${momentsProvider.negativeCount}-";
-    }
+        _logger.i('✅ Momento añadido correctamente');
+        notifyListeners();
+        return true;
+      } else {
+        _logger.e('❌ Error guardando momento en BD');
+        _setError('Error guardando momento');
+        return false;
+      }
 
-    return Container(
-      padding: const EdgeInsets.only(top: 12, bottom: 8),
-      alignment: Alignment.center,
-      child: Text(
-        'Captura tus momentos$statsText',
-        style: TextStyle(
-          fontSize: 12,
-          color: themeProvider.currentColors.textSecondary,
-        ),
-        textAlign: TextAlign.center,
-      ),
-    );
-  }
-
-  Widget _buildModeSelector(ThemeProvider themeProvider) {
-    final modes = [
-      {"id": "quick", "emoji": "⚡", "name": "Quick"},
-      {"id": "mood", "emoji": "🎭", "name": "Mood"},
-      {"id": "timeline", "emoji": "⏰", "name": "Timeline"},
-      {"id": "templates", "emoji": "🎯", "name": "Templates"}
-    ];
-
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildModeButton(modes[0], themeProvider),
-            const SizedBox(width: 8),
-            _buildModeButton(modes[1], themeProvider),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            _buildModeButton(modes[2], themeProvider),
-            const SizedBox(width: 8),
-            _buildModeButton(modes[3], themeProvider),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildModeButton(Map<String, String> mode, ThemeProvider themeProvider) {
-    final isActive = _activeMode == mode["id"];
-
-    return GestureDetector(
-      onTap: () => setState(() => _activeMode = mode["id"]!),
-      child: Container(
-        width: 140,
-        height: 70,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: isActive
-              ? themeProvider.currentColors.accentPrimary.withValues(alpha: 0.3)
-              : themeProvider.currentColors.surface,
-          border: Border.all(
-            color: isActive
-                ? themeProvider.currentColors.accentPrimary
-                : themeProvider.currentColors.borderColor,
-            width: isActive ? 2 : 1,
-          ),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(mode["emoji"]!, style: const TextStyle(fontSize: 20)),
-            const SizedBox(height: 4),
-            Text(
-              mode["name"]!,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: themeProvider.currentColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActiveMode(ThemeProvider themeProvider, InteractiveMomentsProvider momentsProvider) {
-    switch (_activeMode) {
-      case "quick":
-        return _buildQuickMode(themeProvider, momentsProvider);
-      case "mood":
-        return _buildMoodMode(themeProvider, momentsProvider);
-      case "timeline":
-        return _buildTimelineMode(themeProvider, momentsProvider);
-      case "templates":
-        return _buildTemplatesMode(themeProvider, momentsProvider);
-      default:
-        return _buildQuickMode(themeProvider, momentsProvider);
+    } catch (e) {
+      _logger.e('❌ Error añadiendo momento: $e');
+      _setError('Error añadiendo momento');
+      return false;
     }
   }
 
-  Widget _buildQuickMode(ThemeProvider themeProvider, InteractiveMomentsProvider momentsProvider) {
-    return Column(
-      children: [
-        // Campo de texto
-        ThemedContainer(
-          child: TextField(
-            controller: _textController,
-            decoration: const InputDecoration(
-              hintText: '¿Qué pasó?',
-              border: InputBorder.none,
-            ),
-            style: TextStyle(color: themeProvider.currentColors.textPrimary),
-          ),
-        ),
+  /// Limpiar todos los momentos del día
+  Future<bool> clearAllMoments(int userId) async {
+    _logger.d('🗑️ Limpiando todos los momentos del día');
+    _setLoading(true);
 
-        const SizedBox(height: 8),
+    try {
+      final success = await _databaseService.clearInteractiveMomentsToday(userId);
 
-        // Frases rápidas
-        ThemedContainer(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '⚡ Frases:',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: themeProvider.currentColors.textSecondary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: [
-                  "Me sentí increíble",
-                  "Fue genial",
-                  "Muy estresante",
-                  "Me frustré"
-                ].map((phrase) {
-                  return GestureDetector(
-                    onTap: () => _textController.text = phrase,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: themeProvider.currentColors.surface,
-                        border: Border.all(color: themeProvider.currentColors.borderColor),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        phrase,
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: themeProvider.currentColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
-          ),
-        ),
+      if (success) {
+        _moments.clear();
+        _logger.i('✅ Momentos eliminados correctamente');
+        notifyListeners();
+        return true;
+      } else {
+        _setError('Error eliminando momentos');
+        return false;
+      }
 
-        const SizedBox(height: 8),
-
-        // Emojis positivos
-        EmojiPicker(
-          type: "positive",
-          onEmojiSelected: (emoji) => _addQuickMoment(emoji, "positive", momentsProvider),
-        ),
-
-        const SizedBox(height: 8),
-
-        // Emojis negativos
-        EmojiPicker(
-          type: "negative",
-          onEmojiSelected: (emoji) => _addQuickMoment(emoji, "negative", momentsProvider),
-        ),
-      ],
-    );
+    } catch (e) {
+      _logger.e('❌ Error limpiando momentos: $e');
+      _setError('Error eliminando momentos');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
-  Widget _buildMoodMode(ThemeProvider themeProvider, InteractiveMomentsProvider momentsProvider) {
-    return ThemedContainer(
-      child: Column(
-        children: [
-          Text(
-            '🎚️ Intensidad',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: themeProvider.currentColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
+  /// Guardar momentos como entrada diaria
+  Future<int?> saveMomentsAsEntry(
+      int userId, {
+        String? reflection,
+        bool? worthIt,
+      }) async {
+    _logger.d('💾 Guardando ${_moments.length} momentos como entrada diaria');
+    _setLoading(true);
 
-          Row(
-            children: [
-              const Text('😐', style: TextStyle(fontSize: 20)),
-              Expanded(
-                child: Slider(
-                  min: 1,
-                  max: 10,
-                  value: _currentIntensity,
-                  divisions: 9,
-                  onChanged: (value) => setState(() => _currentIntensity = value),
-                ),
-              ),
-              const Text('🤯', style: TextStyle(fontSize: 20)),
-            ],
-          ),
+    try {
+      if (_moments.isEmpty) {
+        _setError('No hay momentos para guardar');
+        return null;
+      }
 
-          const SizedBox(height: 16),
-
-          Text(
-            '${_currentIntensity.round()}/10',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: themeProvider.getMoodColor(_currentIntensity),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTimelineMode(ThemeProvider themeProvider, InteractiveMomentsProvider momentsProvider) {
-    return ThemedContainer(
-      child: Column(
-        children: [
-          Text(
-            '⏰ Selecciona hora',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: themeProvider.currentColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          Text('Modo Timeline - En desarrollo'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTemplatesMode(ThemeProvider themeProvider, InteractiveMomentsProvider momentsProvider) {
-    return ThemedContainer(
-      child: Column(
-        children: [
-          Text(
-            '🎯 Templates',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: themeProvider.currentColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          Text('Modo Templates - En desarrollo'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMomentsSummary(ThemeProvider themeProvider, InteractiveMomentsProvider momentsProvider) {
-    if (momentsProvider.totalCount == 0) {
-      return ThemedContainer(
-        child: Text(
-          'No hay momentos añadidos aún',
-          style: TextStyle(
-            color: themeProvider.currentColors.textHint,
-            fontSize: 12,
-          ),
-          textAlign: TextAlign.center,
-        ),
+      // Usar el método de la base de datos para convertir momentos en entrada
+      final entryId = await _databaseService.createDailyEntryFromMoments(
+        userId,
+        freeReflection: reflection ?? 'Entrada creada desde Momentos Interactivos',
+        worthIt: worthIt ?? (positiveCount > negativeCount),
       );
-    }
 
-    return ThemedContainer(
-      child: Column(
-        children: [
-          Text(
-            '📈 Resumen',
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: themeProvider.currentColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
+      if (entryId != null) {
+        _logger.i('✅ Entrada diaria creada con ID: $entryId');
+        // Los momentos ya se eliminaron automáticamente en el método de BD
+        _moments.clear();
+        notifyListeners();
+        return entryId;
+      } else {
+        _setError('Error creando entrada diaria');
+        return null;
+      }
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              Column(
-                children: [
-                  Text(
-                    '${momentsProvider.positiveCount}',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: themeProvider.currentColors.positiveMain,
-                    ),
-                  ),
-                  Text(
-                    'Positivos',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: themeProvider.currentColors.textHint,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                children: [
-                  Text(
-                    '${momentsProvider.negativeCount}',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: themeProvider.currentColors.negativeMain,
-                    ),
-                  ),
-                  Text(
-                    'Difíciles',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: themeProvider.currentColors.textHint,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                children: [
-                  Text(
-                    '${momentsProvider.totalCount}',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: themeProvider.currentColors.accentPrimary,
-                    ),
-                  ),
-                  Text(
-                    'Total',
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: themeProvider.currentColors.textHint,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          Row(
-            children: [
-              Expanded(
-                child: ThemedButton(
-                  onPressed: () => _clearMoments(momentsProvider),
-                  type: ThemedButtonType.negative,
-                  height: 35,
-                  child: const Text('🗑️ Limpiar'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ThemedButton(
-                  onPressed: () => _saveMoments(momentsProvider),
-                  type: ThemedButtonType.positive,
-                  height: 35,
-                  child: const Text('💾 Guardar'),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _addQuickMoment(String emoji, String type, InteractiveMomentsProvider momentsProvider) async {
-    if (_textController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⚠️ Escribe qué pasó antes de seleccionar emoji')),
-      );
-      return;
-    }
-
-    final authProvider = context.read<AuthProvider>();
-    final success = await momentsProvider.addMoment(
-      userId: authProvider.currentUser!.id!,
-      emoji: emoji,
-      text: _textController.text.trim(),
-      type: type,
-      category: 'quick',
-    );
-
-    if (success) {
-      _textController.clear();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('✅ $emoji ${_textController.text} añadido')),
-      );
+    } catch (e) {
+      _logger.e('❌ Error guardando entrada: $e');
+      _setError('Error guardando entrada diaria');
+      return null;
+    } finally {
+      _setLoading(false);
     }
   }
 
-  Future<void> _clearMoments(InteractiveMomentsProvider momentsProvider) async {
-    final authProvider = context.read<AuthProvider>();
-    await momentsProvider.clearAllMoments(authProvider.currentUser!.id!);
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('🗑️ Momentos eliminados')),
-    );
+  /// Obtener momentos por tipo
+  List<InteractiveMomentModel> getMomentsByType(String type) {
+    return _moments.where((moment) => moment.type == type).toList();
   }
 
-  Future<void> _saveMoments(InteractiveMomentsProvider momentsProvider) async {
-    final authProvider = context.read<AuthProvider>();
-    final entryId = await momentsProvider.saveMomentsAsEntry(
-      authProvider.currentUser!.id!,
-      reflection: 'Entrada creada desde Momentos Interactivos',
-      worthIt: momentsProvider.positiveCount > momentsProvider.negativeCount,
-    );
+  /// Obtener momentos por categoría
+  List<InteractiveMomentModel> getMomentsByCategory(String category) {
+    return _moments.where((moment) => moment.category == category).toList();
+  }
 
-    if (entryId != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('✅ ${momentsProvider.totalCount} momentos guardados')),
-      );
-      Navigator.of(context).pushReplacementNamed('/calendar');
+  /// Obtener resumen del día
+  Map<String, dynamic> getDaySummary() {
+    final positive = positiveCount;
+    final negative = negativeCount;
+    final total = totalCount;
+
+    String mood = 'balanced';
+    if (positive > negative) {
+      mood = 'positive';
+    } else if (negative > positive) {
+      mood = 'negative';
     }
+
+    return {
+      'total_moments': total,
+      'positive_count': positive,
+      'negative_count': negative,
+      'overall_mood': mood,
+      'balance_score': total > 0 ? (positive - negative) / total : 0.0,
+      'categories': _moments.map((m) => m.category).toSet().toList(),
+    };
+  }
+
+  /// Helpers para manejar estado
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void _setError(String error) {
+    _errorMessage = error;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  /// Limpiar provider
+  void clear() {
+    _moments.clear();
+    _isLoading = false;
+    _errorMessage = null;
+    notifyListeners();
   }
 }

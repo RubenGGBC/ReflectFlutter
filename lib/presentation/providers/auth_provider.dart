@@ -1,24 +1,23 @@
 // ============================================================================
-// presentation/providers/auth_provider.dart
+// presentation/providers/auth_provider.dart - ACTUALIZADO CON AUTO-LOGIN
 // ============================================================================
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
 
 import '../../data/models/user_model.dart';
 import '../../data/services/database_service.dart';
+import '../../data/services/session_service.dart';
 
 class AuthProvider with ChangeNotifier {
   final DatabaseService _databaseService;
+  final SessionService _sessionService = SessionService();
   final Logger _logger = Logger();
 
   UserModel? _currentUser;
   bool _isLoading = false;
   String? _errorMessage;
   bool _isInitialized = false;
-
-  AuthProvider(this._databaseService);
 
   // Getters
   UserModel? get currentUser => _currentUser;
@@ -27,43 +26,54 @@ class AuthProvider with ChangeNotifier {
   bool get isLoggedIn => _currentUser != null;
   bool get isInitialized => _isInitialized;
 
-  /// Inicializar provider - verificar si hay sesión guardada
+  AuthProvider(this._databaseService);
+
+  /// Inicializar provider - verificar auto-login
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    _logger.i('🔑 Inicializando AuthProvider');
+    _logger.i('🔑 Inicializando AuthProvider con auto-login');
     _setLoading(true);
 
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedUserId = prefs.getInt('user_id');
+      // Verificar si hay sesión activa
+      final hasSession = await _sessionService.hasActiveSession();
 
-      if (savedUserId != null) {
-        _logger.d('👤 Usuario guardado encontrado: $savedUserId');
-        final user = await _databaseService.getUserById(savedUserId);
+      if (hasSession) {
+        final sessionData = await _sessionService.getSessionData();
 
-        if (user != null) {
-          _currentUser = user;
-          _logger.i('🌺 Sesión restaurada para: ${user.name}');
-        } else {
-          _logger.w('⚠️ Usuario guardado no encontrado en BD, limpiando sesión');
-          await _clearSavedSession();
+        if (sessionData != null) {
+          final userId = sessionData['id'] as int;
+
+          // Obtener datos actualizados del usuario desde BD
+          final user = await _databaseService.getUserById(userId);
+
+          if (user != null) {
+            _currentUser = user;
+            await _sessionService.updateLastLogin();
+            _logger.i('🌺 Auto-login exitoso para: ${user.name}');
+          } else {
+            _logger.w('⚠️ Usuario de sesión no encontrado en BD');
+            await _sessionService.clearSession();
+          }
         }
+      } else {
+        _logger.d('ℹ️ No hay sesión activa para auto-login');
       }
 
       _isInitialized = true;
 
     } catch (e) {
-      _logger.e('❌ Error inicializando AuthProvider: $e');
+      _logger.e('❌ Error en inicialización: $e');
       _setError('Error inicializando sesión');
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Login de usuario
-  Future<bool> login(String email, String password) async {
-    _logger.i('🔑 Intentando login para: $email');
+  /// Login de usuario con opción "recordarme"
+  Future<bool> login(String email, String password, {bool rememberMe = false}) async {
+    _logger.i('🔑 Intentando login para: $email (Remember: $rememberMe)');
     _setLoading(true);
     _clearError();
 
@@ -72,7 +82,10 @@ class AuthProvider with ChangeNotifier {
 
       if (user != null) {
         _currentUser = user;
-        await _saveSession(user.id!);
+
+        // Guardar sesión si el usuario lo solicitó
+        await _sessionService.saveUserSession(user, rememberMe: rememberMe);
+
         _logger.i('✅ Login exitoso para: ${user.name}');
         return true;
       } else {
@@ -104,7 +117,10 @@ class AuthProvider with ChangeNotifier {
         final user = await _databaseService.getUserById(userId);
         if (user != null) {
           _currentUser = user;
-          await _saveSession(userId);
+
+          // Guardar sesión automáticamente tras registro
+          await _sessionService.saveUserSession(user, rememberMe: true);
+
           _logger.i('✅ Registro y login exitoso para: $name');
           return true;
         }
@@ -125,23 +141,27 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  /// Logout
+  /// Logout completo
   Future<void> logout() async {
     _logger.i('🚪 Cerrando sesión para: ${_currentUser?.name}');
 
     try {
-      await _clearSavedSession();
+      // Limpiar sesión guardada
+      await _sessionService.clearSession();
+
+      // Limpiar estado actual
       _currentUser = null;
       _clearError();
-      _logger.i('✅ Sesión cerrada correctamente');
+
+      _logger.i('✅ Logout completado');
     } catch (e) {
-      _logger.e('❌ Error cerrando sesión: $e');
+      _logger.e('❌ Error en logout: $e');
     }
 
     notifyListeners();
   }
 
-  /// Crear usuario de prueba
+  /// Crear usuario de prueba para desarrollo
   Future<bool> createTestUser() async {
     _logger.i('🧪 Creando usuario de prueba');
 
@@ -149,32 +169,60 @@ class AuthProvider with ChangeNotifier {
     const password = 'reflect123';
     const name = 'Viajero Zen';
 
-    // Intentar crear usuario
-    await _databaseService.createUser(email, password, name);
+    try {
+      // Intentar crear usuario (fallará si ya existe, pero está bien)
+      await _databaseService.createUser(email, password, name);
+    } catch (e) {
+      // Ignorar error si el usuario ya existe
+    }
 
     // Intentar login (funcionará incluso si el usuario ya existía)
-    return await login(email, password);
+    return await login(email, password, rememberMe: true);
   }
 
-  /// Guardar sesión en SharedPreferences
-  Future<void> _saveSession(int userId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('user_id', userId);
-      _logger.d('💾 Sesión guardada para usuario: $userId');
-    } catch (e) {
-      _logger.e('❌ Error guardando sesión: $e');
-    }
-  }
+  /// Actualizar perfil de usuario
+  Future<bool> updateProfile({
+    String? name,
+    String? avatarEmoji,
+    String? bio,
+    Map<String, dynamic>? preferences,
+  }) async {
+    if (_currentUser == null) return false;
 
-  /// Limpiar sesión guardada
-  Future<void> _clearSavedSession() async {
+    _setLoading(true);
+
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('user_id');
-      _logger.d('🗑️ Sesión guardada eliminada');
+      final success = await _databaseService.updateUserProfile(
+        _currentUser!.id!,
+        name: name,
+        avatarEmoji: avatarEmoji,
+        bio: bio,
+        preferences: preferences,
+      );
+
+      if (success) {
+        // Recargar datos del usuario
+        final updatedUser = await _databaseService.getUserById(_currentUser!.id!);
+        if (updatedUser != null) {
+          _currentUser = updatedUser;
+
+          // Actualizar sesión guardada
+          await _sessionService.saveUserSession(_currentUser!, rememberMe: true);
+
+          _logger.i('✅ Perfil actualizado correctamente');
+          return true;
+        }
+      }
+
+      _setError('Error actualizando perfil');
+      return false;
+
     } catch (e) {
-      _logger.e('❌ Error limpiando sesión: $e');
+      _logger.e('❌ Error actualizando perfil: $e');
+      _setError('Error actualizando perfil');
+      return false;
+    } finally {
+      _setLoading(false);
     }
   }
 
@@ -194,4 +242,3 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-

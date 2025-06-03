@@ -13,7 +13,7 @@ import 'package:logger/logger.dart';
 
 import '../models/user_model.dart';
 import '../models/daily_entry_model.dart';
-import '../models/interactive_moment_model.dart';
+import '../models/interative_moment_model.dart';
 import '../models/tag_model.dart';
 
 class DatabaseService {
