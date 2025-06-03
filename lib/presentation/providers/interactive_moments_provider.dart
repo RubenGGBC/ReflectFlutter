@@ -5,7 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 
-import '../../data/models/interative_moment_model.dart';
+import '../../data/models/interactive_moment_model.dart';
 import '../../data/services/database_service.dart';
 
 class InteractiveMomentsProvider with ChangeNotifier {
@@ -122,7 +122,7 @@ class InteractiveMomentsProvider with ChangeNotifier {
     }
   }
 
-  /// Guardar momentos como entrada diaria
+
   Future<int?> saveMomentsAsEntry(
       int userId, {
         String? reflection,
@@ -137,10 +137,10 @@ class InteractiveMomentsProvider with ChangeNotifier {
         return null;
       }
 
-      // Usar el método de la base de datos para convertir momentos en entrada
-      final entryId = await _databaseService.createDailyEntryFromMoments(
+      // Usar el nuevo método de la base de datos
+      final entryId = await _databaseService.saveInteractiveMomentsAsEntry(
         userId,
-        freeReflection: reflection ?? 'Entrada creada desde Momentos Interactivos',
+        reflection: reflection ?? 'Entrada creada desde Momentos Interactivos',
         worthIt: worthIt ?? (positiveCount > negativeCount),
       );
 
@@ -163,7 +163,6 @@ class InteractiveMomentsProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
-
   /// Obtener momentos por tipo
   List<InteractiveMomentModel> getMomentsByType(String type) {
     return _moments.where((moment) => moment.type == type).toList();

@@ -5,7 +5,7 @@
 import 'package:json_annotation/json_annotation.dart';
 import 'tag_model.dart';
 
-part 'interactive_moment_model.g.dart';
+part 'interactive_moments_provider.g.dart';
 
 @JsonSerializable()
 class InteractiveMomentModel {

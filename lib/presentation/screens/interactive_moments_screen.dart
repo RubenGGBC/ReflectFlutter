@@ -22,7 +22,7 @@ enum InteractiveMode {
   timeline,
   templates,
 }
-
+final DatabaseService _databaseService = DatabaseService();
 class InteractiveMomentsScreen extends StatefulWidget {
   const InteractiveMomentsScreen({Key? key}) : super(key: key);
 
@@ -906,7 +906,11 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
     }
   }
 
-  Future<void> _saveMomentsAsEntry() async {
+  // ============================================================================
+  // Reemplazar el método _saveMoments() en interactive_moments_screen.dart
+  // ============================================================================
+
+  Future<void> _saveMoments() async {
     final authProvider = context.read<AuthProvider>();
     final momentsProvider = context.read<InteractiveMomentsProvider>();
 
@@ -923,8 +927,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
     try {
       final userId = authProvider.currentUser!.id!;
 
-      // Guardar momentos como entrada
-      final entryId = await momentsProvider.saveMomentsAsEntry(
+      // Guardar momentos como entrada usando el nuevo método
+      final entryId = await _databaseService.saveInteractiveMomentsAsEntry(
         userId,
         reflection: 'Entrada creada desde Momentos Interactivos',
         worthIt: momentsProvider.positiveCount > momentsProvider.negativeCount,
@@ -933,7 +937,10 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
       if (entryId != null) {
         _showMessage('✅ ${momentsProvider.totalCount} momentos guardados');
 
-        // ✅ CAMBIO PRINCIPAL: Ir a daily review en lugar de calendario
+        // Limpiar momentos locales ya que se eliminaron de BD
+        momentsProvider.clear();
+
+        // Navegar a daily review
         Future.delayed(const Duration(milliseconds: 1500), () {
           if (mounted) {
             Navigator.of(context).pushReplacementNamed('/daily_review');
@@ -947,7 +954,6 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen> {
       _showMessage('Error guardando momentos', isError: true);
     }
   }
-
   // ✅ TAMBIÉN ACTUALIZA ESTE MÉTODO SI EXISTE
   Widget _buildActionButtons(ThemeProvider themeProvider) {
     return Row(

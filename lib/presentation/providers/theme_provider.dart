@@ -1,125 +1,79 @@
 // ============================================================================
-// presentation/providers/theme_provider.dart
+// Reemplazar COMPLETAMENTE theme_provider.dart
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
 
-import '../../core/themes/app_theme.dart';
-import '../../core/themes/theme_definitions.dart';
-import '../../core/themes/app_theme_data.dart';
-
 class ThemeProvider with ChangeNotifier {
   final Logger _logger = Logger();
 
-  AppThemeType _currentThemeType = AppThemeType.deepOcean;
-  AppColors _currentColors = ThemeDefinitions.deepOcean;
-  ThemeData _currentThemeData = AppThemeData.buildTheme(ThemeDefinitions.deepOcean);
+  // Solo usar colores hardcodeados - Dark Blue Theme
+  static const Color primaryBg = Color(0xFF0A0E1A);
+  static const Color surface = Color(0xFF141B2D);
+  static const Color surfaceVariant = Color(0xFF1E2A3F);
+  static const Color accentPrimary = Color(0xFF1E3A8A);
+  static const Color accentSecondary = Color(0xFF3B82F6);
+  static const Color textPrimary = Color(0xFFE8EAF0);
+  static const Color textSecondary = Color(0xFFB3B8C8);
+  static const Color textHint = Color(0xFF8691A8);
+  static const Color positiveMain = Color(0xFF10B981);
+  static const Color negativeMain = Color(0xFFEF4444);
+  static const Color borderColor = Color(0xFF1E3A8A);
+  static const Color shadowColor = Color(0x331E3A8A);
+  static const List<Color> gradientHeader = [Color(0xFF1E3A8A), Color(0xFF3B82F6)];
+
   bool _isInitialized = false;
 
-  // Getters
-  AppThemeType get currentThemeType => _currentThemeType;
-  AppColors get currentColors => _currentColors;
-  ThemeData get currentThemeData => _currentThemeData;
+  // Getters para compatibilidad
+  Color get primaryBgColor => primaryBg;
+  Color get surfaceColor => surface;
+  Color get surfaceVariantColor => surfaceVariant;
+  Color get accentPrimaryColor => accentPrimary;
+  Color get textPrimaryColor => textPrimary;
+  Color get textSecondaryColor => textSecondary;
+  Color get textHintColor => textHint;
+  Color get positiveMainColor => positiveMain;
+  Color get negativeMainColor => negativeMain;
+  Color get borderColorValue => borderColor;
+  List<Color> get gradientHeaderColors => gradientHeader;
+
+  // Objeto de colores actuales para compatibilidad
+  AppColors get currentColors => AppColors(
+    primaryBg: primaryBg,
+    surface: surface,
+    surfaceVariant: surfaceVariant,
+    accentPrimary: accentPrimary,
+    accentSecondary: accentSecondary,
+    textPrimary: textPrimary,
+    textSecondary: textSecondary,
+    textHint: textHint,
+    positiveMain: positiveMain,
+    negativeMain: negativeMain,
+    borderColor: borderColor,
+    shadowColor: shadowColor,
+    gradientHeader: gradientHeader,
+  );
+
   bool get isInitialized => _isInitialized;
 
-  /// Inicializar provider - cargar tema guardado
+  /// Inicializar provider
   Future<void> initialize() async {
     if (_isInitialized) return;
-
-    _logger.i('🎨 Inicializando ThemeProvider');
-
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedThemeName = prefs.getString('current_theme') ?? 'deep_ocean';
-
-      // Buscar tema por nombre
-      AppThemeType? foundThemeType;
-      for (final entry in ThemeDefinitions.themes.entries) {
-        if (entry.value.name == savedThemeName) {
-          foundThemeType = entry.key;
-          break;
-        }
-      }
-
-      if (foundThemeType != null) {
-        await _applyTheme(foundThemeType, save: false);
-        _logger.i('📖 Tema cargado: ${_currentColors.displayName}');
-      } else {
-        _logger.w('⚠️ Tema guardado no encontrado, usando Deep Ocean por defecto');
-      }
-
-      _isInitialized = true;
-
-    } catch (e) {
-      _logger.e('❌ Error cargando tema: $e');
-      _isInitialized = true; // Continuar con tema por defecto
-    }
-
+    _logger.i('🎨 Inicializando ThemeProvider (Dark Blue)');
+    _isInitialized = true;
     notifyListeners();
   }
-
-  /// Cambiar tema
-  Future<bool> setTheme(AppThemeType themeType) async {
-    if (themeType == _currentThemeType) return true;
-
-    _logger.i('🎨 Cambiando tema a: ${ThemeDefinitions.themes[themeType]?.displayName}');
-
-    try {
-      await _applyTheme(themeType, save: true);
-      _logger.i('✅ Tema aplicado correctamente');
-      return true;
-    } catch (e) {
-      _logger.e('❌ Error aplicando tema: $e');
-      return false;
-    }
-  }
-
-  /// Aplicar tema
-  Future<void> _applyTheme(AppThemeType themeType, {bool save = true}) async {
-    final themeColors = ThemeDefinitions.themes[themeType];
-    if (themeColors == null) {
-      throw Exception('Tema no encontrado: $themeType');
-    }
-
-    _currentThemeType = themeType;
-    _currentColors = themeColors;
-    _currentThemeData = AppThemeData.buildTheme(themeColors);
-
-    if (save) {
-      await _saveTheme(themeColors.name);
-    }
-
-    notifyListeners();
-  }
-
-  /// Guardar tema actual
-  Future<void> _saveTheme(String themeName) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('current_theme', themeName);
-      await prefs.setString('last_updated', DateTime.now().toIso8601String());
-      _logger.d('💾 Tema guardado: $themeName');
-    } catch (e) {
-      _logger.e('❌ Error guardando tema: $e');
-    }
-  }
-
-  /// Obtener todos los temas disponibles
-  Map<AppThemeType, AppColors> get availableThemes => ThemeDefinitions.themes;
-
-  /// Verificar si un tema es oscuro
-  bool get isDarkTheme => _currentColors.isDark;
 
   /// Obtener color para mood score
   Color getMoodColor(double mood) {
     if (mood <= 3) {
-      return _currentColors.negativeMain;
+      return negativeMain;
     } else if (mood <= 6) {
-      return Colors.orange; // Amarillo/naranja
+      return Colors.orange;
     } else {
-      return _currentColors.positiveMain;
+      return positiveMain;
     }
   }
 
@@ -137,4 +91,51 @@ class ThemeProvider with ChangeNotifier {
       return "Excelente";
     }
   }
+
+  /// Tema data para Material
+  ThemeData get currentThemeData => ThemeData(
+    useMaterial3: true,
+    brightness: Brightness.dark,
+    scaffoldBackgroundColor: primaryBg,
+    colorScheme: const ColorScheme.dark(
+      primary: accentPrimary,
+      secondary: accentSecondary,
+      surface: surface,
+      background: primaryBg,
+      error: negativeMain,
+    ),
+  );
+}
+
+// Clase de colores para compatibilidad
+class AppColors {
+  final Color primaryBg;
+  final Color surface;
+  final Color surfaceVariant;
+  final Color accentPrimary;
+  final Color accentSecondary;
+  final Color textPrimary;
+  final Color textSecondary;
+  final Color textHint;
+  final Color positiveMain;
+  final Color negativeMain;
+  final Color borderColor;
+  final Color shadowColor;
+  final List<Color> gradientHeader;
+
+  const AppColors({
+    required this.primaryBg,
+    required this.surface,
+    required this.surfaceVariant,
+    required this.accentPrimary,
+    required this.accentSecondary,
+    required this.textPrimary,
+    required this.textSecondary,
+    required this.textHint,
+    required this.positiveMain,
+    required this.negativeMain,
+    required this.borderColor,
+    required this.shadowColor,
+    required this.gradientHeader,
+  });
 }

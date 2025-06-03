@@ -5,6 +5,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
@@ -13,7 +14,7 @@ import 'package:logger/logger.dart';
 
 import '../models/user_model.dart';
 import '../models/daily_entry_model.dart';
-import '../models/interative_moment_model.dart';
+import '../models/interactive_moment_model.dart';
 import '../models/tag_model.dart';
 
 class DatabaseService {
@@ -58,6 +59,11 @@ class DatabaseService {
   }
 
   /// Crear tablas cuando se crea la base de datos por primera vez
+  // ============================================================================
+  // Reemplazar el método _onCreate() en database_service.dart
+  // ============================================================================
+
+  /// Crear tablas cuando se crea la base de datos por primera vez
   Future<void> _onCreate(Database db, int version) async {
     _logger.i('✨ Creando esquema de base de datos zen');
 
@@ -70,6 +76,7 @@ class DatabaseService {
           password_hash TEXT NOT NULL,
           name TEXT NOT NULL,
           avatar_emoji TEXT DEFAULT '🧘‍♀️',
+          bio TEXT, 
           preferences TEXT DEFAULT '{}',
           created_at TEXT DEFAULT (datetime('now')),
           last_login TEXT
@@ -316,56 +323,6 @@ class DatabaseService {
   }
 
   /// Convertir momentos interactivos del día en entrada diaria
-  Future<int?> saveInteractiveMomentsAsEntry(int userId, {String? reflection, bool? worthIt}) async {
-    try {
-      _logger.i('🔄 Convirtiendo momentos interactivos en entrada diaria para usuario $userId');
-
-      // Obtener momentos del día
-      final moments = await getInteractiveMomentsToday(userId);
-
-      if (moments.isEmpty) {
-        _logger.w('⚠️ No hay momentos para convertir');
-        return null;
-      }
-
-      // Separar por tipo
-      final positiveTags = moments
-          .where((moment) => moment.type == 'positive')
-          .map((moment) => moment.toTag())
-          .toList();
-
-      final negativeTags = moments
-          .where((moment) => moment.type == 'negative')
-          .map((moment) => moment.toTag())
-          .toList();
-
-      _logger.d('📊 Convertidos: ${positiveTags.length} positivos, ${negativeTags.length} negativos');
-
-      // Crear entrada diaria
-      final entry = DailyEntryModel.create(
-        userId: userId,
-        freeReflection: reflection ?? 'Entrada creada desde Momentos Interactivos',
-        positiveTags: positiveTags,
-        negativeTags: negativeTags,
-        worthIt: worthIt,
-      );
-
-      // Guardar entrada
-      final entryId = await saveDailyEntry(entry);
-
-      if (entryId != null) {
-        _logger.i('✅ Entrada diaria creada con ID: $entryId');
-        return entryId;
-      } else {
-        _logger.e('❌ Error creando entrada diaria');
-        return null;
-      }
-
-    } catch (e) {
-      _logger.e('❌ Error convirtiendo momentos a entrada: $e');
-      return null;
-    }
-  }
 
   // ============================================================================
   // 📝 MÉTODOS DE ENTRADAS DIARIAS
@@ -656,6 +613,319 @@ class DatabaseService {
     } catch (e) {
       _logger.e('❌ Error obteniendo contador zen: $e');
       return 0;
+    }
+  }
+  // ============================================================================
+// Añadir estos métodos al final de DatabaseService en database_service.dart
+// ============================================================================
+
+  /// Convertir momentos interactivos del día en entrada diaria
+  Future<int?> saveInteractiveMomentsAsEntry(int userId, {String? reflection, bool? worthIt}) async {
+    try {
+      _logger.i('🔄 Convirtiendo momentos interactivos en entrada diaria para usuario $userId');
+
+      // Obtener momentos del día
+      final moments = await getInteractiveMomentsToday(userId);
+
+      if (moments.isEmpty) {
+        _logger.w('⚠️ No hay momentos para convertir');
+        return null;
+      }
+
+      // Separar por tipo
+      final positiveTags = moments
+          .where((moment) => moment.type == 'positive')
+          .map((moment) => moment.toTag())
+          .toList();
+
+      final negativeTags = moments
+          .where((moment) => moment.type == 'negative')
+          .map((moment) => moment.toTag())
+          .toList();
+
+      _logger.d('📊 Convertidos: ${positiveTags.length} positivos, ${negativeTags.length} negativos');
+
+      // Crear entrada diaria
+      final entry = DailyEntryModel.create(
+        userId: userId,
+        freeReflection: reflection ?? 'Entrada creada desde Momentos Interactivos',
+        positiveTags: positiveTags,
+        negativeTags: negativeTags,
+        worthIt: worthIt,
+      );
+
+      // Guardar entrada
+      final entryId = await saveDailyEntry(entry);
+
+      if (entryId != null) {
+        // Limpiar momentos después de crear la entrada
+        await clearInteractiveMomentsToday(userId);
+        _logger.i('✅ Entrada diaria creada con ID: $entryId');
+        return entryId;
+      } else {
+        _logger.e('❌ Error creando entrada diaria');
+        return null;
+      }
+
+    } catch (e) {
+      _logger.e('❌ Error convirtiendo momentos a entrada: $e');
+      return null;
+    }
+  }
+
+  /// Obtener estadísticas comprehensivas del usuario
+  Future<Map<String, dynamic>> getUserComprehensiveStatistics(int userId) async {
+    try {
+      final db = await database;
+
+      // Estadísticas básicas
+      final List<Map<String, dynamic>> basicResults = await db.rawQuery('''
+        SELECT COUNT(*) as total_entries,
+               AVG(mood_score) as avg_mood,
+               SUM(word_count) as total_words
+        FROM daily_entries 
+        WHERE user_id = ?
+      ''', [userId]);
+
+      final basicStats = basicResults.first;
+      final totalEntries = basicStats['total_entries'] as int? ?? 0;
+      final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
+      final totalWords = basicStats['total_words'] as int? ?? 0;
+
+      // Conteo de tags
+      final List<Map<String, dynamic>> tagResults = await db.query(
+        'daily_entries',
+        columns: ['positive_tags', 'negative_tags'],
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
+
+      int positiveCount = 0;
+      int negativeCount = 0;
+
+      for (final row in tagResults) {
+        try {
+          final positiveTagsJson = row['positive_tags'] as String?;
+          if (positiveTagsJson != null && positiveTagsJson.isNotEmpty) {
+            final List<dynamic> positiveTags = json.decode(positiveTagsJson);
+            positiveCount += positiveTags.length;
+          }
+        } catch (e) {
+          // Error parseando, continuar
+        }
+
+        try {
+          final negativeTagsJson = row['negative_tags'] as String?;
+          if (negativeTagsJson != null && negativeTagsJson.isNotEmpty) {
+            final List<dynamic> negativeTags = json.decode(negativeTagsJson);
+            negativeCount += negativeTags.length;
+          }
+        } catch (e) {
+          // Error parseando, continuar
+        }
+      }
+
+      // Calcular racha
+      final streakDays = await calculateCurrentStreak(userId);
+
+      // Estadísticas del mes actual
+      final currentMonth = DateTime.now().toIso8601String().substring(0, 7); // YYYY-MM
+      final List<Map<String, dynamic>> monthResults = await db.rawQuery('''
+        SELECT COUNT(*) as entries_this_month
+        FROM daily_entries 
+        WHERE user_id = ? AND entry_date LIKE ?
+      ''', [userId, '$currentMonth%']);
+
+      final entriesThisMonth = monthResults.first['entries_this_month'] as int? ?? 0;
+
+      // Mejor mood score
+      final List<Map<String, dynamic>> bestMoodResults = await db.query(
+        'daily_entries',
+        columns: ['MAX(mood_score) as best_mood', 'entry_date'],
+        where: 'user_id = ?',
+        whereArgs: [userId],
+        orderBy: 'mood_score DESC',
+        limit: 1,
+      );
+
+      final bestMood = bestMoodResults.isNotEmpty
+          ? (bestMoodResults.first['best_mood'] as int? ?? 5)
+          : 5;
+
+      final bestMoodDate = bestMoodResults.isNotEmpty
+          ? bestMoodResults.first['entry_date'] as String?
+          : null;
+
+      return {
+        'total_entries': totalEntries,
+        'positive_count': positiveCount,
+        'negative_count': negativeCount,
+        'avg_mood_score': double.parse(avgMood.toStringAsFixed(1)),
+        'total_words': totalWords,
+        'streak_days': streakDays,
+        'entries_this_month': entriesThisMonth,
+        'best_mood_score': bestMood,
+        'best_mood_date': bestMoodDate,
+        'total_moments': positiveCount + negativeCount,
+      };
+
+    } catch (e) {
+      _logger.e('❌ Error obteniendo estadísticas completas: $e');
+      return {
+        'total_entries': 0,
+        'positive_count': 0,
+        'negative_count': 0,
+        'avg_mood_score': 5.0,
+        'total_words': 0,
+        'streak_days': 0,
+        'entries_this_month': 0,
+        'best_mood_score': 5,
+        'best_mood_date': null,
+        'total_moments': 0,
+      };
+    }
+  }
+
+  /// Calcular racha actual de días consecutivos
+  Future<int> calculateCurrentStreak(int userId) async {
+    try {
+      final db = await database;
+
+      // Obtener todas las fechas con entradas, ordenadas descendentemente
+      final List<Map<String, dynamic>> results = await db.query(
+        'daily_entries',
+        columns: ['DISTINCT entry_date'],
+        where: 'user_id = ?',
+        whereArgs: [userId],
+        orderBy: 'entry_date DESC',
+      );
+
+      if (results.isEmpty) return 0;
+
+      final dates = results
+          .map((row) => DateTime.parse(row['entry_date'] as String))
+          .toList();
+
+      int streak = 0;
+      DateTime currentDate = DateTime.now();
+      final today = DateTime(currentDate.year, currentDate.month, currentDate.day);
+
+      // Si no hay entrada para hoy, empezar desde ayer
+      final latestEntry = DateTime(dates.first.year, dates.first.month, dates.first.day);
+      if (latestEntry != today) {
+        currentDate = today.subtract(const Duration(days: 1));
+      } else {
+        currentDate = today;
+      }
+
+      // Contar días consecutivos hacia atrás
+      for (final entryDate in dates) {
+        final entryDay = DateTime(entryDate.year, entryDate.month, entryDate.day);
+        final checkDay = DateTime(currentDate.year, currentDate.month, currentDate.day);
+
+        if (entryDay == checkDay) {
+          streak++;
+          currentDate = currentDate.subtract(const Duration(days: 1));
+        } else {
+          break;
+        }
+      }
+
+      return streak;
+
+    } catch (e) {
+      _logger.e('❌ Error calculando racha: $e');
+      return 0;
+    }
+  }
+
+  /// Actualizar perfil de usuario
+  Future<bool> updateUserProfile(int userId, {
+    String? name,
+    String? avatarEmoji,
+    String? bio,
+    Map<String, dynamic>? preferences,
+  }) async {
+    try {
+      final db = await database;
+
+      // Construir query dinámicamente
+      final List<String> updateFields = [];
+      final List<dynamic> values = [];
+
+      if (name != null) {
+        updateFields.add('name = ?');
+        values.add(name);
+      }
+
+      if (avatarEmoji != null) {
+        updateFields.add('avatar_emoji = ?');
+        values.add(avatarEmoji);
+      }
+
+      if (bio != null) {
+        updateFields.add('bio = ?');
+        values.add(bio);
+      }
+
+      if (preferences != null) {
+        updateFields.add('preferences = ?');
+        values.add(json.encode(preferences));
+      }
+
+      if (updateFields.isEmpty) {
+        _logger.w('⚠️ No hay campos para actualizar');
+        return false;
+      }
+
+      updateFields.add('last_login = ?');
+      values.add(DateTime.now().toIso8601String());
+      values.add(userId);
+
+      final updateCount = await db.rawUpdate('''
+        UPDATE users 
+        SET ${updateFields.join(', ')}
+        WHERE id = ?
+      ''', values);
+
+      if (updateCount > 0) {
+        _logger.i('✅ Perfil actualizado para usuario $userId');
+        return true;
+      } else {
+        _logger.e('❌ Usuario $userId no encontrado');
+        return false;
+      }
+
+    } catch (e) {
+      _logger.e('❌ Error actualizando perfil: $e');
+      return false;
+    }
+  }
+
+  /// Obtener usuario por email (para auto-login)
+  Future<UserModel?> getUserByEmail(String email) async {
+    try {
+      final db = await database;
+
+      final List<Map<String, dynamic>> results = await db.query(
+        'users',
+        where: 'email = ?',
+        whereArgs: [email],
+        limit: 1,
+      );
+
+      if (results.isEmpty) {
+        _logger.w('❌ Usuario no encontrado: $email');
+        return null;
+      }
+
+      final user = UserModel.fromDatabase(results.first);
+      _logger.d('👤 Usuario encontrado: ${user.name} ($email)');
+      return user;
+
+    } catch (e) {
+      _logger.e('❌ Error obteniendo usuario por email: $e');
+      return null;
     }
   }
 }

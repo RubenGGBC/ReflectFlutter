@@ -1,79 +1,33 @@
-import 'package:json_annotation/json_annotation.dart';
+// GENERATED CODE - DO NOT MODIFY BY HAND
 
-part 'user_model.g.dart';
+part of 'user_model.dart';
 
-@JsonSerializable()
-class UserModel {
-      final int? id;
-      final String email;
-      final String name;
-      final String avatarEmoji;
-      final Map<String, dynamic> preferences;
-      final DateTime? createdAt;
-      final DateTime? lastLogin;
+// **************************************************************************
+// JsonSerializableGenerator
+// **************************************************************************
 
-      const UserModel({
-            this.id,
-            required this.email,
-            required this.name,
-            this.avatarEmoji = '🧘‍♀️',
-            this.preferences = const {},
-            this.createdAt,
-            this.lastLogin,
-      });
+UserModel _$UserModelFromJson(Map<String, dynamic> json) => UserModel(
+      id: (json['id'] as num?)?.toInt(),
+      email: json['email'] as String,
+      name: json['name'] as String,
+      avatarEmoji: json['avatarEmoji'] as String? ?? '🧘‍♀️',
+      bio: json['bio'] as String?,
+      preferences: json['preferences'] as Map<String, dynamic>? ?? const {},
+      createdAt: json['createdAt'] == null
+          ? null
+          : DateTime.parse(json['createdAt'] as String),
+      lastLogin: json['lastLogin'] == null
+          ? null
+          : DateTime.parse(json['lastLogin'] as String),
+    );
 
-      factory UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
-      Map<String, dynamic> toJson() => _$UserModelToJson(this);
-
-      // Método para crear usuario desde base de datos
-      factory UserModel.fromDatabase(Map<String, dynamic> map) {
-            return UserModel(
-                  id: map['id'] as int?,
-                  email: map['email'] as String,
-                  name: map['name'] as String,
-                  avatarEmoji: map['avatar_emoji'] as String? ?? '🧘‍♀️',
-                  preferences: map['preferences'] != null
-                      ? Map<String, dynamic>.from(json.decode(map['preferences']))
-                      : {},
-                  createdAt: map['created_at'] != null
-                      ? DateTime.parse(map['created_at'] as String)
-                      : null,
-                  lastLogin: map['last_login'] != null
-                      ? DateTime.parse(map['last_login'] as String)
-                      : null,
-            );
-      }
-
-      // Método para convertir a base de datos
-      Map<String, dynamic> toDatabase() {
-            return {
-                  if (id != null) 'id': id,
-                  'email': email,
-                  'name': name,
-                  'avatar_emoji': avatarEmoji,
-                  'preferences': json.encode(preferences),
-                  if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
-                  if (lastLogin != null) 'last_login': lastLogin!.toIso8601String(),
-            };
-      }
-
-      UserModel copyWith({
-            int? id,
-            String? email,
-            String? name,
-            String? avatarEmoji,
-            Map<String, dynamic>? preferences,
-            DateTime? createdAt,
-            DateTime? lastLogin,
-      }) {
-            return UserModel(
-                  id: id ?? this.id,
-                  email: email ?? this.email,
-                  name: name ?? this.name,
-                  avatarEmoji: avatarEmoji ?? this.avatarEmoji,
-                  preferences: preferences ?? this.preferences,
-                  createdAt: createdAt ?? this.createdAt,
-                  lastLogin: lastLogin ?? this.lastLogin,
-            );
-      }
-}
+Map<String, dynamic> _$UserModelToJson(UserModel instance) => <String, dynamic>{
+      'id': instance.id,
+      'email': instance.email,
+      'name': instance.name,
+      'avatarEmoji': instance.avatarEmoji,
+      'bio': instance.bio,
+      'preferences': instance.preferences,
+      'createdAt': instance.createdAt?.toIso8601String(),
+      'lastLogin': instance.lastLogin?.toIso8601String(),
+    };
