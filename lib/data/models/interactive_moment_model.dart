@@ -1,13 +1,10 @@
 // ============================================================================
-// data/models/interactive_moment_model.dart - NUEVO ARCHIVO SEPARADO
+// data/models/interactive_moment_model.dart - VERSIÓN CORREGIDA
 // ============================================================================
 
-import 'package:json_annotation/json_annotation.dart';
 import 'tag_model.dart';
 
-part 'interactive_moments_provider.g.dart';
-
-@JsonSerializable()
+/// Modelo para momentos interactivos sin JSON serialization automática
 class InteractiveMomentModel {
   final String id;
   final String emoji;
@@ -31,6 +28,7 @@ class InteractiveMomentModel {
     required this.entryDate,
   });
 
+  /// Factory constructor para crear un momento nuevo
   factory InteractiveMomentModel.create({
     required String emoji,
     required String text,
@@ -53,10 +51,37 @@ class InteractiveMomentModel {
     );
   }
 
-  factory InteractiveMomentModel.fromJson(Map<String, dynamic> json) => _$InteractiveMomentModelFromJson(json);
-  Map<String, dynamic> toJson() => _$InteractiveMomentModelToJson(this);
+  /// Crear desde JSON manualmente (sin code generation)
+  factory InteractiveMomentModel.fromJson(Map<String, dynamic> json) {
+    return InteractiveMomentModel(
+      id: json['id'] as String,
+      emoji: json['emoji'] as String,
+      text: json['text'] as String,
+      type: json['type'] as String,
+      intensity: json['intensity'] as int,
+      category: json['category'] as String,
+      timeStr: json['timeStr'] as String,
+      timestamp: DateTime.parse(json['timestamp'] as String),
+      entryDate: DateTime.parse(json['entryDate'] as String),
+    );
+  }
 
-  // Para base de datos
+  /// Convertir a JSON manualmente
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'emoji': emoji,
+      'text': text,
+      'type': type,
+      'intensity': intensity,
+      'category': category,
+      'timeStr': timeStr,
+      'timestamp': timestamp.toIso8601String(),
+      'entryDate': entryDate.toIso8601String(),
+    };
+  }
+
+  /// Crear desde base de datos
   factory InteractiveMomentModel.fromDatabase(Map<String, dynamic> map) {
     return InteractiveMomentModel(
       id: map['moment_id'] as String,
@@ -71,6 +96,7 @@ class InteractiveMomentModel {
     );
   }
 
+  /// Convertir para base de datos
   Map<String, dynamic> toDatabase() {
     return {
       'moment_id': id,
@@ -86,7 +112,7 @@ class InteractiveMomentModel {
     };
   }
 
-  // Convertir a TagModel para compatibilidad
+  /// Convertir a TagModel para compatibilidad
   TagModel toTag() {
     return TagModel(
       name: text,
@@ -96,6 +122,7 @@ class InteractiveMomentModel {
     );
   }
 
+  /// Crear copia con modificaciones
   InteractiveMomentModel copyWith({
     String? id,
     String? emoji,

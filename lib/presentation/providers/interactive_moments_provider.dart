@@ -1,5 +1,5 @@
 // ============================================================================
-// presentation/providers/interactive_moments_provider.dart - PROVIDER REAL
+// presentation/providers/interactive_moments_provider.dart - VERSIÓN CORREGIDA
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -34,12 +34,10 @@ class InteractiveMomentsProvider with ChangeNotifier {
     _clearError();
 
     try {
+      // ✅ CORREGIR: Usar el método correcto del DatabaseService
       final momentsData = await _databaseService.getInteractiveMomentsToday(userId);
 
-      _moments = momentsData.map((data) {
-        return InteractiveMomentModel.fromDatabase(data);
-      }).toList();
-
+      _moments = momentsData; // Ya son InteractiveMomentModel
       _logger.i('✅ Cargados ${_moments.length} momentos del día');
 
     } catch (e) {
@@ -72,7 +70,7 @@ class InteractiveMomentsProvider with ChangeNotifier {
         timeStr: timeStr,
       );
 
-      // Guardar en base de datos
+      // ✅ CORREGIR: Usar el método correcto
       final momentId = await _databaseService.saveInteractiveMoment(userId, moment);
 
       if (momentId != null) {
@@ -122,7 +120,7 @@ class InteractiveMomentsProvider with ChangeNotifier {
     }
   }
 
-
+  /// Guardar momentos como entrada diaria
   Future<int?> saveMomentsAsEntry(
       int userId, {
         String? reflection,
@@ -137,7 +135,7 @@ class InteractiveMomentsProvider with ChangeNotifier {
         return null;
       }
 
-      // Usar el nuevo método de la base de datos
+      // ✅ CORREGIR: Usar el método correcto
       final entryId = await _databaseService.saveInteractiveMomentsAsEntry(
         userId,
         reflection: reflection ?? 'Entrada creada desde Momentos Interactivos',
@@ -163,6 +161,7 @@ class InteractiveMomentsProvider with ChangeNotifier {
       _setLoading(false);
     }
   }
+
   /// Obtener momentos por tipo
   List<InteractiveMomentModel> getMomentsByType(String type) {
     return _moments.where((moment) => moment.type == type).toList();
