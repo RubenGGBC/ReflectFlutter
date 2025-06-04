@@ -14,12 +14,12 @@ class GradientHeader extends StatelessWidget {
   final double? height;
 
   const GradientHeader({
-    Key? key,
+    super.key,
     required this.title,
     this.leftButton,
     this.rightButton,
     this.height,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

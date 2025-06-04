@@ -250,7 +250,7 @@ class InteractiveMomentModel {
     final Map<String, List<InteractiveMomentModel>> grouped = {};
 
     for (final moment in moments) {
-      final hour = moment.timeStr.split(':')[0] + ':00';
+      final hour = '${moment.timeStr.split(':')[0]}:00';
       grouped.putIfAbsent(hour, () => []).add(moment);
     }
 

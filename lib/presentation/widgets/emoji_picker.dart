@@ -12,10 +12,10 @@ class EmojiPicker extends StatelessWidget {
   final Function(String) onEmojiSelected;
 
   const EmojiPicker({
-    Key? key,
+    super.key,
     required this.type,
     required this.onEmojiSelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

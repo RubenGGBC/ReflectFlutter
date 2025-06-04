@@ -17,7 +17,7 @@ class ThemedContainer extends StatelessWidget {
   final bool isSurface;
 
   const ThemedContainer({
-    Key? key,
+    super.key,
     required this.child,
     this.padding,
     this.margin,
@@ -25,7 +25,7 @@ class ThemedContainer extends StatelessWidget {
     this.addShadow = true,
     this.addBorder = true,
     this.isSurface = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

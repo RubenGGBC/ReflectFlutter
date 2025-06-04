@@ -16,7 +16,7 @@ class CustomTextField extends StatelessWidget {
   final int? minLines;
 
   const CustomTextField({
-    Key? key,
+    super.key,
     required this.controller,
     required this.label,
     required this.hint,
@@ -27,7 +27,7 @@ class CustomTextField extends StatelessWidget {
     this.onChanged,
     this.maxLines = 1,
     this.minLines,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

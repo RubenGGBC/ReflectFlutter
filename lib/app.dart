@@ -17,10 +17,9 @@ import 'presentation/screens/daily_review_screen.dart';
 import 'presentation/screens/theme_selector_screen.dart';
 import 'presentation/screens/profile_screen.dart';
 import 'injection_container.dart' as di;
-import 'presentation/screens/daily_detail_screen.dart';
 
 class ReflectApp extends StatelessWidget {
-  const ReflectApp({Key? key}) : super(key: key);
+  const ReflectApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -74,7 +73,7 @@ class ReflectApp extends StatelessWidget {
 
 /// Widget que maneja la inicialización y navegación inicial
 class AppInitializer extends StatefulWidget {
-  const AppInitializer({Key? key}) : super(key: key);
+  const AppInitializer({super.key});
 
   @override
   State<AppInitializer> createState() => _AppInitializerState();
@@ -147,14 +146,14 @@ class _AppInitializerState extends State<AppInitializer> {
 
 /// Pantalla de splash mientras se inicializa la app
 class SplashScreen extends StatelessWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Scaffold(
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -196,7 +195,7 @@ class SplashScreen extends StatelessWidget {
               'ReflectApp',
               style: theme.textTheme.displayMedium?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: theme.colorScheme.onBackground,
+                color: theme.colorScheme.onSurface,
               ),
             ),
 
@@ -206,7 +205,7 @@ class SplashScreen extends StatelessWidget {
             Text(
               'Tu santuario zen',
               style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onBackground.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
 
@@ -230,7 +229,7 @@ class SplashScreen extends StatelessWidget {
             Text(
               'Inicializando...',
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onBackground.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
               ),
             ),
           ],

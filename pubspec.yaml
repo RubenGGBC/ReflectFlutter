@@ -1,4 +1,4 @@
-name: reflect_app  # ✅ DEBE SER ESTE NOMBRE, NO "untitled3"
+name: untitled3
 description: Una app de reflexión zen y momentos interactivos
 publish_to: 'none'
 version: 1.0.0+1
@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # ✅ DEPENDENCIAS NECESARIAS
+  # DEPENDENCIAS NECESARIAS
   provider: ^6.1.1
   logger: ^2.0.2+1
   sqflite: ^2.3.0
@@ -29,6 +29,7 @@ dev_dependencies:
   flutter_lints: ^3.0.1
   build_runner: ^2.4.7
   json_serializable: ^6.7.1
+  # Removed: untitled3: any  <-- THIS LINE IS THE PROBLEM
 
 flutter:
   uses-material-design: true

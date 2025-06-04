@@ -8,7 +8,6 @@ import 'package:logger/logger.dart';
 
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
-import '../providers/interactive_moments_provider.dart';
 import '../widgets/gradient_header.dart';
 import '../widgets/themed_container.dart';
 import '../widgets/themed_button.dart';
@@ -16,10 +15,9 @@ import '../widgets/mood_slider.dart';
 import '../widgets/custom_text_field.dart';
 import '../../data/services/database_service.dart';
 import '../../data/models/daily_entry_model.dart';
-import '../../data/models/tag_model.dart';
 
 class DailyReviewScreen extends StatefulWidget {
-  const DailyReviewScreen({Key? key}) : super(key: key);
+  const DailyReviewScreen({super.key});
 
   @override
   State<DailyReviewScreen> createState() => _DailyReviewScreenState();
@@ -152,7 +150,7 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
         children: [
           Row(
             children: [
-              Text('📊', style: const TextStyle(fontSize: 32)),
+              const Text('📊', style: TextStyle(fontSize: 32)),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
@@ -514,7 +512,7 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
             const SizedBox(height: 16),
 
             // Gráfico simple de barras por hora
-            Container(
+            SizedBox(
               height: 60,
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -567,7 +565,7 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
                           const SizedBox(height: 4),
                           if (hour % 6 == 0)
                             Text(
-                              '${hour.toString().padLeft(2, '0')}',
+                              hour.toString().padLeft(2, '0'),
                               style: TextStyle(
                                 fontSize: 8,
                                 color: themeProvider.currentColors.textHint,
@@ -703,7 +701,7 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
                 ),
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

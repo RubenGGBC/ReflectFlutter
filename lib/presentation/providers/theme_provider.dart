@@ -39,7 +39,7 @@ class ThemeProvider with ChangeNotifier {
   List<Color> get gradientHeaderColors => gradientHeader;
 
   // Objeto de colores actuales para compatibilidad
-  AppColors get currentColors => AppColors(
+  AppColors get currentColors => const AppColors(
     primaryBg: primaryBg,
     surface: surface,
     surfaceVariant: surfaceVariant,

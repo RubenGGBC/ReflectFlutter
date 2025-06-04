@@ -278,11 +278,9 @@ class AppThemeData {
         onTertiary: Colors.white,
         error: appColors.negativeMain,
         onError: Colors.white,
-        background: appColors.primaryBg,
-        onBackground: appColors.textPrimary,
         surface: appColors.surface,
         onSurface: appColors.textPrimary,
-        surfaceVariant: appColors.surfaceVariant,
+        surfaceContainerHighest: appColors.surfaceVariant,
         onSurfaceVariant: appColors.textSecondary,
         outline: appColors.borderColor,
         outlineVariant: appColors.borderColor.withOpacity(0.5),
@@ -375,7 +373,7 @@ class AppThemeData {
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: TextStyle(
+        titleTextStyle: const TextStyle(
           fontSize: 20,
           fontWeight: FontWeight.w600,
           color: Colors.white,
@@ -471,26 +469,26 @@ class AppThemeData {
 
       // Checkbox y Switch
       checkboxTheme: CheckboxThemeData(
-        fillColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return appColors.accentPrimary;
           }
           return Colors.transparent;
         }),
-        checkColor: MaterialStateProperty.all(Colors.white),
+        checkColor: WidgetStateProperty.all(Colors.white),
         side: BorderSide(color: appColors.borderColor, width: 2),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),
 
       switchTheme: SwitchThemeData(
-        thumbColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return appColors.accentPrimary;
           }
           return appColors.borderColor;
         }),
-        trackColor: MaterialStateProperty.resolveWith((states) {
-          if (states.contains(MaterialState.selected)) {
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
             return appColors.accentPrimary.withOpacity(0.5);
           }
           return appColors.borderColor.withOpacity(0.3);

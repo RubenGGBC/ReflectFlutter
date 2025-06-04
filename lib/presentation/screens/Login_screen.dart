@@ -9,11 +9,10 @@ import 'package:logger/logger.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../widgets/custom_text_field.dart';
-import '../widgets/gradient_header.dart';
 import '../widgets/themed_button.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -54,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildHeroSection(BuildContext context, ThemeProvider themeProvider) {
-    return Container(
+    return SizedBox(
       height: MediaQuery.of(context).size.height * 0.4,
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,

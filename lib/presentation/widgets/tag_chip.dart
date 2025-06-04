@@ -16,13 +16,13 @@ class TagChip extends StatelessWidget {
   final String type; // "positive" or "negative"
 
   const TagChip({
-    Key? key,
+    super.key,
     required this.tag,
     this.onTap,
     this.onDelete,
     this.isSelected = false,
     required this.type,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

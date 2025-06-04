@@ -17,7 +17,7 @@ enum ThemeSelectorType {
 }
 
 class ThemeSelectorScreen extends StatefulWidget {
-  const ThemeSelectorScreen({Key? key}) : super(key: key);
+  const ThemeSelectorScreen({super.key});
 
   @override
   State<ThemeSelectorScreen> createState() => _ThemeSelectorScreenState();
@@ -212,17 +212,18 @@ class _ThemeSelectorScreenState extends State<ThemeSelectorScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
+        // ✅ CORREGIDO: Usar Expanded para evitar overflow
         Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildThemeCard(ThemeSelectorType.deepOcean, themeProvider),
+            Expanded(child: _buildThemeCard(ThemeSelectorType.deepOcean, themeProvider)),
             const SizedBox(width: 16),
-            _buildThemeCard(ThemeSelectorType.electricDark, themeProvider),
+            Expanded(child: _buildThemeCard(ThemeSelectorType.electricDark, themeProvider)),
           ],
         ),
       ],
     );
   }
+
 
   Widget _buildLightThemesSection(ThemeProvider themeProvider) {
     return Column(
@@ -237,27 +238,28 @@ class _ThemeSelectorScreenState extends State<ThemeSelectorScreen> {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 16),
+        // ✅ CORREGIDO: Usar Expanded para evitar overflow
         Row(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildThemeCard(ThemeSelectorType.springLight, themeProvider),
+            Expanded(child: _buildThemeCard(ThemeSelectorType.springLight, themeProvider)),
             const SizedBox(width: 16),
-            _buildThemeCard(ThemeSelectorType.sunsetWarm, themeProvider),
+            Expanded(child: _buildThemeCard(ThemeSelectorType.sunsetWarm, themeProvider)),
           ],
         ),
       ],
     );
   }
 
+
   Widget _buildThemeCard(ThemeSelectorType themeType, ThemeProvider themeProvider) {
     final themeData = _localThemes[themeType]!;
     final isSelected = currentSelection == themeType;
-    final isCurrent = themeType == ThemeSelectorType.deepOcean; // Deep Ocean siempre es actual
+    final isCurrent = themeType == ThemeSelectorType.deepOcean;
 
     return GestureDetector(
       onTap: () => _selectTheme(themeType),
       child: Container(
-        width: 160,
+        // ✅ CORREGIDO: Quitar width fijo, usar solo height
         height: 240,
         decoration: BoxDecoration(
           color: themeProvider.currentColors.surface,
@@ -280,19 +282,12 @@ class _ThemeSelectorScreenState extends State<ThemeSelectorScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Badge de tipo (Oscuro/Claro)
             _buildTypeBadge(themeData),
             const SizedBox(height: 12),
-
-            // Título y descripción
             _buildThemeHeader(themeData, themeProvider),
             const SizedBox(height: 12),
-
-            // Mini preview de colores
             _buildMiniPreview(themeData),
             const SizedBox(height: 12),
-
-            // Badge de "ACTUAL" si corresponde
             _buildCurrentBadge(isCurrent, themeProvider),
           ],
         ),
@@ -349,96 +344,100 @@ class _ThemeSelectorScreenState extends State<ThemeSelectorScreen> {
   }
 
   Widget _buildMiniPreview(Map<String, dynamic> themeData) {
-    return Container(
-      width: 130,
-      height: 80,
-      decoration: BoxDecoration(
-        color: themeData['bgColor'] as Color,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: (themeData['primaryColor'] as Color).withOpacity(0.3)),
-      ),
-      padding: const EdgeInsets.all(6),
-      child: Column(
-        children: [
-          // Mini header
-          Container(
-            width: 120,
-            height: 20,
-            decoration: BoxDecoration(
-              color: themeData['primaryColor'] as Color,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            alignment: Alignment.center,
-            child: const Text(
-              'Header',
-              style: TextStyle(
-                fontSize: 8,
-                color: Colors.white,
+    return Flexible(
+      child: Container(
+        // ✅ CORREGIDO: Usar width relativo en lugar de fijo
+        width: double.infinity,
+        height: 80,
+        decoration: BoxDecoration(
+          color: themeData['bgColor'] as Color,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: (themeData['primaryColor'] as Color).withOpacity(0.3)),
+        ),
+        padding: const EdgeInsets.all(6),
+        child: Column(
+          children: [
+            // Mini header
+            Container(
+              width: double.infinity,
+              height: 20,
+              decoration: BoxDecoration(
+                color: themeData['primaryColor'] as Color,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              alignment: Alignment.center,
+              child: const Text(
+                'Header',
+                style: TextStyle(
+                  fontSize: 8,
+                  color: Colors.white,
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 4),
+            const SizedBox(height: 4),
 
-          // Cards de ejemplo
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 55,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: themeData['positiveColor'] as Color,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                alignment: Alignment.center,
-                child: const Text(
-                  '+ Positivo',
-                  style: TextStyle(
-                    fontSize: 7,
-                    color: Colors.white,
+            // Cards de ejemplo - RESPONSIVE
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: themeData['positiveColor'] as Color,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      '+ Pos',
+                      style: TextStyle(
+                        fontSize: 7,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 4),
-              Container(
-                width: 55,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: themeData['negativeColor'] as Color,
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                alignment: Alignment.center,
-                child: const Text(
-                  '- Negativo',
-                  style: TextStyle(
-                    fontSize: 7,
-                    color: Colors.white,
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Container(
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: themeData['negativeColor'] as Color,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    alignment: Alignment.center,
+                    child: const Text(
+                      '- Neg',
+                      style: TextStyle(
+                        fontSize: 7,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
+              ],
+            ),
+            const SizedBox(height: 4),
 
-          // Surface demo
-          Container(
-            width: 120,
-            height: 20,
-            decoration: BoxDecoration(
-              color: themeData['surfaceColor'] as Color,
-              borderRadius: BorderRadius.circular(4),
-              border: Border.all(color: (themeData['primaryColor'] as Color).withOpacity(0.3)),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              'Surface',
-              style: TextStyle(
-                fontSize: 7,
-                color: (themeData['isDark'] as bool) ? Colors.white70 : Colors.black54,
+            // Surface demo
+            Container(
+              width: double.infinity,
+              height: 20,
+              decoration: BoxDecoration(
+                color: themeData['surfaceColor'] as Color,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: (themeData['primaryColor'] as Color).withOpacity(0.3)),
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                'Surface',
+                style: TextStyle(
+                  fontSize: 7,
+                  color: (themeData['isDark'] as bool) ? Colors.white70 : Colors.black54,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

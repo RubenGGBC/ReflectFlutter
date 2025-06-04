@@ -13,11 +13,11 @@ class MoodSlider extends StatelessWidget {
   final String? label;
 
   const MoodSlider({
-    Key? key,
+    super.key,
     required this.value,
     required this.onChanged,
     this.label,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

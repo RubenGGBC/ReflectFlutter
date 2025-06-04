@@ -17,9 +17,9 @@ class DailyDetailScreen extends StatefulWidget {
   final DateTime selectedDate;
 
   const DailyDetailScreen({
-    Key? key,
+    super.key,
     required this.selectedDate,
-  }) : super(key: key);
+  });
 
   @override
   State<DailyDetailScreen> createState() => _DailyDetailScreenState();
@@ -109,10 +109,10 @@ class _DailyDetailScreenState extends State<DailyDetailScreen> {
                       ],
                     ),
                   ),
-                  Expanded(
+                  const Expanded(
                     child: Text(
                       '📅 Resumen del Día',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w500,
                         color: Colors.white,
@@ -185,7 +185,27 @@ class _DailyDetailScreenState extends State<DailyDetailScreen> {
       ],
     );
   }
+  Widget _buildReflectionCard(ThemeProvider themeProvider) {
+    return ThemedContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '💭 Reflexión del Día',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: themeProvider.currentColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 12),
 
+          // ✅ MEJORAR: Mostrar reflexión organizada con momentos
+          _buildOrganizedReflection(themeProvider),
+        ],
+      ),
+    );
+  }
   Widget _buildContent(ThemeProvider themeProvider) {
     if (_dayEntry == null) {
       return _buildEmptyState(themeProvider);
@@ -539,43 +559,492 @@ class _DailyDetailScreenState extends State<DailyDetailScreen> {
     );
   }
 
-  Widget _buildReflectionCard(ThemeProvider themeProvider) {
-    return ThemedContainer(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '💭 Reflexión del Día',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: themeProvider.currentColors.textPrimary,
+
+
+
+// ============================================================================
+// MEJORAS PARA MOSTRAR MOMENTOS EN daily_detail_screen.dart
+// ============================================================================
+
+
+
+// 2. AÑADIR método para mostrar reflexión organizada:
+  Widget _buildOrganizedReflection(ThemeProvider themeProvider) {
+    if (_dayEntry == null) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: themeProvider.currentColors.surfaceVariant.withOpacity(0.5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: themeProvider.currentColors.borderColor.withOpacity(0.3),
+          ),
+        ),
+        child: Text(
+          'No hay reflexión para este día.',
+          style: TextStyle(
+            fontSize: 13,
+            color: themeProvider.currentColors.textHint,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+
+    final reflection = _dayEntry!.freeReflection;
+
+    // Detectar si es una reflexión con formato de momentos
+    if (reflection.contains('=== MOMENTOS DEL DÍA ===')) {
+      return _buildFormattedMomentsReflection(reflection, themeProvider);
+    } else {
+      return _buildSimpleReflection(reflection, themeProvider);
+    }
+  }
+
+// 3. AÑADIR método para reflexión con momentos formateados:
+  Widget _buildFormattedMomentsReflection(String reflection, ThemeProvider themeProvider) {
+    final lines = reflection.split('\n');
+
+    // Extraer secciones
+    String? savedTime;
+    List<String> momentsList = [];
+    String? summary;
+    List<String> additionalReflections = [];
+
+    bool inMoments = false;
+    bool inSummary = false;
+    bool inAdditional = false;
+
+    for (String line in lines) {
+      if (line.startsWith('Momentos guardados a:')) {
+        savedTime = line.replaceFirst('Momentos guardados a: ', '');
+      } else if (line.contains('=== MOMENTOS DEL DÍA ===')) {
+        inMoments = true;
+        inSummary = false;
+        inAdditional = false;
+      } else if (line.contains('=== RESUMEN ===')) {
+        inMoments = false;
+        inSummary = true;
+        inAdditional = false;
+      } else if (line.contains('=== REFLEXIÓN ADICIONAL ===') || line.contains('--- Reflexión adicional')) {
+        inMoments = false;
+        inSummary = false;
+        inAdditional = true;
+      } else if (inMoments && line.trim().isNotEmpty) {
+        momentsList.add(line.trim());
+      } else if (inSummary && line.trim().isNotEmpty && line.startsWith('•')) {
+        summary = '${summary ?? ''}$line\n';
+      } else if (inAdditional && line.trim().isNotEmpty && !line.startsWith('Añadida a las')) {
+        additionalReflections.add(line.trim());
+      }
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header con hora de guardado
+        if (savedTime != null)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  themeProvider.currentColors.accentPrimary.withOpacity(0.2),
+                  themeProvider.currentColors.accentSecondary.withOpacity(0.1),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: themeProvider.currentColors.accentPrimary.withOpacity(0.3),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.schedule,
+                  size: 16,
+                  color: themeProvider.currentColors.accentPrimary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Momentos guardados a las $savedTime',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: themeProvider.currentColors.accentPrimary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _getTimeOfDayEmoji(savedTime),
+                  style: const TextStyle(fontSize: 14),
+                ),
+              ],
             ),
           ),
+
+        if (savedTime != null) const SizedBox(height: 16),
+
+        // Lista de momentos en timeline
+        if (momentsList.isNotEmpty) ...[
+          Row(
+            children: [
+              Icon(
+                Icons.timeline,
+                size: 18,
+                color: themeProvider.currentColors.positiveMain,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '📝 Momentos del día (${momentsList.length}):',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: themeProvider.currentColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 12),
+
           Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
+            height: 200,
             decoration: BoxDecoration(
-              color: themeProvider.currentColors.accentPrimary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  themeProvider.currentColors.surface,
+                  themeProvider.currentColors.surfaceVariant.withOpacity(0.5),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: themeProvider.currentColors.borderColor.withOpacity(0.3),
               ),
+              boxShadow: [
+                BoxShadow(
+                  color: themeProvider.currentColors.shadowColor.withOpacity(0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
-            child: Text(
-              _dayEntry!.freeReflection.isNotEmpty
-                  ? _dayEntry!.freeReflection
-                  : 'Sin reflexión escrita para este día.',
-              style: TextStyle(
-                fontSize: 13,
-                color: themeProvider.currentColors.textPrimary,
-                height: 1.4,
+            child: ListView.builder(
+              padding: const EdgeInsets.all(12),
+              itemCount: momentsList.length,
+              itemBuilder: (context, index) {
+                return _buildEnhancedMomentItem(
+                    momentsList[index],
+                    index,
+                    momentsList.length,
+                    themeProvider
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 16),
+        ],
+
+        // Resumen estadístico
+        if (summary != null) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  themeProvider.currentColors.positiveMain.withOpacity(0.1),
+                  themeProvider.currentColors.positiveMain.withOpacity(0.05),
+                ],
               ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: themeProvider.currentColors.positiveMain.withOpacity(0.3),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.insights,
+                      size: 18,
+                      color: themeProvider.currentColors.positiveMain,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Resumen del día:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: themeProvider.currentColors.positiveMain,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  summary.trim(),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: themeProvider.currentColors.textPrimary,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // Reflexiones adicionales
+        if (additionalReflections.isNotEmpty) ...[
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  themeProvider.currentColors.accentSecondary.withOpacity(0.1),
+                  themeProvider.currentColors.accentSecondary.withOpacity(0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: themeProvider.currentColors.accentSecondary.withOpacity(0.3),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.edit_note,
+                      size: 18,
+                      color: themeProvider.currentColors.accentSecondary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Reflexiones adicionales:',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: themeProvider.currentColors.accentSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ...additionalReflections.map((reflection) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      reflection,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: themeProvider.currentColors.textPrimary,
+                        height: 1.4,
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+  Widget _buildSimpleReflection(String reflection, ThemeProvider themeProvider) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            themeProvider.currentColors.accentPrimary.withOpacity(0.1),
+            themeProvider.currentColors.accentPrimary.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: themeProvider.currentColors.borderColor.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.psychology,
+                size: 16,
+                color: themeProvider.currentColors.accentPrimary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Reflexión del día:',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: themeProvider.currentColors.accentPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            reflection.isNotEmpty ? reflection : 'Sin reflexión escrita para este día.',
+            style: TextStyle(
+              fontSize: 13,
+              color: themeProvider.currentColors.textPrimary,
+              height: 1.4,
             ),
           ),
         ],
       ),
+    );
+  }
+  Widget _buildEnhancedMomentItem(String momentText, int index, int total, ThemeProvider themeProvider) {
+    // Parsear: "HH:MM 😊 Texto del momento"
+    final parts = momentText.split(' ');
+    if (parts.length < 3) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        child: Text(
+          momentText,
+          style: TextStyle(
+            fontSize: 11,
+            color: themeProvider.currentColors.textSecondary,
+          ),
+        ),
+      );
+    }
+
+    final time = parts[0];
+    final emoji = parts[1];
+    final text = parts.skip(2).join(' ');
+    final isPositive = _isPositiveEmoji(emoji);
+    final color = isPositive
+        ? themeProvider.currentColors.positiveMain
+        : themeProvider.currentColors.negativeMain;
+    final isLast = index == total - 1;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Timeline visual con línea conectora
+        Column(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                gradient: RadialGradient(
+                  colors: [
+                    color.withOpacity(0.3),
+                    color.withOpacity(0.1),
+                  ],
+                ),
+                shape: BoxShape.circle,
+                border: Border.all(color: color, width: 2),
+                boxShadow: [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Center(
+                child: Text(emoji, style: const TextStyle(fontSize: 14)),
+              ),
+            ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 40,
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      color.withOpacity(0.5),
+                      color.withOpacity(0.1),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(1),
+                ),
+              ),
+          ],
+        ),
+
+        const SizedBox(width: 16),
+
+        // Contenido del momento
+        Expanded(
+          child: Container(
+             margin: EdgeInsets.only(bottom: isLast ? 0 : 16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  color.withOpacity(0.1),
+                  color.withOpacity(0.05),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withOpacity(0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      _getRelativeTimeDescription(time),
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        isPositive ? 'POSITIVO' : 'DIFÍCIL',
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  text,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: themeProvider.currentColors.textPrimary,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -649,5 +1118,60 @@ class _DailyDetailScreenState extends State<DailyDetailScreen> {
       'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
     ];
     return months[month];
+  }
+  bool _isPositiveEmoji(String emoji) {
+    const positiveEmojis = [
+      '😊', '😄', '🤗', '😁', '🥳', '🤩', '😍', '🥰',
+      '🎉', '🏆', '🎯', '💪', '✨', '🌟', '🔥', '⭐',
+      '😌', '🧘‍♀️', '☕', '🍵', '🌸', '🌿', '🌅',
+      '❤️', '💕', '💖', '💝', '😘', '💞', '💓',
+      '🎵', '🎸', '🎨', '🎭', '📚', '🎮'
+    ];
+
+    return positiveEmojis.contains(emoji);
+  }
+
+  String _getRelativeTimeDescription(String timeStr) {
+    try {
+      final parts = timeStr.split(':');
+      if (parts.length != 2) return timeStr;
+
+      final hour = int.parse(parts[0]);
+
+      if (hour >= 5 && hour < 12) {
+        return '$timeStr (mañana)';
+      } else if (hour >= 12 && hour < 17) {
+        return '$timeStr (tarde)';
+      } else if (hour >= 17 && hour < 21) {
+        return '$timeStr (atardecer)';
+      } else {
+        return '$timeStr (noche)';
+      }
+    } catch (e) {
+      return timeStr;
+    }
+  }
+
+  String _getTimeOfDayEmoji(String? timeStr) {
+    if (timeStr == null) return '🕐';
+
+    try {
+      final parts = timeStr.split(':');
+      if (parts.length != 2) return '🕐';
+
+      final hour = int.parse(parts[0]);
+
+      if (hour >= 5 && hour < 12) {
+        return '🌅';
+      } else if (hour >= 12 && hour < 17) {
+        return '☀️';
+      } else if (hour >= 17 && hour < 21) {
+        return '🌆';
+      } else {
+        return '🌙';
+      }
+    } catch (e) {
+      return '🕐';
+    }
   }
 }

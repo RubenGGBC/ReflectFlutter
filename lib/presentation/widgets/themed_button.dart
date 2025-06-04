@@ -25,7 +25,7 @@ class ThemedButton extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
 
   const ThemedButton({
-    Key? key,
+    super.key,
     required this.onPressed,
     required this.child,
     this.type = ThemedButtonType.primary,
@@ -33,7 +33,7 @@ class ThemedButton extends StatelessWidget {
     this.height,
     this.isLoading = false,
     this.padding,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -163,12 +163,12 @@ class ThemedButton extends StatelessWidget {
         color: backgroundColor.withOpacity(0.7),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Center(
+      child: const Center(
         child: SizedBox(
           width: 24,
           height: 24,
           child: CircularProgressIndicator(
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
             strokeWidth: 2,
           ),
         ),

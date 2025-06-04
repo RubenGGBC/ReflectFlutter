@@ -56,7 +56,7 @@ class SessionService {
             _logger.d('🔄 Sesión activa encontrada para usuario: $userId');
             return true;
           } else {
-            _logger.w('⚠️ Sesión expirada (${daysSinceLogin} días)');
+            _logger.w('⚠️ Sesión expirada ($daysSinceLogin días)');
             await clearSession();
           }
         }
