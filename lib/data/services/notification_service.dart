@@ -9,6 +9,9 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:logger/logger.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
+
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -141,13 +144,11 @@ class NotificationService {
     }
   }
 
-  /// Programar notificación nocturna obligatoria
-  Future<void> _scheduleNightlyReviewReminder() async {
-    if (!_isMobilePlatform()) return;
 
+  Future<void> _scheduleNightlyReviewReminder() async {
     try {
       final now = DateTime.now();
-      var scheduledDate = DateTime(now.year, now.month, now.day, 22, 30); // 22:30
+      var scheduledDate = DateTime(now.year, now.month, now.day, 22, 30);
 
       // Si ya pasó la hora, programar para mañana
       if (scheduledDate.isBefore(now)) {
@@ -162,40 +163,12 @@ class NotificationService {
         priority: Priority.high,
         showWhen: true,
         icon: '@mipmap/ic_launcher',
-        largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
-        styleInformation: BigTextStyleInformation(
-          '🌙 En 1 hora y 30 minutos (00:00) se guardará automáticamente tu resumen del día. ¡Asegúrate de haber registrado todos tus momentos importantes!',
-          htmlFormatBigText: false,
-          contentTitle: '🔔 Último llamado para tu día zen',
-          htmlFormatContentTitle: false,
-          summaryText: 'ReflectApp',
-          htmlFormatSummaryText: false,
-        ),
-        actions: [
-          AndroidNotificationAction(
-            'review_now',
-            '📝 Revisar ahora',
-            showsUserInterface: true,
-            contextual: true,
-          ),
-          AndroidNotificationAction(
-            'add_moments',
-            '✨ Añadir momentos',
-            showsUserInterface: true,
-            contextual: false,
-          ),
-        ],
       );
 
       const iosDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
-        sound: 'default',
-        badgeNumber: 1,
-        subtitle: 'Tu día zen se cierra pronto',
-        threadIdentifier: 'daily_review',
-        categoryIdentifier: 'daily_review_category',
       );
 
       const details = NotificationDetails(
@@ -203,26 +176,31 @@ class NotificationService {
         iOS: iosDetails,
       );
 
+      // ✅ CORREGIR: Usar zonedSchedule con timezone local correcto
       await _notificationsPlugin.zonedSchedule(
         dailyReviewNotificationId,
         '🌙 Último llamado para tu día zen',
         '💫 A las 00:00 se guardará tu resumen automáticamente. ¿Has registrado todos tus momentos?',
-        tz.TZDateTime.from(scheduledDate, tz.local),
+        tz.TZDateTime(
+          tz.local,
+          scheduledDate.year,
+          scheduledDate.month,
+          scheduledDate.day,
+          scheduledDate.hour,
+          scheduledDate.minute,
+        ),
         details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: DateTimeComponents.time, // Repetir diariamente
         payload: 'nightly_review',
       );
 
-      final timeStr = '${scheduledDate.hour}:${scheduledDate.minute.toString().padLeft(2, '0')}';
-      _logger.i('🌙 Notificación nocturna programada para $timeStr');
+      _logger.i('🌙 Notificación nocturna programada para ${scheduledDate.hour}:${scheduledDate.minute.toString().padLeft(2, '0')}');
 
     } catch (e) {
       _logger.e('❌ Error programando notificación nocturna: $e');
     }
   }
-
   /// Programar recordatorios aleatorios durante el día
   Future<void> _scheduleRandomDayCheckIns() async {
     if (!_isMobilePlatform()) return;
@@ -246,35 +224,24 @@ class NotificationService {
 
   /// Programar una notificación aleatoria específica
   Future<void> _scheduleRandomCheckIn(DateTime baseDate, int index) async {
-    if (!_isMobilePlatform()) return;
-
     try {
-      // Definir ventanas de tiempo para las notificaciones
       final timeWindows = [
-        {'start': 9, 'end': 11, 'name': 'Mañana'},   // 9:00 - 11:00
-        {'start': 12, 'end': 14, 'name': 'Mediodía'}, // 12:00 - 14:00
-        {'start': 15, 'end': 17, 'name': 'Tarde'},    // 15:00 - 17:00
-        {'start': 18, 'end': 20, 'name': 'Noche'},    // 18:00 - 20:00
-        {'start': 21, 'end': 22, 'name': 'Noche tardía'}, // 21:00 - 22:00
+        {'start': 9, 'end': 11},   // 9:00 - 11:00
+        {'start': 12, 'end': 14},  // 12:00 - 14:00
+        {'start': 15, 'end': 17},  // 15:00 - 17:00
+        {'start': 18, 'end': 20},  // 18:00 - 20:00
       ];
 
-      // Seleccionar ventana aleatoria
-      final window = timeWindows[_random.nextInt(timeWindows.length)];
-
-      // Hora aleatoria dentro de la ventana
-      final startHour = window['start'] as int;
-      final endHour = window['end'] as int;
-      final hour = startHour + _random.nextInt(endHour - startHour);
+      final window = timeWindows[index % timeWindows.length];
+      final hour = (window['start'] as int) + _random.nextInt((window['end'] as int) - (window['start'] as int));
       final minute = _random.nextInt(60);
 
       var scheduledDate = DateTime(baseDate.year, baseDate.month, baseDate.day, hour, minute);
 
-      // Si ya pasó la hora, programar para mañana
       if (scheduledDate.isBefore(DateTime.now().add(const Duration(minutes: 5)))) {
         scheduledDate = scheduledDate.add(const Duration(days: 1));
       }
 
-      // Seleccionar mensaje aleatorio
       final messages = _getRandomCheckInMessages();
       final message = messages[_random.nextInt(messages.length)];
 
@@ -284,35 +251,13 @@ class NotificationService {
         channelDescription: 'Recordatorios aleatorios para registrar momentos',
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
-        showWhen: true,
         icon: '@mipmap/ic_launcher',
-        styleInformation: BigTextStyleInformation(
-          '',
-          htmlFormatBigText: false,
-          contentTitle: '',
-          htmlFormatContentTitle: false,
-        ),
-        actions: [
-          AndroidNotificationAction(
-            'add_positive',
-            '✨ Momento positivo',
-            showsUserInterface: true,
-          ),
-          AndroidNotificationAction(
-            'add_negative',
-            '☁️ Momento difícil',
-            showsUserInterface: true,
-          ),
-        ],
       );
 
       const iosDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: false,
         presentSound: true,
-        sound: 'default',
-        threadIdentifier: 'random_checkin',
-        categoryIdentifier: 'checkin_category',
       );
 
       const details = NotificationDetails(
@@ -322,25 +267,31 @@ class NotificationService {
 
       final notificationId = randomCheckInBaseId + index;
 
+      // ✅ CORREGIR: Usar zonedSchedule con timezone local correcto
       await _notificationsPlugin.zonedSchedule(
         notificationId,
         message['title']!,
         message['body']!,
-        tz.TZDateTime.from(scheduledDate, tz.local),
+        tz.TZDateTime(
+          tz.local,
+          scheduledDate.year,
+          scheduledDate.month,
+          scheduledDate.day,
+          scheduledDate.hour,
+          scheduledDate.minute,
+        ),
         details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         payload: 'random_checkin',
       );
 
-      final timeStr = '${scheduledDate.hour}:${scheduledDate.minute.toString().padLeft(2, '0')}';
-      _logger.d('🎲 Recordatorio aleatorio #$index programado: $timeStr - ${message['title']}');
+      _logger.d('🎲 Recordatorio aleatorio #$index programado: ${scheduledDate.hour}:${scheduledDate.minute.toString().padLeft(2, '0')}');
 
     } catch (e) {
       _logger.e('❌ Error programando recordatorio aleatorio #$index: $e');
     }
   }
-
   /// Obtener mensajes aleatorios para los check-ins
   List<Map<String, String>> _getRandomCheckInMessages() {
     return [

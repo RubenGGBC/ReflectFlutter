@@ -59,7 +59,9 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
   double _currentIntensity = 5.0;
 
   // Estado del timeline mode
-  int _selectedHour = DateTime.now().hour;
+  int _selectedHour = DateTime
+      .now()
+      .hour;
 
   // Estado del voice mode
   bool _isListening = false;
@@ -80,16 +82,25 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
     _loadUserStats();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // ✅ AÑADIR: Recargar momentos cada vez que se entra a la pantalla
+    _loadUserMoments();
+  }
+
   void _initializeAnimations() {
     _pulseController = AnimationController(
       duration: const Duration(seconds: 2),
       vsync: this,
-    )..repeat(reverse: true);
+    )
+      ..repeat(reverse: true);
 
     _rotationController = AnimationController(
       duration: const Duration(seconds: 20),
       vsync: this,
-    )..repeat();
+    )
+      ..repeat();
 
     _scaleController = AnimationController(
       duration: const Duration(milliseconds: 200),
@@ -99,7 +110,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
     _shimmerController = AnimationController(
       duration: const Duration(seconds: 3),
       vsync: this,
-    )..repeat();
+    )
+      ..repeat();
 
     _pulseAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
@@ -154,7 +166,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
         setState(() {}); // Actualizar UI
       }
 
-      _logger.d('📊 Estadísticas cargadas: ${_userStats['streak_days']} días de racha');
+      _logger.d(
+          '📊 Estadísticas cargadas: ${_userStats['streak_days']} días de racha');
     } catch (e) {
       _logger.e('Error cargando estadísticas: $e');
       _userStats = {
@@ -193,7 +206,15 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
               controller: _pageController,
               onPageChanged: (index) {
                 setState(() {
-                  _activeMode = InteractiveMode.values[index];
+                  // ✅ ACTUALIZAR: mapear solo los modos disponibles
+                  final availableModes = [
+                    InteractiveMode.quick,
+                    InteractiveMode.mood,
+                    InteractiveMode.timeline,
+                    InteractiveMode.templates,
+                    InteractiveMode.smart,
+                  ];
+                  _activeMode = availableModes[index];
                 });
               },
               children: [
@@ -201,8 +222,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                 _buildMoodModePage(themeProvider),
                 _buildTimelineModePage(themeProvider),
                 _buildTemplatesModePage(themeProvider),
-                _buildVoiceModePage(themeProvider),
                 _buildSmartModePage(themeProvider),
+                // ✅ QUITAR: _buildVoiceModePage
               ],
             ),
           ),
@@ -302,21 +323,11 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                     ),
                   ),
 
-                  // Botones de acción
-                  Row(
-                    children: [
-                      _buildGlassButton(
-                        icon: Icons.palette,
-                        label: 'Temas',
-                        onTap: () => Navigator.of(context).pushNamed('/theme_selector'),
-                      ),
-                      const SizedBox(width: 8),
-                      _buildGlassButton(
-                        icon: Icons.calendar_today,
-                        label: 'Cal',
-                        onTap: () => Navigator.of(context).pushReplacementNamed('/calendar'),
-                      ),
-                    ],
+                  // ✅ SOLO el botón de calendario (quitamos temas)
+                  _buildGlassButton(
+                    icon: Icons.calendar_today,
+                    label: 'Cal',
+                    onTap: () => Navigator.of(context).pushReplacementNamed('/calendar'),
                   ),
                 ],
               ),
@@ -331,7 +342,6 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
       ),
     );
   }
-
   Widget _buildGlassButton({
     required IconData icon,
     String? label,
@@ -412,7 +422,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
     );
   }
 
-  Widget _buildStatBubble(String emoji, String value, String label, Color color) {
+  Widget _buildStatBubble(String emoji, String value, String label,
+      Color color) {
     return AnimatedBuilder(
       animation: _pulseAnimation,
       builder: (context, child) {
@@ -565,17 +576,21 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
             return GestureDetector(
               onTap: () => _quickTextController.text = phrase,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      themeProvider.currentColors.accentPrimary.withOpacity(0.2),
-                      themeProvider.currentColors.accentSecondary.withOpacity(0.1),
+                      themeProvider.currentColors.accentPrimary.withOpacity(
+                          0.2),
+                      themeProvider.currentColors.accentSecondary.withOpacity(
+                          0.1),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: themeProvider.currentColors.borderColor.withOpacity(0.3),
+                    color: themeProvider.currentColors.borderColor.withOpacity(
+                        0.3),
                   ),
                 ),
                 child: Text(
@@ -630,7 +645,9 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
               ),
               const SizedBox(width: 8),
               Text(
-                type == 'positive' ? '✨ Momentos Positivos' : '🌧️ Momentos Difíciles',
+                type == 'positive'
+                    ? '✨ Momentos Positivos'
+                    : '🌧️ Momentos Difíciles',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -642,40 +659,40 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
           const SizedBox(height: 16),
 
           ...emojis.entries.map((category) {
-    return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-    Text(
-    category.key,
-    style: TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w600,
-    color: themeProvider.currentColors.textSecondary,
-    ),
-    ),
-    const SizedBox(height: 8),
-    Wrap(
-    spacing: 8,
-    runSpacing: 8,
-    children: category.value.map((emoji) {
-    return GestureDetector(
-    // ✅ CORREGIDO: Pasar tipo correcto directamente
-    onTap: () => _addQuickMoment(emoji, type, 'emoji_$type'),
-    child: _buildAnimatedEmojiButton(
-    emoji,
-    type == 'positive'
-    ? themeProvider.currentColors.positiveMain
-        : themeProvider.currentColors.negativeMain
-    ),
-    );
-    }).toList(),
-    ),
-    const SizedBox(height: 12),
-    ],
-    );
-    }),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  category.key,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: themeProvider.currentColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: category.value.map((emoji) {
+                    return GestureDetector(
+                      // ✅ CORREGIDO: Pasar tipo correcto directamente
+                      onTap: () => _addQuickMoment(emoji, type, 'emoji_$type'),
+                      child: _buildAnimatedEmojiButton(
+                          emoji,
+                          type == 'positive'
+                              ? themeProvider.currentColors.positiveMain
+                              : themeProvider.currentColors.negativeMain
+                      ),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(height: 12),
+              ],
+            );
+          }),
 
-  ],
+        ],
       ),
     );
   }
@@ -692,7 +709,10 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
           // ✅ CORREGIDO: Añadir onTap que estaba faltando
           onTap: () {
             // Detectar tipo basado en el color
-            final isPositive = color == context.read<ThemeProvider>().currentColors.positiveMain;
+            final isPositive = color == context
+                .read<ThemeProvider>()
+                .currentColors
+                .positiveMain;
             final type = isPositive ? 'positive' : 'negative';
 
             _addQuickMoment(emoji, type, 'quick');
@@ -837,19 +857,25 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
               SliderTheme(
                 data: SliderTheme.of(context).copyWith(
                   trackHeight: 8,
-                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 16),
-                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 28),
-                  activeTrackColor: themeProvider.getMoodColor(_currentIntensity),
+                  thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 16),
+                  overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 28),
+                  activeTrackColor: themeProvider.getMoodColor(
+                      _currentIntensity),
                   inactiveTrackColor: themeProvider.currentColors.borderColor,
                   thumbColor: themeProvider.getMoodColor(_currentIntensity),
-                  overlayColor: themeProvider.getMoodColor(_currentIntensity).withOpacity(0.2),
+                  overlayColor: themeProvider
+                      .getMoodColor(_currentIntensity)
+                      .withOpacity(0.2),
                 ),
                 child: Slider(
                   min: 1,
                   max: 10,
                   divisions: 9,
                   value: _currentIntensity,
-                  onChanged: (value) => setState(() => _currentIntensity = value),
+                  onChanged: (value) =>
+                      setState(() => _currentIntensity = value),
                 ),
               ),
 
@@ -862,9 +888,12 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                   return Transform.scale(
                     scale: _pulseAnimation.value,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20, vertical: 10),
                       decoration: BoxDecoration(
-                        color: themeProvider.getMoodColor(_currentIntensity).withOpacity(0.2),
+                        color: themeProvider
+                            .getMoodColor(_currentIntensity)
+                            .withOpacity(0.2),
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
                           color: themeProvider.getMoodColor(_currentIntensity),
@@ -872,7 +901,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                         ),
                       ),
                       child: Text(
-                        '${_currentIntensity.round()}/10 - ${themeProvider.getMoodLabel(_currentIntensity)}',
+                        '${_currentIntensity.round()}/10 - ${themeProvider
+                            .getMoodLabel(_currentIntensity)}',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -925,7 +955,9 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: themeProvider.getMoodColor(_currentIntensity).withOpacity(0.5),
+                        color: themeProvider
+                            .getMoodColor(_currentIntensity)
+                            .withOpacity(0.5),
                         blurRadius: 20,
                         offset: const Offset(0, 0),
                       ),
@@ -956,18 +988,48 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
   Widget _buildAdvancedMoodBubbles(ThemeProvider themeProvider) {
     final moodCategories = {
       'Energía Alta': [
-        {'emoji': '🚀', 'text': 'Súper energético', 'type': 'positive', 'intensity': 9},
-        {'emoji': '⚡', 'text': 'Lleno de energía', 'type': 'positive', 'intensity': 8},
+        {
+          'emoji': '🚀',
+          'text': 'Súper energético',
+          'type': 'positive',
+          'intensity': 9
+        },
+        {
+          'emoji': '⚡',
+          'text': 'Lleno de energía',
+          'type': 'positive',
+          'intensity': 8
+        },
         {'emoji': '🔥', 'text': 'En llamas', 'type': 'positive', 'intensity': 7},
       ],
       'Tranquilidad': [
-        {'emoji': '😌', 'text': 'Muy relajado', 'type': 'positive', 'intensity': 6},
-        {'emoji': '🧘‍♀️', 'text': 'Zen total', 'type': 'positive', 'intensity': 5},
+        {
+          'emoji': '😌',
+          'text': 'Muy relajado',
+          'type': 'positive',
+          'intensity': 6
+        },
+        {
+          'emoji': '🧘‍♀️',
+          'text': 'Zen total',
+          'type': 'positive',
+          'intensity': 5
+        },
         {'emoji': '🌸', 'text': 'En paz', 'type': 'positive', 'intensity': 5},
       ],
       'Desafíos': [
-        {'emoji': '😰', 'text': 'Algo estresado', 'type': 'negative', 'intensity': 4},
-        {'emoji': '😞', 'text': 'Bajón emocional', 'type': 'negative', 'intensity': 3},
+        {
+          'emoji': '😰',
+          'text': 'Algo estresado',
+          'type': 'negative',
+          'intensity': 4
+        },
+        {
+          'emoji': '😞',
+          'text': 'Bajón emocional',
+          'type': 'negative',
+          'intensity': 3
+        },
         {'emoji': '😵', 'text': 'Abrumado', 'type': 'negative', 'intensity': 2},
       ],
     };
@@ -1015,7 +1077,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
     );
   }
 
-  Widget _buildMoodBubble(Map<String, dynamic> mood, ThemeProvider themeProvider) {
+  Widget _buildMoodBubble(Map<String, dynamic> mood,
+      ThemeProvider themeProvider) {
     final isPositive = mood['type'] == 'positive';
     final color = isPositive
         ? themeProvider.currentColors.positiveMain
@@ -1101,7 +1164,9 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
   }
 
   Widget _buildEnhancedTimeSelector(ThemeProvider themeProvider) {
-    final currentHour = DateTime.now().hour;
+    final currentHour = DateTime
+        .now()
+        .hour;
     final hours = List.generate(24, (index) => index);
 
     return Column(
@@ -1141,8 +1206,10 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                       ]
                           : isCurrent
                           ? [
-                        themeProvider.currentColors.positiveMain.withOpacity(0.3),
-                        themeProvider.currentColors.positiveMain.withOpacity(0.1),
+                        themeProvider.currentColors.positiveMain.withOpacity(
+                            0.3),
+                        themeProvider.currentColors.positiveMain.withOpacity(
+                            0.1),
                       ]
                           : [
                         themeProvider.currentColors.surface,
@@ -1167,7 +1234,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.bold,
-                          color: isSelected ? Colors.white : themeProvider.currentColors.textPrimary,
+                          color: isSelected ? Colors.white : themeProvider
+                              .currentColors.textPrimary,
                         ),
                       ),
                       if (isCurrent) ...[
@@ -1217,12 +1285,15 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                     margin: const EdgeInsets.symmetric(horizontal: 1),
                     decoration: BoxDecoration(
                       color: hasEvent
-                          ? themeProvider.currentColors.accentPrimary.withOpacity(0.5)
-                          : themeProvider.currentColors.borderColor.withOpacity(0.3),
+                          ? themeProvider.currentColors.accentPrimary
+                          .withOpacity(0.5)
+                          : themeProvider.currentColors.borderColor.withOpacity(
+                          0.3),
                       borderRadius: BorderRadius.circular(2),
                     ),
                     child: hasEvent
-                        ? const Center(child: Text('•', style: TextStyle(color: Colors.white)))
+                        ? const Center(child: Text('•', style: TextStyle(
+                        color: Colors.white)))
                         : null,
                   ),
                 );
@@ -1235,9 +1306,12 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('00:00', style: TextStyle(fontSize: 10, color: themeProvider.currentColors.textHint)),
-              Text('12:00', style: TextStyle(fontSize: 10, color: themeProvider.currentColors.textHint)),
-              Text('23:59', style: TextStyle(fontSize: 10, color: themeProvider.currentColors.textHint)),
+              Text('00:00', style: TextStyle(
+                  fontSize: 10, color: themeProvider.currentColors.textHint)),
+              Text('12:00', style: TextStyle(
+                  fontSize: 10, color: themeProvider.currentColors.textHint)),
+              Text('23:59', style: TextStyle(
+                  fontSize: 10, color: themeProvider.currentColors.textHint)),
             ],
           ),
         ],
@@ -1251,7 +1325,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
         children: [
           CustomTextField(
             controller: _timelineTextController,
-            label: '¿Qué pasó a las ${_selectedHour.toString().padLeft(2, '0')}:00?',
+            label: '¿Qué pasó a las ${_selectedHour.toString().padLeft(
+                2, '0')}:00?',
             hint: 'Describe el momento específico...',
             maxLines: 3,
           ),
@@ -1299,7 +1374,11 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
   Widget _buildTemplatesModePage(ThemeProvider themeProvider) {
     final templateCategories = {
       'Trabajo': [
-        {'emoji': '🎯', 'text': 'Tarea completada con éxito', 'type': 'positive'},
+        {
+          'emoji': '🎯',
+          'text': 'Tarea completada con éxito',
+          'type': 'positive'
+        },
         {'emoji': '💡', 'text': 'Idea brillante en reunión', 'type': 'positive'},
         {'emoji': '📊', 'text': 'Presentación exitosa', 'type': 'positive'},
         {'emoji': '😰', 'text': 'Estrés por deadline', 'type': 'negative'},
@@ -1307,7 +1386,11 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
         {'emoji': '😤', 'text': 'Conflicto con compañero', 'type': 'negative'},
       ],
       'Personal': [
-        {'emoji': '💪', 'text': 'Sesión de ejercicio increíble', 'type': 'positive'},
+        {
+          'emoji': '💪',
+          'text': 'Sesión de ejercicio increíble',
+          'type': 'positive'
+        },
         {'emoji': '📚', 'text': 'Aprendí algo nuevo', 'type': 'positive'},
         {'emoji': '🎵', 'text': 'Música que me inspiró', 'type': 'positive'},
         {'emoji': '😴', 'text': 'Noche de mal sueño', 'type': 'negative'},
@@ -1357,7 +1440,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
           ...templateCategories.entries.map((category) {
             return Column(
               children: [
-                _buildTemplateCategory(category.key, category.value, themeProvider),
+                _buildTemplateCategory(
+                    category.key, category.value, themeProvider),
                 const SizedBox(height: 16),
               ],
             );
@@ -1367,7 +1451,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
     );
   }
 
-  Widget _buildTemplateCategory(String categoryName, List<Map<String, dynamic>> templates, ThemeProvider themeProvider) {
+  Widget _buildTemplateCategory(String categoryName,
+      List<Map<String, dynamic>> templates, ThemeProvider themeProvider) {
     return _buildGlassContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1432,7 +1517,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Center(
-                          child: Text(template['emoji'], style: const TextStyle(fontSize: 18)),
+                          child: Text(template['emoji'],
+                              style: const TextStyle(fontSize: 18)),
                         ),
                       ),
                       const SizedBox(width: 16),
@@ -1505,7 +1591,9 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                 GestureDetector(
                   onTap: _toggleVoiceRecording,
                   child: AnimatedBuilder(
-                    animation: _isListening ? _pulseAnimation : const AlwaysStoppedAnimation(1.0),
+                    animation: _isListening
+                        ? _pulseAnimation
+                        : const AlwaysStoppedAnimation(1.0),
                     builder: (context, child) {
                       return Transform.scale(
                         scale: _isListening ? _pulseAnimation.value : 1.0,
@@ -1517,12 +1605,14 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                               colors: _isListening
                                   ? [
                                 themeProvider.currentColors.positiveMain,
-                                themeProvider.currentColors.positiveMain.withOpacity(0.3),
+                                themeProvider.currentColors.positiveMain
+                                    .withOpacity(0.3),
                               ]
                                   : _isProcessingVoice
                                   ? [
                                 themeProvider.currentColors.accentSecondary,
-                                themeProvider.currentColors.accentSecondary.withOpacity(0.3),
+                                themeProvider.currentColors.accentSecondary
+                                    .withOpacity(0.3),
                               ]
                                   : [
                                 themeProvider.currentColors.accentPrimary,
@@ -1533,15 +1623,19 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                             boxShadow: [
                               BoxShadow(
                                 color: _isListening
-                                    ? themeProvider.currentColors.positiveMain.withOpacity(0.5)
-                                    : themeProvider.currentColors.accentPrimary.withOpacity(0.3),
+                                    ? themeProvider.currentColors.positiveMain
+                                    .withOpacity(0.5)
+                                    : themeProvider.currentColors.accentPrimary
+                                    .withOpacity(0.3),
                                 blurRadius: 20,
                                 offset: const Offset(0, 0),
                               ),
                             ],
                           ),
                           child: Icon(
-                            _isListening ? Icons.stop : _isProcessingVoice ? Icons.hourglass_empty : Icons.mic,
+                            _isListening ? Icons.stop : _isProcessingVoice
+                                ? Icons.hourglass_empty
+                                : Icons.mic,
                             color: Colors.white,
                             size: 48,
                           ),
@@ -1595,23 +1689,31 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                   children: [
                     Expanded(
                       child: ThemedButton(
-                        onPressed: _voiceTextController.text.trim().isNotEmpty
+                        onPressed: _voiceTextController.text
+                            .trim()
+                            .isNotEmpty
                             ? () => _processVoiceInput('positive')
                             : null,
                         type: ThemedButtonType.positive,
                         height: 45,
-                        child: const Text('✨ Momento Positivo', style: TextStyle(color: Colors.white)),
+                        child: const Text(
+                            '✨ Momento Positivo', style: TextStyle(color: Colors
+                            .white)),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: ThemedButton(
-                        onPressed: _voiceTextController.text.trim().isNotEmpty
+                        onPressed: _voiceTextController.text
+                            .trim()
+                            .isNotEmpty
                             ? () => _processVoiceInput('negative')
                             : null,
                         type: ThemedButtonType.negative,
                         height: 45,
-                        child: const Text('🌧️ Momento Difícil', style: TextStyle(color: Colors.white)),
+                        child: const Text(
+                            '🌧️ Momento Difícil', style: TextStyle(color: Colors
+                            .white)),
                       ),
                     ),
                   ],
@@ -1702,11 +1804,14 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
             children: categories.map((category) {
               final isSelected = category == _selectedCategory;
               return GestureDetector(
-                onTap: () => setState(() {
-                  _selectedCategory = category; // ✅ CORREGIDO: Actualizar estado
-                }),
+                onTap: () =>
+                    setState(() {
+                      _selectedCategory =
+                          category; // ✅ CORREGIDO: Actualizar estado
+                    }),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     gradient: isSelected ? LinearGradient(
                       colors: [
@@ -1714,7 +1819,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                         themeProvider.currentColors.accentSecondary,
                       ],
                     ) : null,
-                    color: isSelected ? null : themeProvider.currentColors.surface,
+                    color: isSelected ? null : themeProvider.currentColors
+                        .surface,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
                       color: isSelected
@@ -1725,14 +1831,16 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(categoryEmojis[category]!, style: const TextStyle(fontSize: 16)),
+                      Text(categoryEmojis[category]!, style: const TextStyle(
+                          fontSize: 16)),
                       const SizedBox(width: 4),
                       Text(
                         category.toUpperCase(),
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: isSelected ? Colors.white : themeProvider.currentColors.textPrimary,
+                          color: isSelected ? Colors.white : themeProvider
+                              .currentColors.textPrimary,
                         ),
                       ),
                     ],
@@ -1746,7 +1854,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
     );
   }
 
-  Widget _buildSmartSuggestions(List<Map<String, dynamic>> suggestions, ThemeProvider themeProvider) {
+  Widget _buildSmartSuggestions(List<Map<String, dynamic>> suggestions,
+      ThemeProvider themeProvider) {
     return _buildGlassContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1795,7 +1904,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                   ),
                   child: Row(
                     children: [
-                      Text(suggestion['emoji'], style: const TextStyle(fontSize: 20)),
+                      Text(suggestion['emoji'], style: const TextStyle(
+                          fontSize: 20)),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -1857,9 +1967,12 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: themeProvider.currentColors.positiveMain.withOpacity(0.1),
+                    color: themeProvider.currentColors.positiveMain.withOpacity(
+                        0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: themeProvider.currentColors.positiveMain.withOpacity(0.3)),
+                    border: Border.all(
+                        color: themeProvider.currentColors.positiveMain
+                            .withOpacity(0.3)),
                   ),
                   child: Column(
                     children: [
@@ -1873,7 +1986,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                         ),
                       ),
                       Text(
-                        '09:00', // TODO: Usar datos reales cuando estén disponibles
+                        '09:00',
+                        // TODO: Usar datos reales cuando estén disponibles
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -1889,9 +2003,12 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                 child: Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: themeProvider.currentColors.accentPrimary.withOpacity(0.1),
+                    color: themeProvider.currentColors.accentPrimary
+                        .withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: themeProvider.currentColors.accentPrimary.withOpacity(0.3)),
+                    border: Border.all(
+                        color: themeProvider.currentColors.accentPrimary
+                            .withOpacity(0.3)),
                   ),
                   child: Column(
                     children: [
@@ -1924,12 +2041,12 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
   }
 
   Widget _buildEnhancedBottomBar(ThemeProvider themeProvider) {
+    // ✅ QUITAR voice mode de la lista
     final modes = [
       {'mode': InteractiveMode.quick, 'icon': Icons.flash_on, 'label': 'Quick'},
       {'mode': InteractiveMode.mood, 'icon': Icons.psychology, 'label': 'Mood'},
       {'mode': InteractiveMode.timeline, 'icon': Icons.schedule, 'label': 'Time'},
       {'mode': InteractiveMode.templates, 'icon': Icons.apps, 'label': 'Templates'},
-      {'mode': InteractiveMode.voice, 'icon': Icons.mic, 'label': 'Voice'},
       {'mode': InteractiveMode.smart, 'icon': Icons.auto_awesome, 'label': 'Smart'},
     ];
 
@@ -2028,7 +2145,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.delete_sweep, color: Colors.white, size: 18),
+                    const Icon(
+                        Icons.delete_sweep, color: Colors.white, size: 18),
                     const SizedBox(width: 4),
                     Text(
                       'Limpiar (${momentsProvider.totalCount})',
@@ -2042,7 +2160,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
             Expanded(
               flex: 3,
               child: ThemedButton(
-                onPressed: momentsProvider.isLoading || momentsProvider.totalCount == 0 ? null : _saveMoments,
+                onPressed: momentsProvider.isLoading ||
+                    momentsProvider.totalCount == 0 ? null : _saveMoments,
                 type: ThemedButtonType.positive,
                 height: 45,
                 isLoading: momentsProvider.isLoading,
@@ -2075,7 +2194,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
     final text = _quickTextController.text.trim();
 
     if (text.isEmpty) {
-      _showEnhancedMessage('⚠️ Escribe qué pasó antes de seleccionar emoji', isError: true);
+      _showEnhancedMessage(
+          '⚠️ Escribe qué pasó antes de seleccionar emoji', isError: true);
       return;
     }
 
@@ -2096,7 +2216,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
     final text = _quickTextController.text.trim();
 
     if (text.isEmpty) {
-      _showEnhancedMessage('⚠️ Escribe qué pasó antes de usar favoritos', isError: true);
+      _showEnhancedMessage(
+          '⚠️ Escribe qué pasó antes de usar favoritos', isError: true);
       return;
     }
 
@@ -2155,8 +2276,12 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
     ];
 
     // Contar coincidencias
-    int positiveCount = positiveWords.where((word) => lowerText.contains(word)).length;
-    int negativeCount = negativeWords.where((word) => lowerText.contains(word)).length;
+    int positiveCount = positiveWords
+        .where((word) => lowerText.contains(word))
+        .length;
+    int negativeCount = negativeWords
+        .where((word) => lowerText.contains(word))
+        .length;
 
     if (positiveCount > negativeCount) return 'positive';
     if (negativeCount > positiveCount) return 'negative';
@@ -2164,6 +2289,7 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
     // Por defecto, usar contexto del emoji o neutral positivo
     return positiveEmojis.contains(emoji) ? 'positive' : 'positive';
   }
+
   void _createMoodMoment(Map<String, dynamic> bubble) {
     _addMoment(
       emoji: bubble['emoji'] as String,
@@ -2175,7 +2301,9 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
   }
 
   void _addTimelineMoment(String type) {
-    if (_timelineTextController.text.trim().isEmpty) {
+    if (_timelineTextController.text
+        .trim()
+        .isEmpty) {
       _showEnhancedMessage('⚠️ Describe qué pasó', isError: true);
       return;
     }
@@ -2237,7 +2365,9 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
 
   // ✅ AÑADIDO: Generar transcripciones variadas
   String _generateVoiceTranscription() {
-    final hour = DateTime.now().hour;
+    final hour = DateTime
+        .now()
+        .hour;
     final transcriptions = [
       'Hoy tuve una reunión muy productiva con el equipo',
       'Me siento muy estresado por la cantidad de trabajo',
@@ -2255,7 +2385,9 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
   }
 
   void _processVoiceInput(String type) {
-    if (_voiceTextController.text.trim().isEmpty) {
+    if (_voiceTextController.text
+        .trim()
+        .isEmpty) {
       _showEnhancedMessage('⚠️ Primero graba o escribe algo', isError: true);
       return;
     }
@@ -2281,47 +2413,175 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
 
   // ✅ CORREGIDO: Sugerencias que cambian según categoría
   List<Map<String, dynamic>> _getSmartSuggestions() {
-    final hour = DateTime.now().hour;
+    final hour = DateTime
+        .now()
+        .hour;
 
     final suggestions = <String, List<Map<String, dynamic>>>{
       'work': [
-        {'emoji': '💼', 'text': 'Reunión productiva', 'type': 'positive', 'reason': 'Hora laboral perfecta'},
-        {'emoji': '📊', 'text': 'Presentación exitosa', 'type': 'positive', 'reason': 'Pico de productividad'},
-        {'emoji': '💡', 'text': 'Idea brillante en equipo', 'type': 'positive', 'reason': 'Momento creativo'},
-        {'emoji': '😰', 'text': 'Estrés por deadline', 'type': 'negative', 'reason': 'Presión laboral común'},
-        {'emoji': '🤯', 'text': 'Sobrecarga de tareas', 'type': 'negative', 'reason': 'Hora de alta demanda'},
+        {
+          'emoji': '💼',
+          'text': 'Reunión productiva',
+          'type': 'positive',
+          'reason': 'Hora laboral perfecta'
+        },
+        {
+          'emoji': '📊',
+          'text': 'Presentación exitosa',
+          'type': 'positive',
+          'reason': 'Pico de productividad'
+        },
+        {
+          'emoji': '💡',
+          'text': 'Idea brillante en equipo',
+          'type': 'positive',
+          'reason': 'Momento creativo'
+        },
+        {
+          'emoji': '😰',
+          'text': 'Estrés por deadline',
+          'type': 'negative',
+          'reason': 'Presión laboral común'
+        },
+        {
+          'emoji': '🤯',
+          'text': 'Sobrecarga de tareas',
+          'type': 'negative',
+          'reason': 'Hora de alta demanda'
+        },
       ],
       'personal': [
-        {'emoji': '🏃‍♂️', 'text': 'Ejercicio energizante', 'type': 'positive', 'reason': 'Hora ideal para actividad'},
-        {'emoji': '📚', 'text': 'Lectura inspiradora', 'type': 'positive', 'reason': 'Momento de crecimiento'},
-        {'emoji': '🍳', 'text': 'Cocinando algo delicioso', 'type': 'positive', 'reason': 'Actividad relajante'},
-        {'emoji': '😴', 'text': 'Cansancio personal', 'type': 'negative', 'reason': 'Fatiga natural'},
-        {'emoji': '😞', 'text': 'Bajón emocional', 'type': 'negative', 'reason': 'Momento reflexivo'},
+        {
+          'emoji': '🏃‍♂️',
+          'text': 'Ejercicio energizante',
+          'type': 'positive',
+          'reason': 'Hora ideal para actividad'
+        },
+        {
+          'emoji': '📚',
+          'text': 'Lectura inspiradora',
+          'type': 'positive',
+          'reason': 'Momento de crecimiento'
+        },
+        {
+          'emoji': '🍳',
+          'text': 'Cocinando algo delicioso',
+          'type': 'positive',
+          'reason': 'Actividad relajante'
+        },
+        {
+          'emoji': '😴',
+          'text': 'Cansancio personal',
+          'type': 'negative',
+          'reason': 'Fatiga natural'
+        },
+        {
+          'emoji': '😞',
+          'text': 'Bajón emocional',
+          'type': 'negative',
+          'reason': 'Momento reflexivo'
+        },
       ],
       'social': [
-        {'emoji': '👥', 'text': 'Tiempo con amigos', 'type': 'positive', 'reason': 'Hora social perfecta'},
-        {'emoji': '☕', 'text': 'Café con alguien especial', 'type': 'positive', 'reason': 'Momento de conexión'},
-        {'emoji': '🎉', 'text': 'Celebración familiar', 'type': 'positive', 'reason': 'Tiempo de calidad'},
-        {'emoji': '😞', 'text': 'Conflicto interpersonal', 'type': 'negative', 'reason': 'Tensión social'},
-        {'emoji': '😔', 'text': 'Sentimiento de soledad', 'type': 'negative', 'reason': 'Necesidad de conexión'},
+        {
+          'emoji': '👥',
+          'text': 'Tiempo con amigos',
+          'type': 'positive',
+          'reason': 'Hora social perfecta'
+        },
+        {
+          'emoji': '☕',
+          'text': 'Café con alguien especial',
+          'type': 'positive',
+          'reason': 'Momento de conexión'
+        },
+        {
+          'emoji': '🎉',
+          'text': 'Celebración familiar',
+          'type': 'positive',
+          'reason': 'Tiempo de calidad'
+        },
+        {
+          'emoji': '😞',
+          'text': 'Conflicto interpersonal',
+          'type': 'negative',
+          'reason': 'Tensión social'
+        },
+        {
+          'emoji': '😔',
+          'text': 'Sentimiento de soledad',
+          'type': 'negative',
+          'reason': 'Necesidad de conexión'
+        },
       ],
       'health': [
-        {'emoji': '💪', 'text': 'Entrenamiento completado', 'type': 'positive', 'reason': 'Logro fitness'},
-        {'emoji': '🥗', 'text': 'Comida saludable', 'type': 'positive', 'reason': 'Bienestar nutricional'},
-        {'emoji': '🧘‍♀️', 'text': 'Meditación relajante', 'type': 'positive', 'reason': 'Momento zen'},
-        {'emoji': '🤒', 'text': 'No me siento bien', 'type': 'negative', 'reason': 'Malestar físico'},
-        {'emoji': '😪', 'text': 'Agotamiento físico', 'type': 'negative', 'reason': 'Necesidad de descanso'},
+        {
+          'emoji': '💪',
+          'text': 'Entrenamiento completado',
+          'type': 'positive',
+          'reason': 'Logro fitness'
+        },
+        {
+          'emoji': '🥗',
+          'text': 'Comida saludable',
+          'type': 'positive',
+          'reason': 'Bienestar nutricional'
+        },
+        {
+          'emoji': '🧘‍♀️',
+          'text': 'Meditación relajante',
+          'type': 'positive',
+          'reason': 'Momento zen'
+        },
+        {
+          'emoji': '🤒',
+          'text': 'No me siento bien',
+          'type': 'negative',
+          'reason': 'Malestar físico'
+        },
+        {
+          'emoji': '😪',
+          'text': 'Agotamiento físico',
+          'type': 'negative',
+          'reason': 'Necesidad de descanso'
+        },
       ],
       'creative': [
-        {'emoji': '🎨', 'text': 'Proyecto creativo avanzado', 'type': 'positive', 'reason': 'Inspiración activa'},
-        {'emoji': '💡', 'text': 'Idea brillante', 'type': 'positive', 'reason': 'Momento eureka'},
-        {'emoji': '🎵', 'text': 'Música que me inspira', 'type': 'positive', 'reason': 'Estímulo artístico'},
-        {'emoji': '😑', 'text': 'Bloqueo creativo', 'type': 'negative', 'reason': 'Estancamiento común'},
-        {'emoji': '😤', 'text': 'Frustración artística', 'type': 'negative', 'reason': 'Proceso creativo'},
+        {
+          'emoji': '🎨',
+          'text': 'Proyecto creativo avanzado',
+          'type': 'positive',
+          'reason': 'Inspiración activa'
+        },
+        {
+          'emoji': '💡',
+          'text': 'Idea brillante',
+          'type': 'positive',
+          'reason': 'Momento eureka'
+        },
+        {
+          'emoji': '🎵',
+          'text': 'Música que me inspira',
+          'type': 'positive',
+          'reason': 'Estímulo artístico'
+        },
+        {
+          'emoji': '😑',
+          'text': 'Bloqueo creativo',
+          'type': 'negative',
+          'reason': 'Estancamiento común'
+        },
+        {
+          'emoji': '😤',
+          'text': 'Frustración artística',
+          'type': 'negative',
+          'reason': 'Proceso creativo'
+        },
       ],
     };
 
-    return suggestions[_selectedCategory] ?? suggestions['work']!; // ✅ CORREGIDO
+    return suggestions[_selectedCategory] ??
+        suggestions['work']!; // ✅ CORREGIDO
   }
 
   Future<void> _addMoment({
@@ -2367,7 +2627,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
 
     if (authProvider.currentUser == null) return;
 
-    final success = await momentsProvider.clearAllMoments(authProvider.currentUser!.id!);
+    final success = await momentsProvider.clearAllMoments(
+        authProvider.currentUser!.id!);
 
     if (success) {
       _showEnhancedMessage('🗑️ Momentos eliminados');
@@ -2393,7 +2654,8 @@ class _InteractiveMomentsScreenState extends State<InteractiveMomentsScreen>
     try {
       final userId = authProvider.currentUser!.id!;
       final now = DateTime.now();
-      final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+      final timeStr = '${now.hour.toString().padLeft(2, '0')}:${now.minute
+          .toString().padLeft(2, '0')}';
 
       // ✅ MEJORAR: Crear texto detallado con momentos
       final momentsList = momentsProvider.moments.map((moment) {
@@ -2409,7 +2671,12 @@ $momentsList
 • Total de momentos: ${momentsProvider.totalCount}
 • Momentos positivos: ${momentsProvider.positiveCount} ✨
 • Momentos difíciles: ${momentsProvider.negativeCount} ☁️
-• Balance del día: ${momentsProvider.positiveCount > momentsProvider.negativeCount ? 'Predominantemente positivo' : momentsProvider.negativeCount > momentsProvider.positiveCount ? 'Con desafíos' : 'Balanceado'}''';
+• Balance del día: ${momentsProvider.positiveCount >
+          momentsProvider.negativeCount
+          ? 'Predominantemente positivo'
+          : momentsProvider.negativeCount > momentsProvider.positiveCount
+          ? 'Con desafíos'
+          : 'Balanceado'}''';
 
       final entryId = await _databaseService.saveInteractiveMomentsAsEntry(
         userId,
@@ -2418,7 +2685,8 @@ $momentsList
       );
 
       if (entryId != null) {
-        _showEnhancedMessage('✅ ${momentsProvider.totalCount} momentos guardados como entrada diaria');
+        _showEnhancedMessage('✅ ${momentsProvider
+            .totalCount} momentos guardados como entrada diaria');
 
         momentsProvider.clear();
 
@@ -2435,6 +2703,7 @@ $momentsList
       _showEnhancedMessage('Error guardando momentos', isError: true);
     }
   }
+
   void _showEnhancedMessage(String message, {bool isError = false}) {
     if (!mounted) return;
 
@@ -2492,6 +2761,7 @@ $momentsList
     final index = (mood - 1).clamp(0, 9).toInt();
     return moodEmojis[index];
   }
+
   Widget _buildMomentsTimelineSection(ThemeProvider themeProvider) {
     return Consumer<InteractiveMomentsProvider>(
       builder: (context, momentsProvider, child) {
@@ -2500,7 +2770,8 @@ $momentsList
         }
 
         return Container(
-          margin: const EdgeInsets.all(16),
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          // ✅ Reducido margen
           child: _buildGlassContainer(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -2510,28 +2781,30 @@ $momentsList
                     Icon(
                       Icons.timeline,
                       color: themeProvider.currentColors.accentPrimary,
-                      size: 18,
+                      size: 16, // ✅ Reducido
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6), // ✅ Reducido
                     Text(
                       '⏰ Momentos de Hoy',
                       style: TextStyle(
-                        fontSize: 16,
+                        fontSize: 14, // ✅ Reducido
                         fontWeight: FontWeight.bold,
                         color: themeProvider.currentColors.textPrimary,
                       ),
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2), // ✅ Reducido
                       decoration: BoxDecoration(
-                        color: themeProvider.currentColors.accentPrimary.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
+                        color: themeProvider.currentColors.accentPrimary
+                            .withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8), // ✅ Reducido
                       ),
                       child: Text(
-                        '${momentsProvider.totalCount} momentos',
+                        '${momentsProvider.totalCount}',
                         style: TextStyle(
-                          fontSize: 10,
+                          fontSize: 10, // ✅ Reducido
                           fontWeight: FontWeight.bold,
                           color: themeProvider.currentColors.accentPrimary,
                         ),
@@ -2539,17 +2812,18 @@ $momentsList
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8), // ✅ Reducido
 
-                // Timeline de momentos
+                // Timeline de momentos más compacto
                 SizedBox(
-                  height: 120,
+                  height: 80, // ✅ Reducido de 120 a 80
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     itemCount: momentsProvider.moments.length,
                     itemBuilder: (context, index) {
                       final moment = momentsProvider.moments[index];
-                      return _buildMomentTimelineCard(moment, themeProvider);
+                      return _buildCompactMomentCard(
+                          moment, themeProvider); // ✅ Nuevo método
                     },
                   ),
                 ),
@@ -2560,119 +2834,202 @@ $momentsList
       },
     );
   }
-}
-Widget _buildMomentTimelineCard(dynamic moment, ThemeProvider themeProvider) {
-  final isPositive = moment.type == 'positive';
-  final color = isPositive
-      ? themeProvider.currentColors.positiveMain
-      : themeProvider.currentColors.negativeMain;
 
-  return Container(
-    width: 140,
-    margin: const EdgeInsets.only(right: 12),
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          color.withOpacity(0.15),
-          color.withOpacity(0.05),
+  Widget _buildMomentTimelineCard(dynamic moment, ThemeProvider themeProvider) {
+    final isPositive = moment.type == 'positive';
+    final color = isPositive
+        ? themeProvider.currentColors.positiveMain
+        : themeProvider.currentColors.negativeMain;
+
+    return Container(
+      width: 140,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withOpacity(0.15),
+            color.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: color.withOpacity(0.3)),
-      boxShadow: [
-        BoxShadow(
-          color: color.withOpacity(0.2),
-          blurRadius: 8,
-          offset: const Offset(0, 4),
-        ),
-      ],
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header con emoji y hora
-        Row(
-          children: [
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                shape: BoxShape.circle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header con emoji y hora
+          Row(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    moment.emoji,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ),
               ),
-              child: Center(
+              const SizedBox(width: 8),
+              Expanded(
                 child: Text(
-                  moment.emoji,
-                  style: const TextStyle(fontSize: 12),
+                  moment.timeStr,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                moment.timeStr,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 8),
-
-        // Texto del momento
-        Expanded(
-          child: Text(
-            moment.text,
-            style: TextStyle(
-              fontSize: 12,
-              color: themeProvider.currentColors.textPrimary,
-              height: 1.3,
-            ),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
+            ],
           ),
-        ),
 
-        const SizedBox(height: 8),
+          const SizedBox(height: 8),
 
-        // Intensidad y categoría
-        Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8),
+          // Texto del momento
+          Expanded(
+            child: Text(
+              moment.text,
+              style: TextStyle(
+                fontSize: 12,
+                color: themeProvider.currentColors.textPrimary,
+                height: 1.3,
               ),
-              child: Text(
-                moment.category.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.bold,
-                  color: color,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // Intensidad y categoría
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  moment.category.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
                 ),
               ),
-            ),
-            const Spacer(),
-            Row(
-              children: List.generate(3, (i) {
-                return Icon(
-                  i < (moment.intensity / 3.33).round() ? Icons.circle : Icons.circle_outlined,
-                  size: 6,
-                  color: color.withOpacity(i < (moment.intensity / 3.33).round() ? 1.0 : 0.3),
-                );
-              }),
-            ),
+              const Spacer(),
+              Row(
+                children: List.generate(3, (i) {
+                  return Icon(
+                    i < (moment.intensity / 3.33).round() ? Icons.circle : Icons
+                        .circle_outlined,
+                    size: 6,
+                    color: color.withOpacity(
+                        i < (moment.intensity / 3.33).round() ? 1.0 : 0.3),
+                  );
+                }),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactMomentCard(dynamic moment, ThemeProvider themeProvider) {
+    final isPositive = moment.type == 'positive';
+    final color = isPositive
+        ? themeProvider.currentColors.positiveMain
+        : themeProvider.currentColors.negativeMain;
+
+    return Container(
+      width: 100,
+      // ✅ Reducido de 140 a 100
+      margin: const EdgeInsets.only(right: 8),
+      // ✅ Reducido
+      padding: const EdgeInsets.all(8),
+      // ✅ Reducido
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withOpacity(0.15),
+            color.withOpacity(0.05),
           ],
         ),
-      ],
-    ),
-  );
+        borderRadius: BorderRadius.circular(12), // ✅ Reducido
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header compacto
+          Row(
+            children: [
+              Text(moment.emoji, style: const TextStyle(fontSize: 14)),
+              // ✅ Reducido
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  moment.timeStr,
+                  style: TextStyle(
+                    fontSize: 9, // ✅ Reducido
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 4),
+
+          // Texto compacto
+          Expanded(
+            child: Text(
+              moment.text,
+              style: TextStyle(
+                fontSize: 10, // ✅ Reducido
+                color: themeProvider.currentColors.textPrimary,
+                height: 1.2,
+              ),
+              maxLines: 2, // ✅ Reducido
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+
+          // Indicador de intensidad compacto
+          Row(
+            children: List.generate(3, (i) {
+              return Icon(
+                i < (moment.intensity / 3.33).round() ? Icons.circle : Icons
+                    .circle_outlined,
+                size: 4, // ✅ Muy reducido
+                color: color.withOpacity(
+                    i < (moment.intensity / 3.33).round() ? 1.0 : 0.3),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
 }
