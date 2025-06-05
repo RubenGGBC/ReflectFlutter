@@ -212,6 +212,46 @@ class NotificationsProvider with ChangeNotifier {
     };
   }
 
+  /// Obtener resultado de la última operación
+  String? get lastOperationResult {
+    if (_errorMessage != null) return 'Error: $_errorMessage';
+    if (_isEnabled && _stats['daily_review_scheduled'] == true) {
+      return 'Recordatorio nocturno configurado correctamente';
+    }
+    return 'Configuración pendiente';
+  }
+
+  /// Obtener información de diagnóstico
+  Map<String, dynamic> getDiagnosticInfo() {
+    return {
+      'initialized': _isInitialized,
+      'enabled': _isEnabled,
+      'loading': _isLoading,
+      'error': _errorMessage,
+      'stats': _stats,
+      'platform': 'Android',
+      'version': '1.0.0',
+    };
+  }
+
+  /// Obtener mensaje de estado para la UI
+  String getStatusMessage() {
+    final config = getConfigInfo();
+    return config['description'] as String;
+  }
+
+  /// Verificar si necesita acción del usuario
+  bool needsUserAction() {
+    final config = getConfigInfo();
+    return config['action'] != null;
+  }
+
+  /// Obtener acción sugerida
+  String? getSuggestedAction() {
+    final config = getConfigInfo();
+    return config['action'] as String?;
+  }
+
   /// Helpers de estado
   void _setLoading(bool loading) {
     _isLoading = loading;
