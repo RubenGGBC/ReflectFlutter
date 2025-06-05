@@ -17,7 +17,8 @@ import 'presentation/screens/daily_review_screen.dart';
 import 'presentation/screens/theme_selector_screen.dart';
 import 'presentation/screens/profile_screen.dart';
 import 'injection_container.dart' as di;
-
+import 'presentation/providers/notifications_provider.dart';
+import 'presentation/screens/notifications_settings_screen.dart';
 class ReflectApp extends StatelessWidget {
   const ReflectApp({super.key});
 
@@ -33,6 +34,9 @@ class ReflectApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<InteractiveMomentsProvider>(
           create: (_) => di.sl<InteractiveMomentsProvider>(),
+        ),
+        ChangeNotifierProvider<NotificationsProvider>(
+          create: (_) => di.sl<NotificationsProvider>()..initialize(),
         ),
       ],
       child: Consumer<ThemeProvider>(
@@ -56,6 +60,7 @@ class ReflectApp extends StatelessWidget {
               '/daily_review': (context) => const DailyReviewScreen(),
               '/theme_selector': (context) => const ThemeSelectorScreen(),
               '/profile': (context) => const ProfileScreen(),
+              '/notifications_settings': (context) => const NotificationSettingsScreen(),
             },
 
             // Manejar rutas no encontradas

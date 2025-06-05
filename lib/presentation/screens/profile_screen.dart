@@ -8,6 +8,7 @@ import 'package:logger/logger.dart';
 
 import '../providers/auth_provider.dart';
 import '../widgets/custom_text_field.dart';
+import '../widgets/notification_settings_widget.dart';
 import '../widgets/themed_button.dart';
 import '../widgets/themed_container.dart';
 import '../../data/services/database_service.dart';
@@ -381,7 +382,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
-
+          ThemedButton(
+            onPressed: () => Navigator.of(context).pushNamed('/notifications_settings'),
+            type: ThemedButtonType.outlined,
+            width: double.infinity,
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text('🔔', style: TextStyle(fontSize: 16)),
+                SizedBox(width: 8),
+                Text('Configurar notificaciones'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
           // Botón de logout
           ThemedButton(
             onPressed: () => _showLogoutDialog(authProvider),

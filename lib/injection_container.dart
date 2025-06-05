@@ -9,6 +9,7 @@ import 'data/services/database_service.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/interactive_moments_provider.dart';
+import 'presentation/providers/notifications_provider.dart';
 
 final sl = GetIt.instance;
 
@@ -48,7 +49,10 @@ Future<void> init() async {
     sl.registerLazySingleton<InteractiveMomentsProvider>(
           () => InteractiveMomentsProvider(sl<DatabaseService>()),
     );
-
+    // Notifications Provider - Singleton
+    sl.registerLazySingleton<NotificationsProvider>(
+          () => NotificationsProvider(),
+    );
     logger.i('✅ Contenedor de dependencias inicializado');
 
   } catch (e) {
