@@ -10,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  sqflite_common_ffi: ^2.3.0 # o la última versión estable
 
   # 🎨 UI y Estado
   provider: ^6.1.2
@@ -19,6 +20,7 @@ dependencies:
   sqflite: ^2.3.3+1
   path_provider: ^2.1.3
   path: ^1.9.0
+
 
   # 🔐 Seguridad
   crypto: ^3.0.3
@@ -38,7 +40,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^6.0.0 # Changed this line
+  flutter_lints: ^5.0.0 # Changed this line
 
   # 🔧 Code Generation
   build_runner: ^2.4.9

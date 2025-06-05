@@ -620,57 +620,201 @@ class DatabaseService {
 // ============================================================================
 
   /// Convertir momentos interactivos del día en entrada diaria
+  // ============================================================================
+// MÉTODO MEJORADO EN database_service.dart - COMBINAR MOMENTOS
+// ============================================================================
+
+  /// Convertir momentos interactivos del día en entrada diaria (MEJORADO)
   Future<int?> saveInteractiveMomentsAsEntry(int userId, {String? reflection, bool? worthIt}) async {
     try {
-      _logger.i('🔄 Convirtiendo momentos interactivos en entrada diaria para usuario $userId');
+      _logger.i('🔄 Combinando momentos interactivos en entrada diaria para usuario $userId');
 
       // Obtener momentos del día
-      final moments = await getInteractiveMomentsToday(userId);
+      final newMoments = await getInteractiveMomentsToday(userId);
 
-      if (moments.isEmpty) {
-        _logger.w('⚠️ No hay momentos para convertir');
+      if (newMoments.isEmpty) {
+        _logger.w('⚠️ No hay momentos nuevos para guardar');
         return null;
       }
 
-      // Separar por tipo
-      final positiveTags = moments
+      // Verificar si ya existe entrada para hoy
+      final today = DateTime.now().toIso8601String().split('T')[0];
+      final existingEntry = await getDayEntry(userId, DateTime.now());
+
+      List<TagModel> combinedPositiveTags = [];
+      List<TagModel> combinedNegativeTags = [];
+      String combinedReflection = reflection ?? '';
+
+      if (existingEntry != null) {
+        // COMBINAR con momentos existentes
+        _logger.d('📝 Combinando con entrada existente');
+
+        // Combinar tags existentes
+        combinedPositiveTags.addAll(existingEntry.positiveTags);
+        combinedNegativeTags.addAll(existingEntry.negativeTags);
+
+        // Combinar reflexiones (mantener texto anterior)
+        if (existingEntry.freeReflection.isNotEmpty) {
+          combinedReflection = existingEntry.freeReflection;
+          if (reflection != null && reflection.isNotEmpty) {
+            combinedReflection += '\n\n--- Momentos añadidos ---\n$reflection';
+          }
+        }
+      }
+
+      // Separar nuevos momentos por tipo y convertir a tags
+      final newPositiveTags = newMoments
           .where((moment) => moment.type == 'positive')
           .map((moment) => moment.toTag())
           .toList();
 
-      final negativeTags = moments
+      final newNegativeTags = newMoments
           .where((moment) => moment.type == 'negative')
           .map((moment) => moment.toTag())
           .toList();
 
-      _logger.d('📊 Convertidos: ${positiveTags.length} positivos, ${negativeTags.length} negativos');
+      // Añadir nuevos tags a los existentes
+      combinedPositiveTags.addAll(newPositiveTags);
+      combinedNegativeTags.addAll(newNegativeTags);
 
-      // Crear entrada diaria
+      _logger.d('📊 Total combinado: ${combinedPositiveTags.length} positivos, ${combinedNegativeTags.length} negativos');
+
+      // Crear entrada diaria actualizada
       final entry = DailyEntryModel.create(
         userId: userId,
-        freeReflection: reflection ?? 'Entrada creada desde Momentos Interactivos',
-        positiveTags: positiveTags,
-        negativeTags: negativeTags,
+        freeReflection: combinedReflection.isNotEmpty
+            ? combinedReflection
+            : 'Momentos registrados a lo largo del día',
+        positiveTags: combinedPositiveTags,
+        negativeTags: combinedNegativeTags,
         worthIt: worthIt,
       );
 
-      // Guardar entrada
+      // Guardar entrada (esto actualizará si ya existe)
       final entryId = await saveDailyEntry(entry);
 
       if (entryId != null) {
-        // Limpiar momentos después de crear la entrada
+        // Limpiar solo los momentos nuevos después de combinarlos
         await clearInteractiveMomentsToday(userId);
-        _logger.i('✅ Entrada diaria creada con ID: $entryId');
+        _logger.i('✅ Entrada diaria actualizada con ID: $entryId');
         return entryId;
       } else {
-        _logger.e('❌ Error creando entrada diaria');
+        _logger.e('❌ Error actualizando entrada diaria');
         return null;
       }
 
     } catch (e) {
-      _logger.e('❌ Error convirtiendo momentos a entrada: $e');
+      _logger.e('❌ Error combinando momentos a entrada: $e');
       return null;
     }
+  }
+
+  /// Obtener entrada del día con momentos organizados por hora
+  Future<Map<String, dynamic>?> getDayEntryWithTimeline(int userId, DateTime date) async {
+    try {
+      final db = await database;
+      final dateStr = date.toIso8601String().split('T')[0];
+
+      // Obtener entrada diaria
+      final entry = await getDayEntry(userId, date);
+      if (entry == null) return null;
+
+      // Obtener momentos interactivos del día (si aún existen)
+      final List<Map<String, dynamic>> momentsResults = await db.query(
+        'interactive_moments',
+        where: 'user_id = ? AND entry_date = ?',
+        whereArgs: [userId, dateStr],
+        orderBy: 'time_str ASC, created_at ASC',
+      );
+
+      // Convertir momentos a timeline
+      final timeline = momentsResults.map((row) {
+        return {
+          'time': row['time_str'] as String,
+          'emoji': row['emoji'] as String,
+          'text': row['text'] as String,
+          'type': row['moment_type'] as String,
+          'intensity': row['intensity'] as int,
+          'category': row['category'] as String,
+          'created_at': row['created_at'] as String,
+        };
+      }).toList();
+
+      return {
+        'entry': entry,
+        'timeline': timeline,
+        'total_moments': entry.positiveTags.length + entry.negativeTags.length,
+        'timeline_moments': timeline.length,
+      };
+
+    } catch (e) {
+      _logger.e('❌ Error obteniendo entrada con timeline: $e');
+      return null;
+    }
+  }
+
+
+  /// Obtener estadísticas de momentos por hora del día
+  Future<Map<String, dynamic>> getMomentsHourlyStats(int userId, DateTime date) async {
+    try {
+      final db = await database;
+      final dateStr = date.toIso8601String().split('T')[0];
+
+      final List<Map<String, dynamic>> results = await db.rawQuery('''
+      SELECT 
+        time_str,
+        moment_type,
+        COUNT(*) as count,
+        intensity
+      FROM interactive_moments 
+      WHERE user_id = ? AND entry_date = ?
+      GROUP BY time_str, moment_type
+      ORDER BY time_str ASC
+    ''', [userId, dateStr]);
+
+      // Organizar por hora
+      final Map<String, Map<String, dynamic>> hourlyStats = {};
+
+      for (final row in results) {
+        final hour = row['time_str'] as String;
+        if (!hourlyStats.containsKey(hour)) {
+          hourlyStats[hour] = {'positive': 0, 'negative': 0, 'total': 0};
+        }
+
+        final type = row['moment_type'] as String;
+        final count = row['count'] as int;
+
+        hourlyStats[hour]![type] = count;
+        hourlyStats[hour]!['total'] = hourlyStats[hour]!['total']! + count;
+      }
+
+      return {
+        'hourly_stats': hourlyStats,
+        'peak_hour': _findPeakHour(hourlyStats),
+        'total_hours_active': hourlyStats.length,
+      };
+
+    } catch (e) {
+      _logger.e('❌ Error obteniendo estadísticas por hora: $e');
+      return {};
+    }
+  }
+
+  String? _findPeakHour(Map<String, Map<String, dynamic>> hourlyStats) {
+    if (hourlyStats.isEmpty) return null;
+
+    String? peakHour;
+    int maxTotal = 0;
+
+    hourlyStats.forEach((hour, stats) {
+      final total = stats['total'] as int;
+      if (total > maxTotal) {
+        maxTotal = total;
+        peakHour = hour;
+      }
+    });
+
+    return peakHour;
   }
 
   /// Obtener estadísticas comprehensivas del usuario
@@ -928,4 +1072,5 @@ class DatabaseService {
       return null;
     }
   }
+
 }

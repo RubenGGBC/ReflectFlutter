@@ -2,9 +2,12 @@
 // main.dart
 // ============================================================================
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
+
+import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // ✅ NUEVO IMPORT
 
 import 'app.dart';
 import 'injection_container.dart' as di;
@@ -16,6 +19,15 @@ void main() async {
   logger.i('🚀 === INICIANDO REFLECTAPP FLUTTER ===');
 
   try {
+    // ✅ Inicializar soporte para base de datos en escritorio
+    if (defaultTargetPlatform == TargetPlatform.linux ||
+        defaultTargetPlatform == TargetPlatform.macOS ||
+        defaultTargetPlatform == TargetPlatform.windows) {
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
+      logger.i('✅ sqflite_common_ffi inicializado para escritorio');
+    }
+
     // Inicializar dependencias
     await di.init();
     logger.i('✅ Dependencias inicializadas');

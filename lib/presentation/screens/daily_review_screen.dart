@@ -1,5 +1,5 @@
 // ============================================================================
-// presentation/screens/daily_review_screen.dart
+// presentation/screens/daily_review_screen.dart - VERSIÓN MEJORADA
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -36,8 +36,11 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
   bool _isLoading = false;
   double _moodScore = 5.0;
   bool? _worthIt;
-  List<TagModel> _positiveTags = [];
-  List<TagModel> _negativeTags = [];
+
+  // Datos del día
+  Map<String, dynamic>? _dayData;
+  List<Map<String, dynamic>> _timeline = [];
+  Map<String, dynamic> _hourlyStats = {};
 
   @override
   void initState() {
@@ -103,24 +106,32 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // Introducción
-          _buildIntroSection(themeProvider),
+          // Resumen del día con estadísticas
+          _buildDaySummaryCard(themeProvider),
           const SizedBox(height: 16),
 
-          // Resumen de momentos
-          _buildMomentsSection(themeProvider),
-          const SizedBox(height: 16),
+          // Timeline de momentos
+          if (_timeline.isNotEmpty) ...[
+            _buildTimelineCard(themeProvider),
+            const SizedBox(height: 16),
+          ],
 
-          // Reflexión libre
-          _buildReflectionSection(themeProvider),
+          // Estadísticas por hora
+          if (_hourlyStats.isNotEmpty) ...[
+            _buildHourlyStatsCard(themeProvider),
+            const SizedBox(height: 16),
+          ],
+
+          // Reflexión libre (con texto anterior preservado)
+          _buildReflectionCard(themeProvider),
           const SizedBox(height: 16),
 
           // Evaluación del día
-          _buildWorthItSection(themeProvider),
+          _buildWorthItCard(themeProvider),
           const SizedBox(height: 16),
 
           // Mood score
-          _buildMoodSection(themeProvider),
+          _buildMoodCard(themeProvider),
           const SizedBox(height: 20),
 
           // Botones de acción
@@ -131,194 +142,97 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
     );
   }
 
-  Widget _buildIntroSection(ThemeProvider themeProvider) {
-    final totalMoments = _positiveTags.length + _negativeTags.length;
-
-    String introText;
-    String introEmoji;
-
-    if (totalMoments > 0) {
-      introText = 'Has registrado $totalMoments momentos hoy. Es hora de reflexionar sobre tu día completo.';
-      introEmoji = '🌟';
-    } else {
-      introText = 'Aún no has registrado momentos específicos, pero puedes reflexionar sobre tu día.';
-      introEmoji = '💭';
-    }
-
-    return ThemedContainer(
-      child: Row(
-        children: [
-          Text(introEmoji, style: const TextStyle(fontSize: 32)),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Hora de reflexionar',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: themeProvider.currentColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  introText,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: themeProvider.currentColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMomentsSection(ThemeProvider themeProvider) {
-    if (_positiveTags.isEmpty && _negativeTags.isEmpty) {
-      return ThemedContainer(
-        child: Column(
-          children: [
-            Text(
-              '📋 Momentos del día',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: themeProvider.currentColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'No hay momentos específicos registrados. Puedes usar la reflexión libre abajo.',
-              style: TextStyle(
-                fontSize: 13,
-                color: themeProvider.currentColors.textSecondary,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      );
-    }
-
-    // Estadísticas
-    final stats = Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: [
-        Column(
-          children: [
-            Text(
-              '${_positiveTags.length}',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: themeProvider.currentColors.positiveMain,
-              ),
-            ),
-            Text(
-              'Positivos',
-              style: TextStyle(
-                fontSize: 12,
-                color: themeProvider.currentColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-        Container(
-          width: 2,
-          height: 40,
-          color: themeProvider.currentColors.borderColor,
-        ),
-        Column(
-          children: [
-            Text(
-              '${_negativeTags.length}',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: themeProvider.currentColors.negativeMain,
-              ),
-            ),
-            Text(
-              'Difíciles',
-              style: TextStyle(
-                fontSize: 12,
-                color: themeProvider.currentColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-
-    // Lista de momentos recientes
-    final allMoments = [..._positiveTags, ..._negativeTags];
-    final recentMoments = allMoments.take(3).map((tag) {
-      final isPositive = _positiveTags.contains(tag);
-      final color = isPositive
-          ? themeProvider.currentColors.positiveMain
-          : themeProvider.currentColors.negativeMain;
-
-      return Row(
-        children: [
-          Text(tag.emoji, style: const TextStyle(fontSize: 16)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              tag.name,
-              style: TextStyle(
-                fontSize: 13,
-                color: themeProvider.currentColors.textSecondary,
-              ),
-            ),
-          ),
-          Container(
-            width: 4,
-            height: 4,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-        ],
-      );
-    }).toList();
+  Widget _buildDaySummaryCard(ThemeProvider themeProvider) {
+    final totalMoments = _dayData?['total_moments'] ?? 0;
+    final timelineMoments = _dayData?['timeline_moments'] ?? 0;
+    final entry = _dayData?['entry'] as DailyEntryModel?;
 
     return ThemedContainer(
       child: Column(
         children: [
-          Text(
-            '📋 Momentos del día',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: themeProvider.currentColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 12),
-          stats,
-          if (recentMoments.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Text(
-              'Últimos momentos:',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-                color: themeProvider.currentColors.textSecondary,
+          Row(
+            children: [
+              Text('📊', style: const TextStyle(fontSize: 32)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Resumen del Día',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: themeProvider.currentColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      totalMoments > 0
+                          ? 'Has registrado $totalMoments momentos en total'
+                          : 'Aún no hay momentos registrados',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: themeProvider.currentColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Column(
-              children: recentMoments
-                  .map((moment) => Padding(
-                padding: const EdgeInsets.only(bottom: 6),
-                child: moment,
-              ))
-                  .toList(),
+            ],
+          ),
+
+          if (entry != null) ...[
+            const SizedBox(height: 16),
+
+            // Estadísticas detalladas
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    themeProvider.currentColors.accentPrimary.withOpacity(0.1),
+                    themeProvider.currentColors.accentSecondary.withOpacity(0.05),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: themeProvider.currentColors.borderColor.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildStatColumn(
+                    '😊',
+                    entry.positiveTags.length.toString(),
+                    'Positivos',
+                    themeProvider.currentColors.positiveMain,
+                  ),
+                  Container(
+                    width: 1,
+                    height: 40,
+                    color: themeProvider.currentColors.borderColor,
+                  ),
+                  _buildStatColumn(
+                    '😔',
+                    entry.negativeTags.length.toString(),
+                    'Difíciles',
+                    themeProvider.currentColors.negativeMain,
+                  ),
+                  Container(
+                    width: 1,
+                    height: 40,
+                    color: themeProvider.currentColors.borderColor,
+                  ),
+                  _buildStatColumn(
+                    '📝',
+                    entry.wordCount.toString(),
+                    'Palabras',
+                    themeProvider.currentColors.accentPrimary,
+                  ),
+                ],
+              ),
             ),
           ],
         ],
@@ -326,92 +240,387 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
     );
   }
 
-  Widget _buildReflectionSection(ThemeProvider themeProvider) {
-    // Prompts de ayuda
-    const prompts = [
-      '¿Qué aprendiste hoy?',
-      '¿Qué te hizo sonreír?',
-      '¿Qué cambiarías?',
-      '¿Cómo te sientes ahora?',
-    ];
-
-    final promptButtons = <Widget>[];
-    for (int i = 0; i < prompts.length; i += 2) {
-      final row = <Widget>[];
-      for (int j = 0; j < 2 && i + j < prompts.length; j++) {
-        final prompt = prompts[i + j];
-        row.add(
-          Expanded(
-            child: GestureDetector(
-              onTap: () => _addPromptToReflection(prompt),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+  Widget _buildTimelineCard(ThemeProvider themeProvider) {
+    return ThemedContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.timeline,
+                color: themeProvider.currentColors.accentPrimary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '⏰ Timeline del Día',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: themeProvider.currentColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: themeProvider.currentColors.surface,
-                  border: Border.all(color: themeProvider.currentColors.borderColor),
-                  borderRadius: BorderRadius.circular(16),
+                  color: themeProvider.currentColors.accentPrimary.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  prompt,
+                  '${_timeline.length} momentos',
                   style: TextStyle(
-                    fontSize: 11,
-                    color: themeProvider.currentColors.textSecondary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: themeProvider.currentColors.accentPrimary,
                   ),
-                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Timeline visual
+          Column(
+            children: _timeline.asMap().entries.map((entry) {
+              final index = entry.key;
+              final moment = entry.value;
+              final isLast = index == _timeline.length - 1;
+
+              return _buildTimelineItem(moment, isLast, themeProvider);
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineItem(Map<String, dynamic> moment, bool isLast, ThemeProvider themeProvider) {
+    final isPositive = moment['type'] == 'positive';
+    final color = isPositive
+        ? themeProvider.currentColors.positiveMain
+        : themeProvider.currentColors.negativeMain;
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Timeline visual
+        Column(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                shape: BoxShape.circle,
+                border: Border.all(color: color, width: 2),
+              ),
+              child: Center(
+                child: Text(
+                  moment['emoji'],
+                  style: const TextStyle(fontSize: 16),
                 ),
               ),
             ),
+            if (!isLast)
+              Container(
+                width: 2,
+                height: 40,
+                color: themeProvider.currentColors.borderColor.withOpacity(0.3),
+              ),
+          ],
+        ),
+
+        const SizedBox(width: 12),
+
+        // Contenido del momento
+        Expanded(
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: color.withOpacity(0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      moment['time'],
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        moment['category'].toString().toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                          color: color,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  moment['text'],
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: themeProvider.currentColors.textPrimary,
+                  ),
+                ),
+                if (moment['intensity'] != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Text(
+                        'Intensidad: ',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: themeProvider.currentColors.textHint,
+                        ),
+                      ),
+                      ...List.generate(10, (i) {
+                        return Icon(
+                          i < moment['intensity'] ? Icons.circle : Icons.circle_outlined,
+                          size: 8,
+                          color: color.withOpacity(i < moment['intensity'] ? 1.0 : 0.3),
+                        );
+                      }),
+                    ],
+                  ),
+                ],
+              ],
+            ),
           ),
-        );
-        if (j == 0 && i + j + 1 < prompts.length) {
-          row.add(const SizedBox(width: 8));
-        }
-      }
-      promptButtons.add(
-        Row(children: row),
-      );
-      if (i + 2 < prompts.length) {
-        promptButtons.add(const SizedBox(height: 6));
-      }
-    }
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHourlyStatsCard(ThemeProvider themeProvider) {
+    final hourlyStats = _hourlyStats['hourly_stats'] as Map<String, Map<String, dynamic>>? ?? {};
+    final peakHour = _hourlyStats['peak_hour'] as String?;
+    final totalHours = _hourlyStats['total_hours_active'] as int? ?? 0;
 
     return ThemedContainer(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '💭 Reflexión libre',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: themeProvider.currentColors.textPrimary,
-            ),
+          Row(
+            children: [
+              Icon(
+                Icons.bar_chart,
+                color: themeProvider.currentColors.accentSecondary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '📈 Actividad por Hora',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: themeProvider.currentColors.textPrimary,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          CustomTextField(
-            controller: _reflectionController,
-            label: '¿Cómo fue tu día? Reflexiona libremente...',
-            hint: 'Escribe aquí tus pensamientos...',
-            maxLines: 6,
-            minLines: 4,
+
+          // Estadísticas resumidas
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: themeProvider.currentColors.positiveMain.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: themeProvider.currentColors.positiveMain.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        peakHour ?? '--:--',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: themeProvider.currentColors.positiveMain,
+                        ),
+                      ),
+                      Text(
+                        'Hora más activa',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: themeProvider.currentColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: themeProvider.currentColors.accentPrimary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: themeProvider.currentColors.accentPrimary.withOpacity(0.3),
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        totalHours.toString(),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: themeProvider.currentColors.accentPrimary,
+                        ),
+                      ),
+                      Text(
+                        'Horas con actividad',
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: themeProvider.currentColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            '💡 Ideas para reflexionar:',
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: themeProvider.currentColors.textSecondary,
+
+          if (hourlyStats.isNotEmpty) ...[
+            const SizedBox(height: 16),
+
+            // Gráfico simple de barras por hora
+            Container(
+              height: 60,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: List.generate(24, (hour) {
+                  final hourStr = '${hour.toString().padLeft(2, '0')}:00';
+                  final stats = hourlyStats[hourStr];
+                  final total = stats?['total'] as int? ?? 0;
+                  final positive = stats?['positive'] as int? ?? 0;
+                  final negative = stats?['negative'] as int? ?? 0;
+
+                  return Expanded(
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 1),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          if (total > 0) ...[
+                            // Barra de negativos
+                            if (negative > 0)
+                              Container(
+                                height: (negative * 20.0),
+                                decoration: BoxDecoration(
+                                  color: themeProvider.currentColors.negativeMain,
+                                  borderRadius: const BorderRadius.only(
+                                    topLeft: Radius.circular(2),
+                                    topRight: Radius.circular(2),
+                                  ),
+                                ),
+                              ),
+                            // Barra de positivos
+                            if (positive > 0)
+                              Container(
+                                height: (positive * 20.0),
+                                decoration: BoxDecoration(
+                                  color: themeProvider.currentColors.positiveMain,
+                                  borderRadius: negative > 0
+                                      ? null
+                                      : const BorderRadius.only(
+                                    topLeft: Radius.circular(2),
+                                    topRight: Radius.circular(2),
+                                  ),
+                                ),
+                              ),
+                          ] else ...[
+                            Container(
+                              height: 2,
+                              color: themeProvider.currentColors.borderColor.withOpacity(0.3),
+                            ),
+                          ],
+                          const SizedBox(height: 4),
+                          if (hour % 6 == 0)
+                            Text(
+                              '${hour.toString().padLeft(2, '0')}',
+                              style: TextStyle(
+                                fontSize: 8,
+                                color: themeProvider.currentColors.textHint,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Column(children: promptButtons),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildWorthItSection(ThemeProvider themeProvider) {
+  Widget _buildReflectionCard(ThemeProvider themeProvider) {
+    return ThemedContainer(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '💭 Reflexión del Día',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: themeProvider.currentColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Añade tus pensamientos sobre el día. Tu reflexión anterior se mantendrá.',
+            style: TextStyle(
+              fontSize: 12,
+              color: themeProvider.currentColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 12),
+          CustomTextField(
+            controller: _reflectionController,
+            label: 'Reflexiona sobre tu día...',
+            hint: 'Escribe aquí tus pensamientos adicionales...',
+            maxLines: 6,
+            minLines: 4,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWorthItCard(ThemeProvider themeProvider) {
     final options = [
       {
         'value': true,
@@ -441,7 +650,7 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
             '⚖️ ¿Mereció la pena el día?',
             style: TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.bold,
               color: themeProvider.currentColors.textPrimary,
             ),
           ),
@@ -500,12 +709,12 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
     );
   }
 
-  Widget _buildMoodSection(ThemeProvider themeProvider) {
+  Widget _buildMoodCard(ThemeProvider themeProvider) {
     return ThemedContainer(
       child: MoodSlider(
         value: _moodScore,
         onChanged: (value) => setState(() => _moodScore = value),
-        label: '🎭 ¿Cómo calificas tu día?',
+        label: '🎭 ¿Cómo calificas tu día en general?',
       ),
     );
   }
@@ -518,13 +727,14 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
             onPressed: _saveDailyReview,
             type: ThemedButtonType.positive,
             height: 50,
+            isLoading: _isLoading,
             child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text('💾', style: TextStyle(fontSize: 16)),
                 SizedBox(width: 8),
                 Text(
-                  'Guardar día',
+                  'Guardar Reflexión Final',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -561,6 +771,30 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
     );
   }
 
+  Widget _buildStatColumn(String emoji, String value, String label, Color color) {
+    return Column(
+      children: [
+        Text(emoji, style: const TextStyle(fontSize: 20)),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: context.read<ThemeProvider>().currentColors.textSecondary,
+          ),
+        ),
+      ],
+    );
+  }
+
   // ============================================================================
   // MÉTODOS DE NEGOCIO
   // ============================================================================
@@ -574,31 +808,23 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
     try {
       final userId = authProvider.currentUser!.id!;
 
-      // Cargar momentos interactivos de hoy
-      final momentsProvider = context.read<InteractiveMomentsProvider>();
-      await momentsProvider.loadTodayMoments(userId);
+      // Cargar datos del día con timeline
+      _dayData = await _databaseService.getDayEntryWithTimeline(userId, DateTime.now());
 
-      // Convertir momentos a tags
-      final moments = momentsProvider.moments;
-      _positiveTags = moments
-          .where((m) => m.type == 'positive')
-          .map((m) => m.toTag())
-          .toList();
+      if (_dayData != null) {
+        final entry = _dayData!['entry'] as DailyEntryModel;
+        _timeline = List<Map<String, dynamic>>.from(_dayData!['timeline']);
 
-      _negativeTags = moments
-          .where((m) => m.type == 'negative')
-          .map((m) => m.toTag())
-          .toList();
-
-      // Cargar entrada existente si existe
-      final existingEntry = await _databaseService.getDayEntry(userId, DateTime.now());
-      if (existingEntry != null) {
-        _reflectionController.text = existingEntry.freeReflection;
-        _worthIt = existingEntry.worthIt;
-        _moodScore = existingEntry.moodScore?.toDouble() ?? 5.0;
+        // Cargar datos en los controladores
+        _reflectionController.text = entry.freeReflection;
+        _worthIt = entry.worthIt;
+        _moodScore = entry.moodScore?.toDouble() ?? 5.0;
       }
 
-      _logger.d('📊 Datos cargados: ${_positiveTags.length} positivos, ${_negativeTags.length} negativos');
+      // Cargar estadísticas por hora
+      _hourlyStats = await _databaseService.getMomentsHourlyStats(userId, DateTime.now());
+
+      _logger.d('📊 Datos cargados: ${_dayData?['total_moments']} momentos totales, ${_timeline.length} en timeline');
 
     } catch (e) {
       _logger.e('❌ Error cargando datos del día: $e');
@@ -608,20 +834,6 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
     }
   }
 
-  void _addPromptToReflection(String prompt) {
-    final current = _reflectionController.text;
-    final newText = current.isEmpty
-        ? '$prompt '
-        : current.endsWith('\n')
-        ? '$current$prompt '
-        : '$current\n\n$prompt ';
-
-    _reflectionController.text = newText;
-    _reflectionController.selection = TextSelection.fromPosition(
-      TextPosition(offset: newText.length),
-    );
-  }
-
   Future<void> _saveDailyReview() async {
     final authProvider = context.read<AuthProvider>();
     if (authProvider.currentUser == null) {
@@ -629,45 +841,55 @@ class _DailyReviewScreenState extends State<DailyReviewScreen> {
       return;
     }
 
-    if (_reflectionController.text.trim().isEmpty) {
-      _showMessage('Añade una reflexión antes de guardar', isError: true);
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
       final userId = authProvider.currentUser!.id!;
+      final existingEntry = _dayData?['entry'] as DailyEntryModel?;
 
-      final entry = DailyEntryModel.create(
-        userId: userId,
-        freeReflection: _reflectionController.text.trim(),
-        positiveTags: _positiveTags,
-        negativeTags: _negativeTags,
+      String finalReflection = _reflectionController.text.trim();
+
+      // Si hay entrada existente, preservar reflexión anterior
+      if (existingEntry != null && existingEntry.freeReflection.isNotEmpty) {
+        if (finalReflection.isNotEmpty && finalReflection != existingEntry.freeReflection) {
+          finalReflection = '${existingEntry.freeReflection}\n\n--- Reflexión adicional ---\n$finalReflection';
+        } else if (finalReflection.isEmpty) {
+          finalReflection = existingEntry.freeReflection;
+        }
+      }
+
+      final entry = existingEntry?.copyWith(
+        freeReflection: finalReflection.isNotEmpty
+            ? finalReflection
+            : 'Día revisado sin reflexión adicional',
         worthIt: _worthIt,
-      );
+        moodScore: _moodScore.round(),
+        updatedAt: DateTime.now(),
+      ) ?? DailyEntryModel.create(
+        userId: userId,
+        freeReflection: finalReflection.isNotEmpty
+            ? finalReflection
+            : 'Día revisado sin momentos específicos',
+        worthIt: _worthIt,
+      ).copyWith(moodScore: _moodScore.round());
 
-      // Sobrescribir mood score
-      final entryWithMood = entry.copyWith(moodScore: _moodScore.round());
-
-      final entryId = await _databaseService.saveDailyEntry(entryWithMood);
+      final entryId = await _databaseService.saveDailyEntry(entry);
 
       if (entryId != null) {
-        _showMessage('✅ Día guardado correctamente');
+        _showMessage('✅ Reflexión final guardada correctamente');
 
-        // Navegar al calendario después de un momento
         Future.delayed(const Duration(milliseconds: 1500), () {
           if (mounted) {
             Navigator.of(context).pushReplacementNamed('/calendar');
           }
         });
       } else {
-        _showMessage('Error guardando el día', isError: true);
+        _showMessage('Error guardando la reflexión', isError: true);
       }
 
     } catch (e) {
       _logger.e('❌ Error guardando revisión diaria: $e');
-      _showMessage('Error guardando el día', isError: true);
+      _showMessage('Error guardando la reflexión', isError: true);
     } finally {
       setState(() => _isLoading = false);
     }
