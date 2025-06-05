@@ -1,5 +1,5 @@
 // ============================================================================
-// presentation/widgets/notification_settings_widget.dart - CONFIGURACIÓN DE NOTIFICACIONES
+// presentation/widgets/notification_settings_widget.dart - VERSIÓN MEJORADA
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -13,11 +13,13 @@ import 'themed_button.dart';
 class NotificationSettingsWidget extends StatelessWidget {
   final bool showHeader;
   final bool isCard;
+  final bool showDebugInfo;
 
   const NotificationSettingsWidget({
     super.key,
     this.showHeader = true,
     this.isCard = true,
+    this.showDebugInfo = false,
   });
 
   @override
@@ -51,7 +53,24 @@ class NotificationSettingsWidget extends StatelessWidget {
 
         Consumer<NotificationsProvider>(
           builder: (context, notificationsProvider, child) {
-            return _buildNotificationStatus(notificationsProvider, themeProvider);
+            return Column(
+              children: [
+                _buildNotificationStatus(notificationsProvider, themeProvider),
+
+                // ✅ NUEVO: Mostrar mensajes de feedback
+                if (notificationsProvider.lastOperationResult != null ||
+                    notificationsProvider.errorMessage != null) ...[
+                  const SizedBox(height: 12),
+                  _buildFeedbackMessage(notificationsProvider, themeProvider),
+                ],
+
+                // ✅ NUEVO: Información de debugging opcional
+                if (showDebugInfo) ...[
+                  const SizedBox(height: 16),
+                  _buildDebugInfo(notificationsProvider, themeProvider),
+                ],
+              ],
+            );
           },
         ),
       ],
@@ -62,6 +81,112 @@ class NotificationSettingsWidget extends StatelessWidget {
     } else {
       return content;
     }
+  }
+
+  /// ✅ NUEVO: Widget para mostrar mensajes de feedback
+  Widget _buildFeedbackMessage(NotificationsProvider provider, ThemeProvider themeProvider) {
+    final hasError = provider.errorMessage != null;
+    final message = hasError ? provider.errorMessage! : provider.lastOperationResult!;
+    final color = hasError
+        ? themeProvider.currentColors.negativeMain
+        : themeProvider.currentColors.positiveMain;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            hasError ? Icons.error : Icons.check_circle,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message,
+              style: TextStyle(
+                fontSize: 12,
+                color: themeProvider.currentColors.textPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// ✅ NUEVO: Información de debugging detallada
+  Widget _buildDebugInfo(NotificationsProvider provider, ThemeProvider themeProvider) {
+    final diagnostic = provider.getDiagnosticInfo();
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: themeProvider.currentColors.surfaceVariant.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: themeProvider.currentColors.borderColor.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '🔧 Información de Debug',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: themeProvider.currentColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          ...diagnostic['provider_state'].entries.map((entry) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 100,
+                    child: Text(
+                      '${entry.key}:',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: themeProvider.currentColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text(
+                      '${entry.value}',
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: themeProvider.currentColors.textPrimary,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+
+          const SizedBox(height: 8),
+          Text(
+            'Notificaciones pendientes: ${diagnostic['stats']['pending_details']?.length ?? 0}',
+            style: TextStyle(
+              fontSize: 10,
+              color: themeProvider.currentColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildNotificationStatus(NotificationsProvider provider, ThemeProvider themeProvider) {
@@ -261,7 +386,7 @@ class NotificationSettingsWidget extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          'Algunas notificaciones no están programadas',
+                          'Algunas notificaciones no se programaron correctamente',
                           style: TextStyle(
                             fontSize: 12,
                             color: themeProvider.currentColors.textSecondary,
@@ -289,6 +414,7 @@ class NotificationSettingsWidget extends StatelessWidget {
                     child: ThemedButton(
                       onPressed: () => provider.sendTestNotification(),
                       height: 40,
+                      isLoading: provider.isLoading,
                       child: const Text('Probar'),
                     ),
                   ),
@@ -406,6 +532,7 @@ class NotificationSettingsWidget extends StatelessWidget {
                       onPressed: () => provider.sendTestNotification(),
                       type: ThemedButtonType.outlined,
                       height: 40,
+                      isLoading: provider.isLoading,
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -419,15 +546,16 @@ class NotificationSettingsWidget extends StatelessWidget {
                   const SizedBox(width: 8),
                   Expanded(
                     child: ThemedButton(
-                      onPressed: () => _showAdvancedOptions(provider, themeProvider),
+                      onPressed: () => provider.updateStats(),
                       type: ThemedButtonType.text,
                       height: 40,
+                      isLoading: provider.isLoading,
                       child: const Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.settings, size: 16),
+                          Icon(Icons.refresh, size: 16),
                           SizedBox(width: 4),
-                          Text('Opciones'),
+                          Text('Actualizar'),
                         ],
                       ),
                     ),
@@ -471,12 +599,28 @@ class NotificationSettingsWidget extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          ThemedButton(
-            onPressed: () => provider.initialize(),
-            type: ThemedButtonType.outlined,
-            width: double.infinity,
-            height: 40,
-            child: const Text('Reintentar'),
+          Row(
+            children: [
+              Expanded(
+                child: ThemedButton(
+                  onPressed: () => provider.initialize(),
+                  type: ThemedButtonType.outlined,
+                  height: 40,
+                  isLoading: provider.isLoading,
+                  child: const Text('Reintentar'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: ThemedButton(
+                  onPressed: () => provider.checkNotificationStatus(),
+                  type: ThemedButtonType.text,
+                  height: 40,
+                  isLoading: provider.isLoading,
+                  child: const Text('Diagnosticar'),
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -544,14 +688,5 @@ class NotificationSettingsWidget extends StatelessWidget {
         ],
       ),
     );
-  }
-
-  void _showAdvancedOptions(NotificationsProvider provider, ThemeProvider themeProvider) {
-    // TODO: Implementar diálogo de opciones avanzadas
-    // Aquí podrías mostrar un diálogo con opciones como:
-    // - Cambiar hora de notificación nocturna
-    // - Ajustar frecuencia de recordatorios
-    // - Personalizar mensajes
-    // - Etc.
   }
 }

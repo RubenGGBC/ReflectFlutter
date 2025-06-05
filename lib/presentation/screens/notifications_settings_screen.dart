@@ -38,7 +38,7 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
               child: Column(
                 children: [
                   // Widget principal de notificaciones
-                  const NotificationSettingsWidget(),
+                  const NotificationSettingsWidget(showHeader: true),
                   const SizedBox(height: 16),
 
                   // Información detallada
@@ -517,4 +517,5 @@ class _NotificationSettingsScreenState extends State<NotificationSettingsScreen>
       ),
     );
   }
+
 }
