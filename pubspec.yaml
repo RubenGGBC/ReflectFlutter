@@ -23,13 +23,17 @@ dependencies:
   get_it: ^7.6.4
   cupertino_icons: ^1.0.6
 
+  # 🔔 NOTIFICACIONES
+  flutter_local_notifications: ^17.2.2
+  timezone: ^0.9.4
+  permission_handler: ^11.3.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.1
   build_runner: ^2.4.7
   json_serializable: ^6.7.1
-  # Removed: untitled3: any  <-- THIS LINE IS THE PROBLEM
 
 flutter:
   uses-material-design: true
