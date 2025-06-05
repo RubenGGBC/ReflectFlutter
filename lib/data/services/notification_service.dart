@@ -1,9 +1,9 @@
 // ============================================================================
-// data/services/notification_service.dart - VERSIÓN CORREGIDA
+// data/services/notification_service.dart - SOLUCIÓN ESPECÍFICA ANDROID
 // ============================================================================
 
-import 'dart:math';
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
@@ -21,291 +21,408 @@ class NotificationService {
   final Random _random = Random();
 
   bool _isInitialized = false;
-  bool _permissionsGranted = false;
+  bool _hasPermissions = false;
   int _notificationIdCounter = 1000;
 
   // IDs fijos para diferentes tipos
   static const int dailyReviewNotificationId = 1;
   static const int randomCheckInBaseId = 100;
 
-  /// Inicializar el servicio de notificaciones
+  /// Inicializar el servicio con enfoque específico en Android
   Future<bool> initialize() async {
-    if (_isInitialized) return _permissionsGranted;
+    if (_isInitialized) return _hasPermissions;
 
     try {
-      _logger.i('🔔 Inicializando servicio de notificaciones');
+      _logger.i('🔔 [INIT] Iniciando NotificationService...');
 
-      // Verificar si es plataforma compatible
-      if (!_isSupportedPlatform()) {
-        _logger.i('📱 Notificaciones no soportadas en esta plataforma');
+      if (!_isMobilePlatform()) {
+        _logger.i('💻 [INIT] Plataforma desktop - simulando éxito');
         _isInitialized = true;
-        _permissionsGranted = false;
-        return false;
+        _hasPermissions = true;
+        return true;
       }
 
-      // ✅ CORREGIR: Inicializar timezone correctamente
-      await _initializeTimezone();
+      // ✅ PASO 1: Inicializar timezone con fallback robusto
+      await _initializeTimezoneRobust();
 
-      // Configuración para Android
-      const AndroidInitializationSettings androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      // ✅ PASO 2: Configurar notificaciones básicas
+      await _initializeNotificationPlugin();
 
-      // Configuración para iOS
-      const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
-        requestSoundPermission: true,
-        requestBadgePermission: true,
-        requestAlertPermission: true,
-        defaultPresentAlert: true,
-        defaultPresentSound: true,
-        defaultPresentBadge: true,
-      );
+      // ✅ PASO 3: Verificar y solicitar TODOS los permisos necesarios
+      await _requestAllRequiredPermissions();
 
-      const InitializationSettings initSettings = InitializationSettings(
-        android: androidSettings,
-        iOS: iosSettings,
-      );
-
-      // Inicializar plugin con manejo de errores mejorado
-      try {
-        final bool? result = await _notificationsPlugin.initialize(
-          initSettings,
-          onDidReceiveNotificationResponse: _onNotificationResponse,
-        );
-
-        if (result != true) {
-          _logger.e('❌ Plugin de notificaciones falló en inicializar');
-          _isInitialized = true;
-          _permissionsGranted = false;
-          return false;
-        }
-      } catch (e) {
-        _logger.e('❌ Error inicializando plugin: $e');
-        _isInitialized = true;
-        _permissionsGranted = false;
-        return false;
-      }
-
-      // Verificar permisos existentes
-      _permissionsGranted = await _checkExistingPermissions();
       _isInitialized = true;
+      _logger.i('✅ [INIT] NotificationService inicializado correctamente');
 
-      _logger.i('✅ Notificaciones inicializadas - Permisos: $_permissionsGranted');
-      return _permissionsGranted;
+      return _hasPermissions;
 
-    } catch (e) {
-      _logger.e('❌ Error crítico en inicialización: $e');
+    } catch (e, stackTrace) {
+      _logger.e('❌ [INIT] Error fatal: $e');
+      _logger.e('[INIT] Stack trace: $stackTrace');
+
       _isInitialized = true;
-      _permissionsGranted = false;
+      _hasPermissions = false;
       return false;
     }
   }
 
-  /// ✅ NUEVO: Inicializar timezone correctamente
-  Future<void> _initializeTimezone() async {
+  /// ✅ MEJORADO: Configuración de timezone más robusta
+  Future<void> _initializeTimezoneRobust() async {
     try {
+      _logger.d('🕐 [TZ] Configurando timezone...');
+
       tz.initializeTimeZones();
 
-      // Configurar zona horaria local
-      if (Platform.isAndroid || Platform.isIOS) {
-        // Para móviles, usar zona horaria del sistema
-        final String timeZoneName = await _getDeviceTimeZone();
-        tz.setLocalLocation(tz.getLocation(timeZoneName));
-      } else {
-        // Para desktop, usar UTC por defecto
-        tz.setLocalLocation(tz.getLocation('UTC'));
-      }
+      // ✅ CORREGIR: Usar timezone de España por defecto
+      String timezoneName = 'Europe/Madrid';
 
-      _logger.d('🌍 Timezone configurado: ${tz.local.name}');
-    } catch (e) {
-      _logger.w('⚠️ Error configurando timezone, usando UTC: $e');
-      tz.setLocalLocation(tz.getLocation('UTC'));
-    }
-  }
-
-  /// ✅ NUEVO: Obtener zona horaria del dispositivo
-  Future<String> _getDeviceTimeZone() async {
-    try {
-      // Lista de zonas horarias comunes por si falla la detección
-      const commonTimeZones = [
-        'Europe/Madrid',     // España
-        'America/New_York',  // US Este
-        'America/Los_Angeles', // US Oeste
-        'Europe/London',     // Reino Unido
-        'UTC',              // Fallback
-      ];
-
-      // Intentar detectar automáticamente
-      final now = DateTime.now();
-      final offset = now.timeZoneOffset.inHours;
-
-      // Mapear offset común a zona horaria
-      String timeZone = 'UTC';
-      switch (offset) {
-        case 1:
-          timeZone = 'Europe/Madrid';
-          break;
-        case 0:
-          timeZone = 'Europe/London';
-          break;
-        case -5:
-          timeZone = 'America/New_York';
-          break;
-        case -8:
-          timeZone = 'America/Los_Angeles';
-          break;
-        default:
-          timeZone = 'UTC';
-      }
-
-      // Verificar que la zona horaria existe
       try {
-        tz.getLocation(timeZone);
-        return timeZone;
+        tz.setLocalLocation(tz.getLocation(timezoneName));
+        _logger.i('🕐 [TZ] ✅ Timezone configurado: $timezoneName');
       } catch (e) {
-        _logger.w('⚠️ Timezone $timeZone no encontrado, usando UTC');
-        return 'UTC';
+        _logger.w('⚠️ [TZ] Error con $timezoneName, usando UTC: $e');
+        tz.setLocalLocation(tz.getLocation('UTC'));
+        timezoneName = 'UTC';
       }
+
+      // ✅ VERIFICAR: Probar que el timezone funciona
+      final now = tz.TZDateTime.now(tz.local);
+      _logger.d('🕐 [TZ] Hora actual: ${now.toString()}');
+
     } catch (e) {
-      _logger.w('⚠️ Error detectando timezone: $e');
-      return 'UTC';
+      _logger.e('❌ [TZ] Error configurando timezone: $e');
+      rethrow;
     }
   }
 
-  /// Verificar si es plataforma soportada
-  bool _isSupportedPlatform() {
-    return Platform.isAndroid || Platform.isIOS;
-  }
-
-  /// ✅ MEJORADO: Verificar permisos existentes
-  Future<bool> _checkExistingPermissions() async {
+  /// ✅ MEJORADO: Inicialización del plugin con configuración Android específica
+  Future<void> _initializeNotificationPlugin() async {
     try {
-      if (Platform.isAndroid) {
-        // Para Android 13+ necesitamos permisos específicos
-        final status = await Permission.notification.status;
-        _logger.d('📱 Estado permisos Android: $status');
-        return status == PermissionStatus.granted;
-      } else if (Platform.isIOS) {
-        // Para iOS, verificar con el plugin
-        final bool? result = await _notificationsPlugin
-            .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
-            ?.requestPermissions(
-          alert: false, // No solicitar, solo verificar
-          badge: false,
-          sound: false,
-        );
-        _logger.d('📱 Permisos iOS verificados: $result');
-        return result ?? false;
-      }
-      return false;
-    } catch (e) {
-      _logger.e('❌ Error verificando permisos: $e');
-      return false;
-    }
-  }
+      _logger.d('📱 [PLUGIN] Configurando notificaciones...');
 
-  /// ✅ MEJORADO: Solicitar permisos con mejor manejo
-  Future<bool> requestPermissions() async {
-    try {
-      _logger.i('🔔 Solicitando permisos de notificaciones');
-
-      if (!_isSupportedPlatform()) {
-        _logger.w('📱 Plataforma no soportada para notificaciones');
-        return false;
-      }
-
-      bool granted = false;
+      final InitializationSettings initSettings;
 
       if (Platform.isAndroid) {
-        // Solicitar permisos en Android
-        final status = await Permission.notification.request();
-        granted = status == PermissionStatus.granted;
-
-        if (!granted) {
-          _logger.w('⚠️ Permisos Android denegados: $status');
-          if (status == PermissionStatus.permanentlyDenied) {
-            _logger.i('📱 Permisos permanentemente denegados - abrir configuración');
-            // TODO: Mostrar diálogo para abrir configuración
-          }
-        }
-      } else if (Platform.isIOS) {
-        // Solicitar permisos en iOS
-        final bool? result = await _notificationsPlugin
-            .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
-            ?.requestPermissions(
-          alert: true,
-          badge: true,
-          sound: true,
+        const AndroidInitializationSettings androidSettings = AndroidInitializationSettings(
+          '@mipmap/ic_launcher',
+          // ✅ NUEVO: Configuraciones específicas para Android
         );
-        granted = result ?? false;
 
-        if (!granted) {
-          _logger.w('⚠️ Permisos iOS denegados');
-        }
-      }
+        initSettings = const InitializationSettings(
+          android: androidSettings,
+        );
+      } else if (Platform.isIOS) {
+        const DarwinInitializationSettings iosSettings = DarwinInitializationSettings(
+          requestSoundPermission: true,
+          requestBadgePermission: true,
+          requestAlertPermission: true,
+          defaultPresentAlert: true,
+          defaultPresentSound: true,
+          defaultPresentBadge: true,
+        );
 
-      _permissionsGranted = granted;
-
-      if (granted) {
-        _logger.i('✅ Permisos otorgados - configurando notificaciones');
-        await _setupDailyNotifications();
+        initSettings = const InitializationSettings(
+          iOS: iosSettings,
+        );
       } else {
-        _logger.w('❌ Permisos denegados - no se configurarán notificaciones');
+        throw Exception('Plataforma no soportada');
       }
 
-      return granted;
+      final bool? result = await _notificationsPlugin.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: _onNotificationResponse,
+      );
+
+      if (result != true) {
+        throw Exception('Plugin initialize() devolvió: $result');
+      }
+
+      _logger.i('📱 [PLUGIN] ✅ Plugin inicializado correctamente');
+
     } catch (e) {
-      _logger.e('❌ Error solicitando permisos: $e');
-      return false;
+      _logger.e('❌ [PLUGIN] Error: $e');
+      rethrow;
     }
   }
 
-  /// ✅ MEJORADO: Configurar notificaciones con mejor manejo de errores
-  Future<void> _setupDailyNotifications() async {
-    if (!_permissionsGranted) {
-      _logger.w('⚠️ No hay permisos para configurar notificaciones');
-      return;
-    }
-
+  /// ✅ NUEVO: Solicitar TODOS los permisos necesarios paso a paso
+  Future<void> _requestAllRequiredPermissions() async {
     try {
-      _logger.i('🔄 Configurando notificaciones diarias...');
+      _logger.d('🔐 [PERMS] Verificando permisos necesarios...');
 
-      // Cancelar notificaciones existentes
-      await cancelAllNotifications();
+      if (Platform.isAndroid) {
+        await _requestAndroidPermissions();
+      } else if (Platform.isIOS) {
+        await _requestIOSPermissions();
+      }
 
-      // Configurar notificación nocturna
-      final nightlySuccess = await _scheduleNightlyReviewReminder();
-
-      // Configurar recordatorios aleatorios
-      final randomSuccess = await _scheduleRandomDayCheckIns();
-
-      _logger.i('✅ Notificaciones configuradas - Nocturna: $nightlySuccess, Aleatorias: $randomSuccess');
+      _logger.i('🔐 [PERMS] Estado final: ${_hasPermissions ? "✅ OTORGADOS" : "❌ DENEGADOS"}');
 
     } catch (e) {
-      _logger.e('❌ Error configurando notificaciones diarias: $e');
-      throw e; // Re-lanzar para que el caller pueda manejar el error
+      _logger.e('❌ [PERMS] Error: $e');
+      _hasPermissions = false;
+      rethrow;
     }
   }
 
-  /// ✅ CORREGIDO: Programar notificación nocturna con manejo de errores
-  Future<bool> _scheduleNightlyReviewReminder() async {
+  /// ✅ MEJORADO: Permisos Android con verificación paso a paso
+  Future<void> _requestAndroidPermissions() async {
     try {
-      final now = DateTime.now();
-      var scheduledDate = DateTime(now.year, now.month, now.day, 22, 30);
+      _logger.d('📱 [ANDROID] Verificando permisos Android...');
 
-      // Si ya pasó la hora, programar para mañana
+      // ✅ PASO 1: Permiso básico de notificaciones
+      PermissionStatus notificationStatus = await Permission.notification.status;
+      _logger.d('📱 [ANDROID] Permiso notificaciones: $notificationStatus');
+
+      if (notificationStatus.isDenied) {
+        _logger.i('📱 [ANDROID] Solicitando permiso de notificaciones...');
+        notificationStatus = await Permission.notification.request();
+        _logger.d('📱 [ANDROID] Resultado solicitud: $notificationStatus');
+      }
+
+      if (!notificationStatus.isGranted) {
+        throw Exception('Permiso de notificaciones denegado: $notificationStatus');
+      }
+
+      // ✅ PASO 2: Permiso de alarmas exactas (Android 12+)
+      await _requestExactAlarmPermission();
+
+      // ✅ PASO 3: Verificar que el sistema Android permite notificaciones
+      await _verifyAndroidNotificationSettings();
+
+      _hasPermissions = true;
+      _logger.i('📱 [ANDROID] ✅ Todos los permisos Android otorgados');
+
+    } catch (e) {
+      _logger.e('❌ [ANDROID] Error en permisos: $e');
+      _hasPermissions = false;
+      rethrow;
+    }
+  }
+
+  /// ✅ NUEVO: Verificar permiso de alarmas exactas
+  Future<void> _requestExactAlarmPermission() async {
+    try {
+      _logger.d('⏰ [EXACT] Verificando permiso de alarmas exactas...');
+
+      final exactAlarmStatus = await Permission.scheduleExactAlarm.status;
+      _logger.d('⏰ [EXACT] Estado: $exactAlarmStatus');
+
+      if (exactAlarmStatus.isDenied) {
+        _logger.i('⏰ [EXACT] Solicitando permiso de alarmas exactas...');
+        final result = await Permission.scheduleExactAlarm.request();
+        _logger.d('⏰ [EXACT] Resultado: $result');
+      }
+
+      // ✅ IMPORTANTE: Este permiso es crítico para notificaciones programadas
+      final finalStatus = await Permission.scheduleExactAlarm.status;
+      if (!finalStatus.isGranted) {
+        _logger.w('⚠️ [EXACT] Permiso de alarmas exactas no otorgado - las notificaciones podrían no funcionar');
+      }
+
+    } catch (e) {
+      _logger.w('⚠️ [EXACT] Error verificando alarmas exactas: $e');
+      // No es crítico, continuar
+    }
+  }
+
+  /// ✅ NUEVO: Verificar configuración del sistema Android
+  Future<void> _verifyAndroidNotificationSettings() async {
+    try {
+      _logger.d('🔍 [VERIFY] Verificando configuración del sistema...');
+
+      // Verificar que el plugin puede crear canales
+      if (Platform.isAndroid) {
+        await _createNotificationChannels();
+      }
+
+      _logger.i('🔍 [VERIFY] ✅ Configuración del sistema verificada');
+
+    } catch (e) {
+      _logger.e('❌ [VERIFY] Error verificando sistema: $e');
+      rethrow;
+    }
+  }
+
+  /// ✅ NUEVO: Crear canales de notificación explícitamente
+  Future<void> _createNotificationChannels() async {
+    try {
+      _logger.d('📺 [CHANNELS] Creando canales de notificación...');
+
+      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+      _notificationsPlugin.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+      if (androidImplementation == null) {
+        throw Exception('No se pudo obtener implementación Android');
+      }
+
+      // Canal para notificación nocturna
+      await androidImplementation.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'daily_review_channel',
+          'Revisión Diaria',
+          description: 'Recordatorio nocturno para completar el día',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+
+      // Canal para recordatorios aleatorios
+      await androidImplementation.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'random_checkin_channel',
+          'Momentos Zen',
+          description: 'Recordatorios aleatorios durante el día',
+          importance: Importance.defaultImportance,
+          playSound: true,
+          enableVibration: false,
+        ),
+      );
+
+      // Canal para pruebas
+      await androidImplementation.createNotificationChannel(
+        const AndroidNotificationChannel(
+          'test_channel',
+          'Pruebas',
+          description: 'Canal para notificaciones de prueba',
+          importance: Importance.high,
+          playSound: true,
+          enableVibration: true,
+        ),
+      );
+
+      _logger.i('📺 [CHANNELS] ✅ Canales creados correctamente');
+
+    } catch (e) {
+      _logger.e('❌ [CHANNELS] Error creando canales: $e');
+      rethrow;
+    }
+  }
+
+  /// Permisos iOS
+  Future<void> _requestIOSPermissions() async {
+    try {
+      _logger.d('🍎 [IOS] Solicitando permisos iOS...');
+
+      final bool? result = await _notificationsPlugin
+          .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
+      _hasPermissions = result ?? false;
+      _logger.i('🍎 [IOS] ${_hasPermissions ? "✅ OTORGADOS" : "❌ DENEGADOS"}');
+
+    } catch (e) {
+      _logger.e('❌ [IOS] Error: $e');
+      _hasPermissions = false;
+      rethrow;
+    }
+  }
+
+  /// ✅ MEJORADO: Reconfigurar con verificación exhaustiva
+  Future<void> reconfigureNotifications() async {
+    if (!_hasPermissions) {
+      throw Exception('No hay permisos para configurar notificaciones');
+    }
+
+    try {
+      _logger.i('🔄 [RECONFIG] Iniciando reconfiguración...');
+
+      // ✅ PASO 1: Limpiar completamente
+      await _clearAllNotificationsCompletely();
+
+      // ✅ PASO 2: Esperar un momento para que el sistema procese
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      // ✅ PASO 3: Programar notificación nocturna con verificación
+      final nightlyResult = await _scheduleNightlyWithVerification();
+
+      // ✅ PASO 4: Programar recordatorios aleatorios con verificación
+      final randomResult = await _scheduleRandomWithVerification();
+
+      // ✅ PASO 5: Verificar resultado final
+      await Future.delayed(const Duration(milliseconds: 500));
+      final finalStats = await getNotificationStats();
+
+      _logger.i('🔄 [RECONFIG] Resultado final:');
+      _logger.i('   🌙 Nocturna: ${nightlyResult ? "✅" : "❌"}');
+      _logger.i('   🎲 Aleatorias: ${randomResult ? "✅" : "❌"}');
+      _logger.i('   📊 Pendientes: ${finalStats["total_pending"]}');
+
+      if (!nightlyResult || !randomResult) {
+        throw Exception('Error en configuración: Nocturna=$nightlyResult, Aleatorias=$randomResult');
+      }
+
+      _logger.i('✅ [RECONFIG] Reconfiguración exitosa');
+
+    } catch (e, stackTrace) {
+      _logger.e('❌ [RECONFIG] Error: $e');
+      _logger.e('[RECONFIG] Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  /// ✅ NUEVO: Limpiar completamente con verificación
+  Future<void> _clearAllNotificationsCompletely() async {
+    try {
+      _logger.d('🗑️ [CLEAR] Limpiando todas las notificaciones...');
+
+      await _notificationsPlugin.cancelAll();
+
+      // Verificar que se limpiaron
+      await Future.delayed(const Duration(milliseconds: 500));
+      final pending = await _notificationsPlugin.pendingNotificationRequests();
+
+      if (pending.isNotEmpty) {
+        _logger.w('⚠️ [CLEAR] Aún quedan ${pending.length} notificaciones pendientes');
+
+        // Cancelar una por una si es necesario
+        for (final notification in pending) {
+          await _notificationsPlugin.cancel(notification.id);
+        }
+      }
+
+      _logger.i('🗑️ [CLEAR] ✅ Limpieza completada');
+
+    } catch (e) {
+      _logger.e('❌ [CLEAR] Error: $e');
+      rethrow;
+    }
+  }
+
+  /// ✅ NUEVO: Programar notificación nocturna con verificación
+  Future<bool> _scheduleNightlyWithVerification() async {
+    try {
+      _logger.i('🌙 [NIGHTLY] Programando notificación nocturna...');
+
+      final now = tz.TZDateTime.now(tz.local);
+      var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, 22, 30);
+
+      // Si ya pasó, programar para mañana
       if (scheduledDate.isBefore(now.add(const Duration(minutes: 5)))) {
         scheduledDate = scheduledDate.add(const Duration(days: 1));
       }
 
-      // ✅ CORREGIR: Crear TZDateTime correctamente
-      final tzScheduledDate = tz.TZDateTime.from(scheduledDate, tz.local);
+      _logger.d('🌙 [NIGHTLY] Fecha programada: $scheduledDate');
 
+      // ✅ CONFIGURACIÓN ESPECÍFICA ANDROID
       const androidDetails = AndroidNotificationDetails(
         'daily_review_channel',
         'Revisión Diaria',
-        channelDescription: 'Recordatorio para completar la revisión del día',
+        channelDescription: 'Recordatorio nocturno para completar el día',
         importance: Importance.high,
         priority: Priority.high,
         showWhen: true,
+        icon: '@mipmap/ic_launcher',
+        enableVibration: true,
+        playSound: true,
+        // ✅ NUEVO: Configuraciones adicionales para Android
+        ongoing: false,
+        autoCancel: true,
       );
 
       const iosDetails = DarwinNotificationDetails(
@@ -319,74 +436,92 @@ class NotificationService {
         iOS: iosDetails,
       );
 
+      // ✅ PROGRAMAR CON ERROR HANDLING ESPECÍFICO
       await _notificationsPlugin.zonedSchedule(
         dailyReviewNotificationId,
         '🌙 Último llamado para tu día zen',
         '💫 A las 00:00 se guardará tu resumen automáticamente. ¿Has registrado todos tus momentos?',
-        tzScheduledDate,
+        scheduledDate,
         details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         payload: 'nightly_review',
-        matchDateTimeComponents: DateTimeComponents.time, // ✅ AÑADIR: Repetir diariamente
       );
 
-      _logger.i('🌙 Notificación nocturna programada para ${scheduledDate.hour}:${scheduledDate.minute.toString().padLeft(2, '0')}');
-      return true;
+      // ✅ VERIFICAR QUE SE PROGRAMÓ
+      await Future.delayed(const Duration(milliseconds: 500));
+      final pending = await _notificationsPlugin.pendingNotificationRequests();
+      final nightlyExists = pending.any((n) => n.id == dailyReviewNotificationId);
 
-    } catch (e) {
-      _logger.e('❌ Error programando notificación nocturna: $e');
-      return false;
-    }
-  }
-
-  /// ✅ CORREGIDO: Programar recordatorios aleatorios con mejor manejo
-  Future<bool> _scheduleRandomDayCheckIns() async {
-    try {
-      final now = DateTime.now();
-      int successCount = 0;
-
-      // Generar 3-5 notificaciones aleatorias por día
-      final numberOfNotifications = 3 + _random.nextInt(3);
-
-      for (int i = 0; i < numberOfNotifications; i++) {
-        final success = await _scheduleRandomCheckIn(now, i);
-        if (success) successCount++;
+      if (nightlyExists) {
+        _logger.i('🌙 [NIGHTLY] ✅ Notificación nocturna programada correctamente');
+        return true;
+      } else {
+        _logger.e('🌙 [NIGHTLY] ❌ Notificación nocturna NO aparece en pendientes');
+        return false;
       }
 
-      _logger.i('🎲 $successCount/$numberOfNotifications recordatorios aleatorios configurados');
-      return successCount > 0;
-
-    } catch (e) {
-      _logger.e('❌ Error programando recordatorios aleatorios: $e');
+    } catch (e, stackTrace) {
+      _logger.e('❌ [NIGHTLY] Error: $e');
+      _logger.e('[NIGHTLY] Stack trace: $stackTrace');
       return false;
     }
   }
 
-  /// ✅ CORREGIDO: Programar notificación aleatoria individual
-  Future<bool> _scheduleRandomCheckIn(DateTime baseDate, int index) async {
+  /// ✅ NUEVO: Programar aleatorias con verificación
+  Future<bool> _scheduleRandomWithVerification() async {
     try {
-      // Ventanas de tiempo más amplias
+      _logger.i('🎲 [RANDOM] Programando recordatorios aleatorios...');
+
+      final numberOfNotifications = 3 + _random.nextInt(3); // 3-5
+      int successCount = 0;
+
+      for (int i = 0; i < numberOfNotifications; i++) {
+        final success = await _scheduleOneRandomNotification(i);
+        if (success) successCount++;
+
+        // Pausa entre programaciones
+        await Future.delayed(const Duration(milliseconds: 200));
+      }
+
+      // ✅ VERIFICAR RESULTADO
+      await Future.delayed(const Duration(milliseconds: 500));
+      final pending = await _notificationsPlugin.pendingNotificationRequests();
+      final randomCount = pending.where((n) =>
+      n.id >= randomCheckInBaseId && n.id < randomCheckInBaseId + 10).length;
+
+      _logger.i('🎲 [RANDOM] Programados: $successCount/$numberOfNotifications, Verificados: $randomCount');
+
+      return randomCount > 0;
+
+    } catch (e, stackTrace) {
+      _logger.e('❌ [RANDOM] Error: $e');
+      _logger.e('[RANDOM] Stack trace: $stackTrace');
+      return false;
+    }
+  }
+
+  /// ✅ NUEVO: Programar una notificación aleatoria individual
+  Future<bool> _scheduleOneRandomNotification(int index) async {
+    try {
       final timeWindows = [
-        {'start': 9, 'end': 11, 'name': 'mañana'},
-        {'start': 13, 'end': 15, 'name': 'tarde'},
-        {'start': 16, 'end': 18, 'name': 'tarde'},
-        {'start': 19, 'end': 21, 'name': 'noche'},
+        {'start': 9, 'end': 11},
+        {'start': 12, 'end': 14},
+        {'start': 15, 'end': 17},
+        {'start': 18, 'end': 20},
+        {'start': 20, 'end': 22},
       ];
 
       final window = timeWindows[index % timeWindows.length];
       final hour = (window['start'] as int) + _random.nextInt((window['end'] as int) - (window['start'] as int));
       final minute = _random.nextInt(60);
 
-      var scheduledDate = DateTime(baseDate.year, baseDate.month, baseDate.day, hour, minute);
+      final now = tz.TZDateTime.now(tz.local);
+      var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
 
-      // Si ya pasó, programar para mañana
-      if (scheduledDate.isBefore(DateTime.now().add(const Duration(minutes: 10)))) {
+      if (scheduledDate.isBefore(now.add(const Duration(minutes: 10)))) {
         scheduledDate = scheduledDate.add(const Duration(days: 1));
       }
-
-      // ✅ CORREGIR: Crear TZDateTime correctamente
-      final tzScheduledDate = tz.TZDateTime.from(scheduledDate, tz.local);
 
       final messages = _getRandomCheckInMessages();
       final message = messages[_random.nextInt(messages.length)];
@@ -394,9 +529,14 @@ class NotificationService {
       const androidDetails = AndroidNotificationDetails(
         'random_checkin_channel',
         'Momentos Zen',
-        channelDescription: 'Recordatorios aleatorios para registrar momentos',
+        channelDescription: 'Recordatorios aleatorios durante el día',
         importance: Importance.defaultImportance,
         priority: Priority.defaultPriority,
+        icon: '@mipmap/ic_launcher',
+        enableVibration: false,
+        playSound: true,
+        ongoing: false,
+        autoCancel: true,
       );
 
       const iosDetails = DarwinNotificationDetails(
@@ -416,66 +556,51 @@ class NotificationService {
         notificationId,
         message['title']!,
         message['body']!,
-        tzScheduledDate,
+        scheduledDate,
         details,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         payload: 'random_checkin',
-        matchDateTimeComponents: DateTimeComponents.time, // ✅ AÑADIR: Repetir diariamente
       );
 
-      _logger.d('🎲 Recordatorio #$index programado: ${window['name']} ${scheduledDate.hour}:${scheduledDate.minute.toString().padLeft(2, '0')}');
+      _logger.d('🎲 [RANDOM] Aleatorio #${index + 1} programado para ${scheduledDate.hour}:${scheduledDate.minute.toString().padLeft(2, '0')}');
       return true;
 
     } catch (e) {
-      _logger.e('❌ Error programando recordatorio #$index: $e');
+      _logger.e('❌ [RANDOM] Error en aleatorio #${index + 1}: $e');
       return false;
     }
   }
 
-  /// Obtener mensajes aleatorios para los check-ins
-  List<Map<String, String>> _getRandomCheckInMessages() {
-    return [
-      {
-        'title': '🌸 ¿Cómo va tu día zen?',
-        'body': 'Tómate un momento para registrar cómo te sientes ahora mismo.',
-      },
-      {
-        'title': '✨ Momento de reflexión',
-        'body': '¿Ha pasado algo especial en las últimas horas? Cuéntanos tu momento.',
-      },
-      {
-        'title': '🧘‍♀️ Pausa consciente',
-        'body': 'Respira profundo. ¿Qué está sucediendo en tu mundo interior?',
-      },
-      {
-        'title': '🌟 Check-in zen',
-        'body': '¿Hay algún momento que te gustaría recordar de hoy?',
-      },
-      {
-        'title': '💫 Tu bienestar importa',
-        'body': 'Registra tu estado actual. Cada momento cuenta en tu viaje zen.',
-      },
-      {
-        'title': '🎯 Momento presente',
-        'body': '¿Cómo está siendo este momento de tu día? Compártelo con tu yo del futuro.',
-      },
-    ];
+  /// Solicitar permisos (método público)
+  Future<bool> requestPermissions() async {
+    if (!_isInitialized) {
+      await initialize();
+    }
+
+    if (_hasPermissions) {
+      _logger.i('🔐 [REQ] Permisos ya otorgados, reconfigurando...');
+      await reconfigureNotifications();
+      return true;
+    }
+
+    await _requestAllRequiredPermissions();
+
+    if (_hasPermissions) {
+      await reconfigureNotifications();
+    }
+
+    return _hasPermissions;
   }
 
-  /// Manejar respuesta a notificaciones
-  void _onNotificationResponse(NotificationResponse response) {
-    _logger.d('🔔 Notificación tocada: ${response.payload}');
-    // TODO: Implementar navegación según el payload
-  }
+  /// Enviar notificación de prueba
+  Future<void> sendTestNotification() async {
+    if (!_hasPermissions) {
+      throw Exception('No hay permisos para enviar notificaciones');
+    }
 
-  /// ✅ MEJORADO: Enviar notificación de prueba con mejor feedback
-  Future<bool> sendTestNotification() async {
     try {
-      if (!_permissionsGranted) {
-        _logger.w('⚠️ No hay permisos para enviar notificación de prueba');
-        return false;
-      }
+      _logger.i('🧪 [TEST] Enviando notificación de prueba...');
 
       const androidDetails = AndroidNotificationDetails(
         'test_channel',
@@ -483,6 +608,9 @@ class NotificationService {
         channelDescription: 'Canal para notificaciones de prueba',
         importance: Importance.high,
         priority: Priority.high,
+        icon: '@mipmap/ic_launcher',
+        enableVibration: true,
+        playSound: true,
       );
 
       const iosDetails = DarwinNotificationDetails(
@@ -498,92 +626,103 @@ class NotificationService {
 
       await _notificationsPlugin.show(
         _notificationIdCounter++,
-        '🧪 Notificación de prueba',
-        'ReflectApp está configurado correctamente. ¡Tu sistema zen funciona! ${DateTime.now().toString().substring(11, 19)}',
+        '🧪 ¡Prueba exitosa!',
+        'ReflectApp funciona perfectamente. Sistema zen activado 🌟',
         details,
         payload: 'test',
       );
 
-      _logger.i('🧪 Notificación de prueba enviada');
-      return true;
+      _logger.i('🧪 [TEST] ✅ Notificación de prueba enviada');
 
-    } catch (e) {
-      _logger.e('❌ Error enviando notificación de prueba: $e');
-      return false;
-    }
-  }
-
-  /// Cancelar todas las notificaciones
-  Future<void> cancelAllNotifications() async {
-    try {
-      await _notificationsPlugin.cancelAll();
-      _logger.i('🗑️ Todas las notificaciones canceladas');
-    } catch (e) {
-      _logger.e('❌ Error cancelando notificaciones: $e');
-    }
-  }
-
-  /// ✅ NUEVO: Reconfigurar notificaciones (método público)
-  Future<bool> reconfigureNotifications() async {
-    try {
-      if (!_permissionsGranted) {
-        _logger.w('⚠️ No hay permisos para reconfigurar notificaciones');
-        return false;
-      }
-
-      _logger.i('🔄 Reconfigurando notificaciones...');
-      await _setupDailyNotifications();
-      return true;
-    } catch (e) {
-      _logger.e('❌ Error reconfigurando notificaciones: $e');
-      return false;
+    } catch (e, stackTrace) {
+      _logger.e('❌ [TEST] Error: $e');
+      _logger.e('[TEST] Stack trace: $stackTrace');
+      rethrow;
     }
   }
 
   /// Verificar si las notificaciones están habilitadas
   Future<bool> areNotificationsEnabled() async {
-    return _permissionsGranted && _isInitialized;
+    if (!_isMobilePlatform()) return true;
+    return _isInitialized && _hasPermissions;
   }
 
-  /// ✅ MEJORADO: Obtener estadísticas detalladas
+  /// Cancelar todas las notificaciones
+  Future<void> cancelAllNotifications() async {
+    await _clearAllNotificationsCompletely();
+  }
+
+  /// Obtener estadísticas detalladas
   Future<Map<String, dynamic>> getNotificationStats() async {
     try {
-      final pending = await _notificationsPlugin.pendingNotificationRequests();
+      final pending = _isMobilePlatform()
+          ? await _notificationsPlugin.pendingNotificationRequests()
+          : <PendingNotificationRequest>[];
+
       final dailyReview = pending.where((n) => n.id == dailyReviewNotificationId).length;
-      final randomCheckins = pending.where((n) => n.id >= randomCheckInBaseId && n.id < randomCheckInBaseId + 10).length;
+      final randomCheckins = pending.where((n) =>
+      n.id >= randomCheckInBaseId && n.id < randomCheckInBaseId + 10).length;
 
-      // ✅ AÑADIR: Información de debug detallada
-      _logger.d('📊 Estadísticas: Total=${pending.length}, Nocturna=$dailyReview, Aleatorias=$randomCheckins');
-
-      for (final notification in pending) {
-        _logger.d('📋 Pendiente: ID=${notification.id}, Título="${notification.title}"');
-      }
-
-      return {
+      final stats = {
         'total_pending': pending.length,
         'daily_review_scheduled': dailyReview > 0,
         'random_checkins_scheduled': randomCheckins,
-        'enabled': _permissionsGranted,
+        'enabled': await areNotificationsEnabled(),
         'initialized': _isInitialized,
-        'platform_supported': _isSupportedPlatform(),
-        'timezone': tz.local.name,
-        'pending_details': pending.map((n) => {
-          'id': n.id,
-          'title': n.title,
-          'body': n.body,
+        'has_permissions': _hasPermissions,
+        'platform_supported': _isMobilePlatform(),
+        'pending_details': pending.map((p) => {
+          'id': p.id,
+          'title': p.title,
+          'body': p.body,
         }).toList(),
+        'debug_info': {
+          'timezone': tz.local.name,
+          'current_time': tz.TZDateTime.now(tz.local).toString(),
+          'platform': Platform.operatingSystem,
+        },
       };
-    } catch (e) {
-      _logger.e('❌ Error obteniendo estadísticas: $e');
+
+      _logger.d('📊 [STATS] $stats');
+      return stats;
+
+    } catch (e, stackTrace) {
+      _logger.e('❌ [STATS] Error: $e');
+      _logger.e('[STATS] Stack trace: $stackTrace');
       return {
         'total_pending': 0,
         'daily_review_scheduled': false,
         'random_checkins_scheduled': 0,
         'enabled': false,
         'initialized': _isInitialized,
-        'platform_supported': _isSupportedPlatform(),
+        'has_permissions': _hasPermissions,
+        'platform_supported': _isMobilePlatform(),
         'error': e.toString(),
       };
     }
+  }
+
+  /// Verificar si es plataforma móvil
+  bool _isMobilePlatform() {
+    return !kIsWeb && (Platform.isAndroid || Platform.isIOS);
+  }
+
+  /// Mensajes para check-ins aleatorios
+  List<Map<String, String>> _getRandomCheckInMessages() {
+    return [
+      {'title': '🌸 ¿Cómo va tu día zen?', 'body': 'Registra cómo te sientes ahora mismo.'},
+      {'title': '✨ Momento de reflexión', 'body': '¿Ha pasado algo especial? Cuéntanos.'},
+      {'title': '🧘‍♀️ Pausa consciente', 'body': '¿Qué está sucediendo en tu mundo interior?'},
+      {'title': '🌟 Check-in zen', 'body': '¿Hay algún momento que recordar de hoy?'},
+      {'title': '💫 Tu bienestar importa', 'body': 'Cada momento cuenta en tu viaje zen.'},
+      {'title': '🎯 Momento presente', 'body': '¿Cómo está siendo este momento?'},
+      {'title': '🌈 Estado emocional', 'body': '¿Cuál es el color de este momento?'},
+      {'title': '🕯️ Instante de calma', 'body': '¿Qué está pasando en tu corazón?'},
+    ];
+  }
+
+  /// Manejar respuesta a notificaciones
+  void _onNotificationResponse(NotificationResponse response) {
+    _logger.d('🔔 [RESPONSE] Notificación tocada: ${response.payload}');
   }
 }
