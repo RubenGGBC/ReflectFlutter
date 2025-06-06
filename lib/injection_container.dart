@@ -1,5 +1,5 @@
 // ============================================================================
-// injection_container.dart - Inyección de Dependencias
+// injection_container.dart - Inyección de Dependencias CORREGIDA
 // ============================================================================
 
 import 'package:get_it/get_it.dart';
@@ -32,9 +32,11 @@ Future<void> init() async {
         lineLength: 120,
         colors: true,
         printEmojis: true,
-        printTime: true,
+        printTime: false, // ✅ CORREGIDO: printTime ya no existe
       ),
     ));
+
+    // Auth Provider - Singleton
     sl.registerLazySingleton<AuthProvider>(
           () => AuthProvider(sl<DatabaseService>()),
     );

@@ -1,4 +1,6 @@
-// app.dart - Sección de rutas actualizada
+// ============================================================================
+// app.dart - VERSIÓN COMPLETA ACTUALIZADA
+// ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -11,9 +13,11 @@ import 'presentation/screens/Login_screen.dart';
 import 'presentation/screens/Register_screen.dart';
 import 'presentation/screens/interactive_moments_screen.dart';
 import 'presentation/screens/calendar_screen.dart';
-import 'presentation/screens/daily_review_screen.dart';  // ✅ NUEVA IMPORTACIÓN
+import 'presentation/screens/daily_review_screen.dart';
 import 'presentation/screens/theme_selector_screen.dart';
+import 'presentation/screens/profile_screen.dart';
 import 'injection_container.dart' as di;
+import 'presentation/screens/daily_detail_screen.dart';
 
 class ReflectApp extends StatelessWidget {
   const ReflectApp({Key? key}) : super(key: key);
@@ -44,14 +48,15 @@ class ReflectApp extends StatelessWidget {
             // Configuración inicial
             home: const AppInitializer(),
 
-            // ✅ RUTAS ACTUALIZADAS CON DAILY REVIEW
+            // ✅ RUTAS COMPLETAS ACTUALIZADAS
             routes: {
               '/login': (context) => const LoginScreen(),
               '/register': (context) => const RegisterScreen(),
               '/interactive_moments': (context) => const InteractiveMomentsScreen(),
               '/calendar': (context) => const CalendarScreen(),
-              '/daily_review': (context) => const DailyReviewScreen(),  // ✅ NUEVA RUTA
+              '/daily_review': (context) => const DailyReviewScreen(),
               '/theme_selector': (context) => const ThemeSelectorScreen(),
+              '/profile': (context) => const ProfileScreen(),
             },
 
             // Manejar rutas no encontradas
@@ -67,7 +72,6 @@ class ReflectApp extends StatelessWidget {
   }
 }
 
-// El resto del código sigue igual...
 /// Widget que maneja la inicialización y navegación inicial
 class AppInitializer extends StatefulWidget {
   const AppInitializer({Key? key}) : super(key: key);

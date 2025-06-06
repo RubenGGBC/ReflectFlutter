@@ -1,9 +1,8 @@
 // ============================================================================
-// Reemplazar COMPLETAMENTE theme_provider.dart
+// lib/presentation/providers/theme_provider.dart - VERSIÓN LIMPIA DEFINITIVA
 // ============================================================================
 
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:logger/logger.dart';
 
 class ThemeProvider with ChangeNotifier {
@@ -101,13 +100,12 @@ class ThemeProvider with ChangeNotifier {
       primary: accentPrimary,
       secondary: accentSecondary,
       surface: surface,
-      background: primaryBg,
       error: negativeMain,
     ),
   );
 }
 
-// Clase de colores para compatibilidad
+// Clase de colores para compatibilidad - SOLO AQUÍ
 class AppColors {
   final Color primaryBg;
   final Color surface;

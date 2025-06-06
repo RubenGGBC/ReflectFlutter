@@ -1,60 +1,34 @@
-name: reflect_app
-description: Tu santuario zen para reflexión y mindfulness
+name: reflect_app  # ✅ DEBE SER ESTE NOMBRE, NO "untitled3"
+description: Una app de reflexión zen y momentos interactivos
 publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.2.0 <4.0.0'
-  flutter: ">=3.19.0"
+  sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
   flutter:
     sdk: flutter
-  sqflite_common_ffi: ^2.3.0 # o la última versión estable
 
-  # 🎨 UI y Estado
-  provider: ^6.1.2
-  shared_preferences: ^2.2.3
-
-  # 🗄️ Base de Datos
-  sqflite: ^2.3.3+1
-  path_provider: ^2.1.3
-  path: ^1.9.0
-
-
-  # 🔐 Seguridad
-  crypto: ^3.0.3
-
-  # 📝 Serialización
-  json_annotation: ^4.9.0
-
-  # 📊 Logging
+  # ✅ DEPENDENCIAS NECESARIAS
+  provider: ^6.1.1
   logger: ^2.0.2+1
-
-  # 🎭 Iconos
+  sqflite: ^2.3.0
+  sqflite_common_ffi: ^2.3.0+4
+  path: ^1.8.3
+  path_provider: ^2.1.1
+  shared_preferences: ^2.2.2
+  json_annotation: ^4.8.1
+  crypto: ^3.0.3
+  get_it: ^7.6.4
   cupertino_icons: ^1.0.6
-
-  # 🔧 Inyección de Dependencias (¡Actualizar a 8.0.3!)
-  get_it: ^8.0.3 # Changed this line
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0 # Changed this line
-
-  # 🔧 Code Generation
-  build_runner: ^2.4.9
-  json_serializable: ^6.8.0
+  flutter_lints: ^3.0.1
+  build_runner: ^2.4.7
+  json_serializable: ^6.7.1
 
 flutter:
   uses-material-design: true
-
-  # ❌ COMENTAMOS LOS ASSETS QUE NO EXISTEN
-  # assets:
-  #   - assets/images/
-  #   - assets/icons/
-
-  # fonts:
-  #   - family: Poppins
-  #     fonts:
-  #       - asset: assets/fonts/Poppins-Regular.ttf
