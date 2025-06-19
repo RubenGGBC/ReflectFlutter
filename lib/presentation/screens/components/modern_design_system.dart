@@ -1,11 +1,9 @@
-// ============================================================================
-// modern_design_system.dart - SISTEMA DE DISEÑO MODERNO PARA REFLECTAPP V2
-// ============================================================================
+// lib/presentation/screens/components/modern_design_system.dart
 
 import 'package:flutter/material.dart';
 
 // ============================================================================
-// 🎨 COLORES MODERNOS
+// 🎨 COLORES MODERNOS - VERSIÓN CORREGIDA Y AMPLIADA
 // ============================================================================
 
 class ModernColors {
@@ -14,6 +12,11 @@ class ModernColors {
   static const List<Color> positiveGradient = [Color(0xFF11998e), Color(0xFF38ef7d)];
   static const List<Color> negativeGradient = [Color(0xFFff6b6b), Color(0xFFfeca57)];
   static const List<Color> neutralGradient = [Color(0xFF2c3e50), Color(0xFF3498db)];
+
+  // ✅ NUEVO: Gradientes añadidos para warning y error
+  static const List<Color> warningGradient = [Color(0xFFfeca57), Color(0xFFff9f43)];
+  static const List<Color> errorGradient = [Color(0xFFff6b6b), Color(0xFFee5253)];
+
 
   // Surfaces con glassmorphism
   static const Color glassSurface = Color(0x1AFFFFFF);
@@ -45,9 +48,7 @@ class ModernColors {
   };
 }
 
-// ============================================================================
-// 📐 ESPACIADO Y DIMENSIONES
-// ============================================================================
+// ... (El resto del archivo ModernSpacing, ModernTypography, etc., permanece igual)
 
 class ModernSpacing {
   static const double xs = 4.0;
@@ -63,10 +64,6 @@ class ModernSpacing {
   static const double radiusXLarge = 20.0;
   static const double radiusRound = 25.0;
 }
-
-// ============================================================================
-// ✍️ TIPOGRAFÍA
-// ============================================================================
 
 class ModernTypography {
   static const TextStyle heading1 = TextStyle(
@@ -123,6 +120,7 @@ class ModernTypography {
     color: ModernColors.textSecondary,
   );
 }
+
 
 // ============================================================================
 // 🎭 COMPONENTES MODERNOS REUTILIZABLES

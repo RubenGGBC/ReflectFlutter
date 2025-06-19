@@ -1,3 +1,5 @@
+// lib/presentation/widgets/improved_dashboard.dart
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/analytics_provider.dart';
@@ -10,8 +12,8 @@ class ImprovedDashboard extends StatelessWidget {
     required this.userId,
   }) : super(key: key);
 
-  /// Safely parses a dynamic value into a number (num).
-  /// Handles nulls, existing numbers, and string representations of numbers.
+  /// Parsea de forma segura un valor dinámico a un número (num).
+  /// Maneja nulos, números existentes y representaciones de números en String.
   num _parseNum(dynamic value, {num fallback = 0}) {
     if (value == null) return fallback;
     if (value is num) return value;
@@ -21,8 +23,8 @@ class ImprovedDashboard extends StatelessWidget {
     return fallback;
   }
 
-  /// Safely parses a dynamic value into a String.
-  /// Handles nulls by returning a fallback value.
+  /// Parsea de forma segura un valor dinámico a un String.
+  /// Maneja nulos devolviendo un valor por defecto.
   String _parseString(dynamic value, {String fallback = ''}) {
     if (value == null) return fallback;
     return value.toString();
@@ -30,69 +32,80 @@ class ImprovedDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<AnalyticsProvider>(
-      builder: (context, analytics, child) {
-        if (analytics.isLoading) {
-          return const Center(
-            child: CircularProgressIndicator(),
-          );
-        }
+    // Usamos 'watch' para que el widget se reconstruya si los datos cambian
+    final analytics = context.watch<AnalyticsProvider>();
 
-        if (analytics.errorMessage != null) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
-                const SizedBox(height: 16),
-                Text(
-                  'Error cargando datos',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  analytics.errorMessage!,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => analytics.loadCompleteAnalytics(userId),
-                  child: const Text('Reintentar'),
-                ),
-              ],
-            ),
-          );
-        }
+    // Estado de carga y error
+    if (analytics.isLoading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
 
-        final summary = analytics.getDashboardSummary();
-        final stressAlerts = analytics.getStressAlerts();
-        final recommendations = analytics.getTopRecommendations();
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+    if (analytics.errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              _buildWellbeingScoreCard(context, summary),
+              Icon(Icons.error_outline, size: 48, color: Colors.red.shade400),
               const SizedBox(height: 16),
-              if (stressAlerts['requires_attention'] == true) ...[
-                _buildStressAlert(stressAlerts),
-                const SizedBox(height: 16),
-              ],
-              _buildQuickStats(context, analytics),
-              const SizedBox(height: 16),
-              _buildScoreComponents(context, analytics),
-              const SizedBox(height: 16),
-              _buildMoodAnalysis(context, analytics),
-              const SizedBox(height: 16),
-              _buildNextLevelProgress(context, analytics),
-              const SizedBox(height: 16),
-              _buildRecommendations(context, recommendations),
+              Text(
+                'Error al cargar los datos',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                analytics.errorMessage!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => analytics.loadCompleteAnalytics(userId),
+                icon: const Icon(Icons.refresh),
+                label: const Text('Reintentar'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue.shade400,
+                  foregroundColor: Colors.white,
+                ),
+              ),
             ],
           ),
-        );
-      },
+        ),
+      );
+    }
+
+    // Extracción de datos con métodos seguros
+    final summary = analytics.getDashboardSummary();
+    final stressAlerts = analytics.getStressAlerts();
+    final recommendations = analytics.getTopRecommendations();
+
+    // UI Principal del Dashboard
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildWellbeingScoreCard(context, summary),
+        const SizedBox(height: 16),
+        if (stressAlerts['requires_attention'] == true) ...[
+          _buildStressAlert(context, stressAlerts),
+          const SizedBox(height: 16),
+        ],
+        _buildQuickStats(context, analytics),
+        const SizedBox(height: 16),
+        _buildScoreComponents(context, analytics),
+        const SizedBox(height: 16),
+        _buildMoodAnalysis(context, analytics),
+        const SizedBox(height: 16),
+        _buildNextLevelProgress(context, analytics),
+        const SizedBox(height: 16),
+        _buildRecommendations(context, recommendations),
+      ],
     );
   }
 
@@ -165,15 +178,17 @@ class ImprovedDashboard extends StatelessWidget {
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
+                  height: 1.0,
                 ),
               ),
               const Padding(
-                padding: EdgeInsets.only(bottom: 8),
+                padding: EdgeInsets.only(bottom: 8.0, left: 4.0),
                 child: Text(
                   '/100',
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.white70,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -202,18 +217,18 @@ class ImprovedDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildStressAlert(Map<String, dynamic> stressAlerts) {
+  Widget _buildStressAlert(BuildContext context, Map<String, dynamic> stressAlerts) {
     final alertColor = stressAlerts['alert_color'] as Color? ?? Colors.orange;
     final alertIcon = _parseString(stressAlerts['alert_icon'], fallback: '⚠️');
     final alertTitle = _parseString(stressAlerts['alert_title'], fallback: 'Alerta');
-    final recommendations = stressAlerts['recommendations'] as List<dynamic>? ?? [];
+    final recommendations = stressAlerts['recommendations'] as List? ?? [];
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: alertColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: alertColor, width: 1),
+        border: Border.all(color: alertColor, width: 1.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -228,7 +243,7 @@ class ImprovedDashboard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: alertColor.withOpacity(0.8),
+                    color: alertColor,
                   ),
                 ),
               ),
@@ -240,7 +255,7 @@ class ImprovedDashboard extends StatelessWidget {
               'Recomendación: ${_parseString(recommendations.first)}',
               style: TextStyle(
                 fontSize: 14,
-                color: alertColor.withOpacity(0.7),
+                color: (Theme.of(context).textTheme.bodyMedium?.color ?? Colors.white).withOpacity(0.8),
               ),
             ),
           ],
@@ -251,7 +266,6 @@ class ImprovedDashboard extends StatelessWidget {
 
   Widget _buildQuickStats(BuildContext context, AnalyticsProvider analytics) {
     final streakData = analytics.getStreakData();
-    // CORREGIDO: Llamar a los nuevos métodos del provider
     final moodInsights = analytics.getQuickStatsMoodInsights();
     final diversityInsights = analytics.getQuickStatsDiversityInsights();
 
@@ -281,7 +295,7 @@ class ImprovedDashboard extends StatelessWidget {
           child: _buildStatCard(
             '🌈',
             'Diversidad',
-            '${_parseNum(diversityInsights['categories_used']).toInt()}/${_parseNum(diversityInsights['max_categories']).toInt()}',
+            '${_parseNum(diversityInsights['categories_used']).toInt()}/${_parseNum(diversityInsights['max_categories'], fallback: 5).toInt()}',
             'Categorías',
             Colors.purple.shade400,
           ),
@@ -292,6 +306,7 @@ class ImprovedDashboard extends StatelessWidget {
 
   Widget _buildStatCard(String emoji, String title, String value, String subtitle, Color color) {
     return Container(
+      height: 150,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
@@ -300,32 +315,37 @@ class ImprovedDashboard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(emoji, style: const TextStyle(fontSize: 24)),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.grey.shade500,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Colors.white54,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -338,22 +358,15 @@ class ImprovedDashboard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: const Color(0xFF141B2D),
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Componentes del Score',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.white),
           ),
           const SizedBox(height: 16),
           ...components.map((component) => Padding(
@@ -388,6 +401,7 @@ class ImprovedDashboard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
+                    color: Colors.white,
                   ),
                 ),
               ],
@@ -409,7 +423,7 @@ class ImprovedDashboard extends StatelessWidget {
             value: percentage.toDouble() / 100,
             backgroundColor: color.withOpacity(0.2),
             valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 6,
+            minHeight: 8,
           ),
         ),
       ],
@@ -417,50 +431,42 @@ class ImprovedDashboard extends StatelessWidget {
   }
 
   Widget _buildMoodAnalysis(BuildContext context, AnalyticsProvider analytics) {
-    // CORREGIDO: Usar el mapa de análisis de mood directamente
     final moodInsights = analytics.moodAnalysis;
-    final stability = _parseNum(moodInsights['stability'], fallback: 0).toInt();
-    final positiveRatio = _parseNum(moodInsights['positive_ratio'], fallback: 0).toInt();
-    final daysAnalyzed = _parseNum(moodInsights['days_analyzed'] ?? moodInsights['total_days_analyzed']).toInt();
+    final stability = _parseNum(moodInsights['stability_score'], fallback: 0.0) * 100;
+    final positiveRatio = _parseNum(moodInsights['positive_days_ratio'], fallback: 0.0) * 100;
+    final daysAnalyzed = _parseNum(moodInsights['total_days_analyzed']).toInt();
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: const Color(0xFF141B2D),
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             '😊 Análisis de Estado de Ánimo',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.white),
           ),
           const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
-                child: _buildMoodMetric('Estabilidad', '$stability%', Colors.blue.shade400),
+                child: _buildMoodMetric('Estabilidad', '${stability.toStringAsFixed(0)}%', Colors.blue.shade400),
               ),
               const SizedBox(width: 16),
               Expanded(
-                child: _buildMoodMetric('Días Positivos', '$positiveRatio%', Colors.green.shade400),
+                child: _buildMoodMetric('Días Positivos', '${positiveRatio.toStringAsFixed(0)}%', Colors.green.shade400),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            'Basado en $daysAnalyzed días de análisis',
-            style: TextStyle(
+            'Basado en los últimos $daysAnalyzed días de análisis.',
+            style: const TextStyle(
               fontSize: 12,
-              color: Colors.grey.shade600,
+              color: Colors.white54,
             ),
           ),
         ],
@@ -474,16 +480,16 @@ class ImprovedDashboard extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
-            color: Colors.grey.shade600,
+            color: Colors.white70,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           value,
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 20,
             fontWeight: FontWeight.bold,
             color: color,
           ),
@@ -493,27 +499,18 @@ class ImprovedDashboard extends StatelessWidget {
   }
 
   Widget _buildNextLevelProgress(BuildContext context, AnalyticsProvider analytics) {
-    // CORREGIDO: Adaptado a la nueva estructura de datos del provider
     final progress = analytics.getNextLevelProgress();
     final currentScore = _parseNum(progress['current_value']).toInt();
     final targetScore = _parseNum(progress['target_value'], fallback: 1).toInt();
-    final targetLevel = _parseString(progress['description']);
+    final description = _parseString(progress['description']);
     final pointsNeeded = (targetScore - currentScore).clamp(0, targetScore);
     final progressPercentage = _parseNum(progress['progress']).toDouble();
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: const Color(0xFF141B2D),
         borderRadius: BorderRadius.circular(12),
-        // CORREGIDO: Typo de 'boxShow' a 'boxShadow'
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -522,8 +519,8 @@ class ImprovedDashboard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '🎯 Progreso al Siguiente Nivel',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                '🎯 Próximo Logro',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.white),
               ),
               Text(
                 '$currentScore/$targetScore',
@@ -537,10 +534,10 @@ class ImprovedDashboard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            targetLevel,
-            style: TextStyle(
+            description,
+            style: const TextStyle(
               fontSize: 14,
-              color: Colors.grey.shade600,
+              color: Colors.white70,
             ),
           ),
           const SizedBox(height: 12),
@@ -555,10 +552,10 @@ class ImprovedDashboard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            pointsNeeded > 0 ? 'Te faltan $pointsNeeded puntos' : '¡Nivel Completado!',
-            style: TextStyle(
+            pointsNeeded > 0 ? 'Te faltan $pointsNeeded puntos para el siguiente nivel.' : '¡Nivel Completado!',
+            style: const TextStyle(
               fontSize: 12,
-              color: Colors.grey.shade600,
+              color: Colors.white54,
             ),
           ),
         ],
@@ -573,22 +570,15 @@ class ImprovedDashboard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
+        color: const Color(0xFF141B2D),
         borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            '💡 Recomendaciones',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            '💡 Recomendaciones para ti',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600, color: Colors.white),
           ),
           const SizedBox(height: 16),
           ...recommendations.map((rec) => Padding(
@@ -604,26 +594,13 @@ class ImprovedDashboard extends StatelessWidget {
     final emoji = _parseString(recommendation['emoji'], fallback: '💡');
     final title = _parseString(recommendation['title'], fallback: 'Recomendación');
     final description = _parseString(recommendation['description']);
-    final priority = _parseString(recommendation['priority'], fallback: 'medium');
-
-    Color priorityColor;
-    switch (priority) {
-      case 'high':
-        priorityColor = Colors.red.shade400;
-        break;
-      case 'medium':
-        priorityColor = Colors.orange.shade400;
-        break;
-      default:
-        priorityColor = Colors.blue.shade400;
-    }
 
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: priorityColor.withOpacity(0.1),
+        color: Colors.blue.withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: priorityColor.withOpacity(0.3)),
+        border: Border.all(color: Colors.blue.withOpacity(0.3)),
       ),
       child: Row(
         children: [
@@ -638,15 +615,16 @@ class ImprovedDashboard extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
+                    color: Colors.white,
                   ),
                 ),
                 if (description.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
                     description,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 12,
-                      color: Colors.grey.shade600,
+                      color: Colors.white70,
                     ),
                   ),
                 ],

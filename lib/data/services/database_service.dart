@@ -57,6 +57,7 @@ class DatabaseService {
   Future<void> _onCreate(Database db, int version) async {
     _logger.i('✨ Creando esquema de base de datos zen');
     await db.transaction((txn) async {
+
       await txn.execute('''
         CREATE TABLE users (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -105,6 +106,25 @@ class DatabaseService {
           FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )
       ''');
+      // En lib/data/services/database_service.dart, dentro de _onCreate
+
+// ... después de la tabla interactive_moments
+      await txn.execute('''
+  CREATE TABLE user_goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    type TEXT NOT NULL,
+    status TEXT NOT NULL,
+    target_value REAL NOT NULL,
+    current_value REAL NOT NULL DEFAULT 0.0,
+    created_at TEXT DEFAULT (datetime('now')),
+    completed_at TEXT,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+  )
+''');
+      await txn.execute('CREATE INDEX idx_user_goals_user_status ON user_goals(user_id, status)');
       await txn.execute('CREATE INDEX idx_daily_entries_user_date ON daily_entries(user_id, entry_date)');
       await txn.execute('CREATE INDEX idx_interactive_moments_user_date ON interactive_moments(user_id, entry_date)');
     });
@@ -1816,6 +1836,77 @@ class DatabaseService {
       return {'target_score': 85, 'target_level': 'Maestro del Bienestar', 'points_needed': 85 - currentScore};
     } else {
       return {'target_score': 100, 'target_level': 'Perfección', 'points_needed': 100 - currentScore};
+    }
+  }
+  // En lib/data/services/database_service.dart
+
+  /// Obtiene las correlaciones más frecuentes entre tags positivos y negativos.
+  ///
+  /// Devuelve un mapa donde la clave es una combinación de tags (ej: "trabajo|estrés")
+  /// y el valor es la frecuencia con la que aparecen juntos.
+  Future<Map<String, int>> getTagCorrelations(int userId, {int limit = 10}) async {
+    _logger.i('🔍 Analizando correlaciones de tags para el usuario $userId');
+    try {
+      final db = await database;
+      final List<Map<String, dynamic>> entries = await db.query(
+        'daily_entries',
+        columns: ['positive_tags', 'negative_tags'],
+        where: 'user_id = ?',
+        whereArgs: [userId],
+      );
+
+      if (entries.isEmpty) {
+        _logger.d('No hay entradas para analizar correlaciones.');
+        return {};
+      }
+
+      final Map<String, int> correlations = {};
+
+      // Función para decodificar tags de forma segura
+      List<TagModel> _parseTags(String? jsonString) {
+        if (jsonString == null || jsonString.isEmpty) return [];
+        try {
+          final List<dynamic> tagsList = json.decode(jsonString);
+          return tagsList.map((tagJson) => TagModel.fromJson(tagJson as Map<String, dynamic>)).toList();
+        } catch (e) {
+          _logger.e('Error decodificando JSON de tags: $e');
+          return [];
+        }
+      }
+
+      for (final row in entries) {
+        final positiveTags = _parseTags(row['positive_tags'] as String?);
+        final negativeTags = _parseTags(row['negative_tags'] as String?);
+
+        if (positiveTags.isEmpty || negativeTags.isEmpty) {
+          continue;
+        }
+
+        // Crear todas las combinaciones posibles para esta entrada
+        for (final pTag in positiveTags) {
+          for (final nTag in negativeTags) {
+            // Crear una clave única y ordenada para la correlación
+            final keyItems = [pTag.name, nTag.name]..sort();
+            final key = keyItems.join('|'); // Ej: "agradecido|trabajo"
+
+            // Incrementar el contador para esta correlación
+            correlations[key] = (correlations[key] ?? 0) + 1;
+          }
+        }
+      }
+
+      // Ordenar por frecuencia y limitar los resultados
+      final sortedCorrelations = correlations.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
+      final limitedCorrelations = Map.fromEntries(sortedCorrelations.take(limit));
+
+      _logger.i('✅ Correlaciones encontradas: ${limitedCorrelations.length}');
+      return limitedCorrelations;
+
+    } catch (e) {
+      _logger.e('❌ Error obteniendo correlaciones de tags: $e');
+      return {};
     }
   }
 
