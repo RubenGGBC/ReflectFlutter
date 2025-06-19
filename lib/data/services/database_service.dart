@@ -608,4 +608,661 @@ class DatabaseService {
       return null;
     }
   }
+  // ============================================================================
+// MÉTODOS AVANZADOS DE ANÁLISIS PARA REFUERZO POSITIVO Y INSIGHTS PROFUNDOS
+// ============================================================================
+
+// Agregar estos métodos al DatabaseService existente
+
+  /// 🕐 Análisis de patrones de humor por hora del día
+  Future<Map<String, dynamic>> getMoodPatternsByHour(int userId) async {
+    try {
+      final db = await database;
+      final results = await db.rawQuery('''
+      SELECT 
+        CAST(substr(time_str, 1, 2) AS INTEGER) as hour,
+        moment_type,
+        AVG(intensity) as avg_intensity,
+        COUNT(*) as count
+      FROM interactive_moments 
+      WHERE user_id = ? AND entry_date >= date('now', '-30 days')
+      GROUP BY hour, moment_type
+      ORDER BY hour ASC
+    ''', [userId]);
+
+      final Map<int, Map<String, dynamic>> hourlyData = {};
+      String? bestHour, worstHour;
+      double bestScore = 0, worstScore = 10;
+
+      for (final row in results) {
+        final hour = row['hour'] as int;
+        final type = row['moment_type'] as String;
+        final avgIntensity = (row['avg_intensity'] as num).toDouble();
+        final count = row['count'] as int;
+
+        if (!hourlyData.containsKey(hour)) {
+          hourlyData[hour] = {'positive': 0.0, 'negative': 0.0, 'total': 0};
+        }
+
+        hourlyData[hour]![type] = avgIntensity;
+        hourlyData[hour]!['total'] = hourlyData[hour]!['total']! + count;
+
+        // Calcular score general (positivos - negativos)
+        final score = (hourlyData[hour]!['positive'] as double) -
+            (hourlyData[hour]!['negative'] as double);
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestHour = '${hour.toString().padLeft(2, '0')}:00';
+        }
+        if (score < worstScore) {
+          worstScore = score;
+          worstHour = '${hour.toString().padLeft(2, '0')}:00';
+        }
+      }
+
+      return {
+        'hourly_data': hourlyData,
+        'best_hour': bestHour ?? 'No hay datos suficientes',
+        'worst_hour': worstHour ?? 'No hay datos suficientes',
+        'peak_energy_time': _findPeakEnergyTime(hourlyData),
+        'recommendation': _getHourlyRecommendation(bestHour, worstHour),
+      };
+    } catch (e) {
+      _logger.e('Error analizando patrones por hora: $e');
+      return {};
+    }
+  }
+
+  /// 📈 Evolución del mood a lo largo del tiempo (últimos 30 días)
+  Future<Map<String, dynamic>> getMoodEvolution(int userId) async {
+    try {
+      final db = await database;
+      final results = await db.rawQuery('''
+      SELECT 
+        entry_date,
+        AVG(mood_score) as avg_mood,
+        COUNT(*) as entries_count
+      FROM daily_entries 
+      WHERE user_id = ? AND entry_date >= date('now', '-30 days')
+      GROUP BY entry_date
+      ORDER BY entry_date ASC
+    ''', [userId]);
+
+      final List<Map<String, dynamic>> timeline = [];
+      double bestMood = 0, worstMood = 10;
+      String? bestDay, worstDay;
+      double totalImprovement = 0;
+
+      for (int i = 0; i < results.length; i++) {
+        final row = results[i];
+        final date = row['entry_date'] as String;
+        final mood = (row['avg_mood'] as num).toDouble();
+
+        timeline.add({
+          'date': date,
+          'mood': mood,
+          'entries': row['entries_count'],
+        });
+
+        if (mood > bestMood) {
+          bestMood = mood;
+          bestDay = date;
+        }
+        if (mood < worstMood) {
+          worstMood = mood;
+          worstDay = date;
+        }
+
+        // Calcular tendencia
+        if (i > 0) {
+          final prevMood = (results[i-1]['avg_mood'] as num).toDouble();
+          totalImprovement += mood - prevMood;
+        }
+      }
+
+      final trend = totalImprovement > 0 ? 'improving' :
+      totalImprovement < -1 ? 'declining' : 'stable';
+
+      return {
+        'timeline': timeline,
+        'best_day': bestDay,
+        'worst_day': worstDay,
+        'best_mood': bestMood,
+        'worst_mood': worstMood,
+        'overall_trend': trend,
+        'improvement_score': totalImprovement.toStringAsFixed(1),
+        'trend_message': _getTrendMessage(trend, totalImprovement),
+      };
+    } catch (e) {
+      _logger.e('Error analizando evolución del mood: $e');
+      return {};
+    }
+  }
+
+  /// 🏆 Sistema de logros y hitos personalizados
+  Future<Map<String, dynamic>> getUserAchievements(int userId) async {
+    try {
+      final db = await database;
+
+      // Consultas para diferentes logros
+      final basicStats = await getUserComprehensiveStatistics(userId);
+      final streakDays = basicStats['streak_days'] ?? 0;
+      final totalEntries = basicStats['total_entries'] ?? 0;
+      final totalMoments = basicStats['total_moments'] ?? 0;
+
+      // Logros específicos
+      final consistencyResult = await db.rawQuery('''
+      SELECT COUNT(DISTINCT entry_date) as consistent_days
+      FROM daily_entries 
+      WHERE user_id = ? AND entry_date >= date('now', '-7 days')
+    ''', [userId]);
+
+      final moodImprovementResult = await db.rawQuery('''
+      SELECT 
+        AVG(CASE WHEN entry_date >= date('now', '-7 days') THEN mood_score END) as recent_mood,
+        AVG(CASE WHEN entry_date < date('now', '-7 days') AND entry_date >= date('now', '-14 days') THEN mood_score END) as prev_mood
+      FROM daily_entries 
+      WHERE user_id = ?
+    ''', [userId]);
+
+      final diversityResult = await db.rawQuery('''
+      SELECT COUNT(DISTINCT category) as categories_used
+      FROM interactive_moments 
+      WHERE user_id = ? AND entry_date >= date('now', '-30 days')
+    ''', [userId]);
+
+      final achievements = <Map<String, dynamic>>[];
+
+      // 🔥 Logros de Consistencia
+      if (streakDays >= 1) achievements.add(_createAchievement('🌱', 'Primer Paso', 'Comenzaste tu viaje de reflexión', true, 'bronze'));
+      if (streakDays >= 3) achievements.add(_createAchievement('🔥', 'En Racha', 'Mantuviste consistencia por 3 días', true, 'bronze'));
+      if (streakDays >= 7) achievements.add(_createAchievement('💪', 'Semana Completa', 'Una semana de reflexión diaria', true, 'silver'));
+      if (streakDays >= 30) achievements.add(_createAchievement('💎', 'Dedicación Diamond', '30 días consecutivos', streakDays >= 30, 'gold'));
+
+      // ✨ Logros de Volumen
+      if (totalMoments >= 10) achievements.add(_createAchievement('📝', 'Capturador', '10 momentos registrados', true, 'bronze'));
+      if (totalMoments >= 50) achievements.add(_createAchievement('🌟', 'Observador', '50 momentos capturados', true, 'silver'));
+      if (totalMoments >= 100) achievements.add(_createAchievement('🚀', 'Experto en Momentos', '100 momentos registrados', totalMoments >= 100, 'gold'));
+
+      // 📊 Logros de Mejora
+      final recentMood = (moodImprovementResult.first['recent_mood'] as num?)?.toDouble() ?? 5.0;
+      final prevMood = (moodImprovementResult.first['prev_mood'] as num?)?.toDouble() ?? 5.0;
+      final moodImprovement = recentMood - prevMood;
+
+      if (moodImprovement > 1) achievements.add(_createAchievement('📈', 'En Ascenso', 'Tu mood mejoró esta semana', true, 'silver'));
+      if (recentMood >= 8) achievements.add(_createAchievement('😊', 'Estado Zen', 'Mood promedio excelente', true, 'gold'));
+
+      // 🎨 Logros de Diversidad
+      final categoriesUsed = (diversityResult.first['categories_used'] as int?) ?? 0;
+      if (categoriesUsed >= 3) achievements.add(_createAchievement('🎨', 'Explorador', 'Usaste múltiples categorías', true, 'bronze'));
+      if (categoriesUsed >= 5) achievements.add(_createAchievement('🌈', 'Diversidad Total', 'Exploraste todas las categorías', categoriesUsed >= 5, 'gold'));
+
+      return {
+        'achievements': achievements,
+        'total_unlocked': achievements.where((a) => a['unlocked']).length,
+        'total_possible': achievements.length,
+        'completion_percentage': achievements.isEmpty ? 0 : (achievements.where((a) => a['unlocked']).length / achievements.length * 100).round(),
+        'next_achievement': _getNextAchievement(achievements, streakDays, totalMoments),
+      };
+    } catch (e) {
+      _logger.e('Error obteniendo logros: $e');
+      return {'achievements': [], 'total_unlocked': 0, 'total_possible': 0};
+    }
+  }
+
+  /// 📊 Análisis de palabras y sentimientos más frecuentes
+  Future<Map<String, dynamic>> getSentimentAnalysis(int userId) async {
+    try {
+      final db = await database;
+      final results = await db.rawQuery('''
+      SELECT free_reflection, positive_tags, negative_tags, mood_score, entry_date
+      FROM daily_entries 
+      WHERE user_id = ? AND entry_date >= date('now', '-30 days')
+    ''', [userId]);
+
+      final Map<String, int> positiveWords = {};
+      final Map<String, int> challengeWords = {};
+      final List<double> moodHistory = [];
+
+      for (final row in results) {
+        final reflection = (row['free_reflection'] as String).toLowerCase();
+        final moodScore = (row['mood_score'] as num).toDouble();
+        moodHistory.add(moodScore);
+
+        // Analizar palabras positivas comunes
+        for (final word in _getPositiveKeywords()) {
+          if (reflection.contains(word)) {
+            positiveWords[word] = (positiveWords[word] ?? 0) + 1;
+          }
+        }
+
+        // Analizar desafíos/áreas de mejora
+        for (final word in _getChallengeKeywords()) {
+          if (reflection.contains(word)) {
+            challengeWords[word] = (challengeWords[word] ?? 0) + 1;
+          }
+        }
+      }
+
+      // Ordenar por frecuencia
+      final topPositive = positiveWords.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      final topChallenges = challengeWords.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+
+      return {
+        'top_positive_themes': topPositive.take(5).map((e) => {'word': e.key, 'count': e.value}).toList(),
+        'top_challenge_areas': topChallenges.take(3).map((e) => {'word': e.key, 'count': e.value}).toList(),
+        'dominant_sentiment': _calculateDominantSentiment(positiveWords, challengeWords),
+        'mood_stability': _calculateMoodStability(moodHistory),
+        'growth_indicators': _identifyGrowthIndicators(topPositive, moodHistory),
+      };
+    } catch (e) {
+      _logger.e('Error en análisis de sentimiento: $e');
+      return {};
+    }
+  }
+
+  /// 🗓️ Análisis de patrones por día de la semana
+  Future<Map<String, dynamic>> getWeeklyPatterns(int userId) async {
+    try {
+      final db = await database;
+      final results = await db.rawQuery('''
+      SELECT 
+        CASE CAST(strftime('%w', entry_date) AS INTEGER)
+          WHEN 0 THEN 'Domingo'
+          WHEN 1 THEN 'Lunes' 
+          WHEN 2 THEN 'Martes'
+          WHEN 3 THEN 'Miércoles'
+          WHEN 4 THEN 'Jueves'
+          WHEN 5 THEN 'Viernes'
+          WHEN 6 THEN 'Sábado'
+        END as day_name,
+        strftime('%w', entry_date) as day_num,
+        AVG(mood_score) as avg_mood,
+        COUNT(*) as entries_count
+      FROM daily_entries 
+      WHERE user_id = ? AND entry_date >= date('now', '-60 days')
+      GROUP BY day_num
+      ORDER BY day_num
+    ''', [userId]);
+
+      String? bestDay, worstDay;
+      double bestMood = 0, worstMood = 10;
+
+      final weeklyData = <Map<String, dynamic>>[];
+      for (final row in results) {
+        final dayName = row['day_name'] as String;
+        final mood = (row['avg_mood'] as num).toDouble();
+
+        weeklyData.add({
+          'day': dayName,
+          'mood': mood,
+          'entries': row['entries_count'],
+        });
+
+        if (mood > bestMood) {
+          bestMood = mood;
+          bestDay = dayName;
+        }
+        if (mood < worstMood) {
+          worstMood = mood;
+          bestDay = dayName;
+        }
+      }
+
+      return {
+        'weekly_data': weeklyData,
+        'best_day': bestDay ?? 'No hay datos',
+        'worst_day': worstDay ?? 'No hay datos',
+        'weekend_vs_weekday': _compareWeekendVsWeekday(weeklyData),
+        'consistency_score': _calculateWeeklyConsistency(weeklyData),
+        'recommendations': _getWeeklyRecommendations(bestDay, worstDay),
+      };
+    } catch (e) {
+      _logger.e('Error analizando patrones semanales: $e');
+      return {};
+    }
+  }
+
+  /// 🎯 Predicciones y recomendaciones personalizadas
+  Future<Map<String, dynamic>> getPersonalizedInsights(int userId) async {
+    try {
+      final basicStats = await getUserComprehensiveStatistics(userId);
+      final moodEvolution = await getMoodEvolution(userId);
+      final hourlyPatterns = await getMoodPatternsByHour(userId);
+      final weeklyPatterns = await getWeeklyPatterns(userId);
+      final achievements = await getUserAchievements(userId);
+
+      final insights = <Map<String, String>>[];
+      final predictions = <Map<String, dynamic>>[];
+      final recommendations = <Map<String, String>>[];
+
+      // Generar insights basados en datos reales
+      final streak = basicStats['streak_days'] ?? 0;
+      final avgMood = basicStats['avg_mood_score'] ?? 5.0;
+      final trend = moodEvolution['overall_trend'] ?? 'stable';
+
+      // 🔮 Predicciones
+      if (streak >= 7) {
+        predictions.add({
+          'type': 'streak_continuation',
+          'probability': 0.85,
+          'message': 'Tienes 85% probabilidad de mantener tu racha esta semana',
+          'confidence': 'alta'
+        });
+      }
+
+      if (trend == 'improving') {
+        predictions.add({
+          'type': 'mood_improvement',
+          'probability': 0.75,
+          'message': 'Tu mood continuará mejorando si mantienes tus hábitos actuales',
+          'confidence': 'alta'
+        });
+      }
+
+      // 💡 Recomendaciones personalizadas
+      final bestHour = hourlyPatterns['best_hour'];
+      if (bestHour != null) {
+        recommendations.add({
+          'type': 'timing',
+          'emoji': '⏰',
+          'title': 'Optimiza tu horario',
+          'description': 'Tu mejor momento es a las $bestHour. Planifica actividades importantes entonces.'
+        });
+      }
+
+      final bestDay = weeklyPatterns['best_day'];
+      if (bestDay != null) {
+        recommendations.add({
+          'type': 'weekly_planning',
+          'emoji': '📅',
+          'title': 'Planificación semanal',
+          'description': 'Los $bestDay son tu mejor día. Úsalos para objetivos importantes.'
+        });
+      }
+
+      // Recomendación basada en consistencia
+      if (streak < 3) {
+        recommendations.add({
+          'type': 'consistency',
+          'emoji': '🎯',
+          'title': 'Construye consistencia',
+          'description': 'Intenta reflexionar a la misma hora cada día para crear un hábito fuerte.'
+        });
+      }
+
+      // 🌟 Insights motivacionales
+      insights.add({
+        'emoji': '📈',
+        'text': 'Has mostrado ${_getProgressDescription(trend)} en tu bienestar emocional.',
+      });
+
+      if (avgMood >= 6) {
+        insights.add({
+          'emoji': '😊',
+          'text': 'Mantienes un equilibrio emocional positivo con ${avgMood.toStringAsFixed(1)}/10 de promedio.',
+        });
+      }
+
+      final unlockedAchievements = achievements['total_unlocked'] ?? 0;
+      if (unlockedAchievements > 0) {
+        insights.add({
+          'emoji': '🏆',
+          'text': 'Has desbloqueado $unlockedAchievements logros. ¡Tu dedicación está dando frutos!',
+        });
+      }
+
+      return {
+        'insights': insights,
+        'predictions': predictions,
+        'recommendations': recommendations,
+        'overall_score': _calculateWellbeingScore(basicStats, moodEvolution, achievements),
+        'next_milestone': _getNextMilestone(basicStats, achievements),
+      };
+    } catch (e) {
+      _logger.e('Error generando insights personalizados: $e');
+      return {};
+    }
+  }
+
+  /// 📊 Score general de bienestar (0-100)
+  int _calculateWellbeingScore(Map<String, dynamic> basicStats, Map<String, dynamic> moodEvolution, Map<String, dynamic> achievements) {
+    double score = 0;
+
+    // Consistencia (30 puntos)
+    final streak = basicStats['streak_days'] ?? 0;
+    score += (streak / 30 * 30).clamp(0, 30);
+
+    // Mood promedio (25 puntos)
+    final avgMood = basicStats['avg_mood_score'] ?? 5.0;
+    score += (avgMood / 10 * 25).clamp(0, 25);
+
+    // Tendencia (20 puntos)
+    final trend = moodEvolution['overall_trend'] ?? 'stable';
+    if (trend == 'improving') score += 20;
+    else if (trend == 'stable') score += 15;
+    else score += 5;
+
+    // Logros (15 puntos)
+    final achievementPercentage = achievements['completion_percentage'] ?? 0;
+    score += (achievementPercentage / 100 * 15).clamp(0, 15);
+
+    // Actividad (10 puntos)
+    final entriesThisMonth = basicStats['entries_this_month'] ?? 0;
+    score += (entriesThisMonth / 20 * 10).clamp(0, 10);
+
+    return score.round().clamp(0, 100);
+  }
+
+// ============================================================================
+// HELPER METHODS
+// ============================================================================
+
+  Map<String, dynamic> _createAchievement(String emoji, String title, String description, bool unlocked, String tier) {
+    return {
+      'emoji': emoji,
+      'title': title,
+      'description': description,
+      'unlocked': unlocked,
+      'tier': tier, // bronze, silver, gold
+    };
+  }
+
+  List<String> _getPositiveKeywords() {
+    return [
+      'feliz', 'alegre', 'contento', 'satisfecho', 'orgulloso', 'agradecido',
+      'exitoso', 'logro', 'conseguí', 'cumplí', 'terminé', 'completé',
+      'amor', 'familia', 'amigos', 'conexión', 'apoyo', 'compañía',
+      'paz', 'tranquilo', 'relajado', 'sereno', 'equilibrio',
+      'energía', 'motivado', 'inspirado', 'creativo', 'productivo'
+    ];
+  }
+
+  List<String> _getChallengeKeywords() {
+    return [
+      'estrés', 'estresado', 'agobiado', 'presión', 'ansiedad', 'nervioso',
+      'cansado', 'agotado', 'exhausto', 'fatiga', 'sueño',
+      'triste', 'deprimido', 'solo', 'vacío', 'melancólico',
+      'frustrado', 'molesto', 'irritado', 'enfadado', 'conflicto',
+      'difícil', 'complicado', 'problema', 'desafío', 'obstáculo'
+    ];
+  }
+
+  String _findPeakEnergyTime(Map<int, Map<String, dynamic>> hourlyData) {
+    int bestHour = 12;
+    double bestScore = 0;
+
+    hourlyData.forEach((hour, data) {
+      final score = (data['positive'] as double) - (data['negative'] as double);
+      if (score > bestScore) {
+        bestScore = score;
+        bestHour = hour;
+      }
+    });
+
+    return '${bestHour.toString().padLeft(2, '0')}:00';
+  }
+
+  String _getHourlyRecommendation(String? bestHour, String? worstHour) {
+    if (bestHour != null && worstHour != null) {
+      return 'Tu energía pico es a las $bestHour. Evita tareas demandantes cerca de las $worstHour.';
+    }
+    return 'Registra más momentos para obtener recomendaciones personalizadas.';
+  }
+
+  String _getTrendMessage(String trend, double improvement) {
+    switch (trend) {
+      case 'improving':
+        return '¡Excelente! Tu bienestar está en ascenso (+${improvement.abs().toStringAsFixed(1)})';
+      case 'declining':
+        return 'Tiempo de cuidarte más. Considera qué está afectando tu bienestar.';
+      default:
+        return 'Mantienes un estado emocional estable. ¡Bien por la consistencia!';
+    }
+  }
+
+  String _calculateDominantSentiment(Map<String, int> positive, Map<String, int> challenges) {
+    final positiveTotal = positive.values.fold(0, (sum, count) => sum + count);
+    final challengeTotal = challenges.values.fold(0, (sum, count) => sum + count);
+
+    if (positiveTotal > challengeTotal * 1.5) return 'muy_positivo';
+    if (positiveTotal > challengeTotal) return 'positivo';
+    if (challengeTotal > positiveTotal * 1.5) return 'reflexivo';
+    return 'equilibrado';
+  }
+
+  double _calculateMoodStability(List<double> moodHistory) {
+    if (moodHistory.length < 2) return 1.0;
+
+    double variance = 0;
+    final mean = moodHistory.reduce((a, b) => a + b) / moodHistory.length;
+
+    for (final mood in moodHistory) {
+      variance += (mood - mean) * (mood - mean);
+    }
+
+    return (10 - (variance / moodHistory.length)).clamp(0, 10) / 10;
+  }
+
+  List<String> _identifyGrowthIndicators(List<MapEntry<String, int>> positiveWords, List<double> moodHistory) {
+    final indicators = <String>[];
+
+    if (positiveWords.isNotEmpty && positiveWords.first.value >= 3) {
+      indicators.add('Vocabulario positivo frecuente');
+    }
+
+    if (moodHistory.length >= 7) {
+      final recentMood = moodHistory.skip(moodHistory.length - 3).reduce((a, b) => a + b) / 3;
+      final olderMood = moodHistory.take(3).reduce((a, b) => a + b) / 3;
+      if (recentMood > olderMood) {
+        indicators.add('Tendencia de mejora reciente');
+      }
+    }
+
+    return indicators;
+  }
+
+  Map<String, dynamic> _compareWeekendVsWeekday(List<Map<String, dynamic>> weeklyData) {
+    double weekendMood = 0, weekdayMood = 0;
+    int weekendCount = 0, weekdayCount = 0;
+
+    for (final day in weeklyData) {
+      final dayName = day['day'] as String;
+      final mood = day['mood'] as double;
+
+      if (dayName == 'Sábado' || dayName == 'Domingo') {
+        weekendMood += mood;
+        weekendCount++;
+      } else {
+        weekdayMood += mood;
+        weekdayCount++;
+      }
+    }
+
+    return {
+      'weekend_avg': weekendCount > 0 ? weekendMood / weekendCount : 0,
+      'weekday_avg': weekdayCount > 0 ? weekdayMood / weekdayCount : 0,
+      'preference': weekendMood > weekdayMood ? 'weekend' : 'weekday',
+    };
+  }
+
+  double _calculateWeeklyConsistency(List<Map<String, dynamic>> weeklyData) {
+    if (weeklyData.length < 2) return 1.0;
+
+    final moods = weeklyData.map((d) => d['mood'] as double).toList();
+    final mean = moods.reduce((a, b) => a + b) / moods.length;
+
+    double variance = 0;
+    for (final mood in moods) {
+      variance += (mood - mean) * (mood - mean);
+    }
+
+    return (10 - variance).clamp(0, 10) / 10;
+  }
+
+  List<Map<String, String>> _getWeeklyRecommendations(String? bestDay, String? worstDay) {
+    final recommendations = <Map<String, String>>[];
+
+    if (bestDay != null) {
+      recommendations.add({
+        'type': 'optimize',
+        'title': 'Optimiza tu $bestDay',
+        'description': 'Planifica actividades importantes para aprovechar tu mejor día.'
+      });
+    }
+
+    if (worstDay != null) {
+      recommendations.add({
+        'type': 'support',
+        'title': 'Cuídate los $worstDay',
+        'description': 'Considera actividades relajantes y de autocuidado ese día.'
+      });
+    }
+
+    return recommendations;
+  }
+
+  String _getProgressDescription(String trend) {
+    switch (trend) {
+      case 'improving': return 'una mejora constante';
+      case 'declining': return 'algunos desafíos recientes';
+      default: return 'estabilidad emocional';
+    }
+  }
+
+  Map<String, dynamic>? _getNextAchievement(List<Map<String, dynamic>> achievements, int streak, int totalMoments) {
+    // Encontrar el próximo logro no desbloqueado
+    final locked = achievements.where((a) => !a['unlocked']).toList();
+    if (locked.isEmpty) return null;
+
+    return locked.first;
+  }
+
+  Map<String, String>? _getNextMilestone(Map<String, dynamic> basicStats, Map<String, dynamic> achievements) {
+    final streak = basicStats['streak_days'] ?? 0;
+    final totalMoments = basicStats['total_moments'] ?? 0;
+
+    if (streak < 7) {
+      return {
+        'type': 'streak',
+        'title': 'Próximo hito: 7 días consecutivos',
+        'description': 'Te faltan ${7 - streak} días para una semana completa.',
+        'progress': '${(streak / 7 * 100).round()}%'
+      };
+    }
+
+    if (totalMoments < 50) {
+      return {
+        'type': 'moments',
+        'title': 'Próximo hito: 50 momentos',
+        'description': 'Te faltan ${50 - totalMoments} momentos para el siguiente nivel.',
+        'progress': '${(totalMoments / 50 * 100).round()}%'
+      };
+    }
+
+    return null;
+  }
 }

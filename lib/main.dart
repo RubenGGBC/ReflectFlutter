@@ -48,7 +48,7 @@ void main() async {
 
     logger.i('✅ ReflectApp v2 inicializado correctamente');
 
-    runApp(const ReflectAppV2());
+    runApp(ReflectAppV2());
 
   } catch (e, stackTrace) {
     logger.e('❌ Error crítico iniciando ReflectApp: $e', error: e, stackTrace: stackTrace);

@@ -4,6 +4,7 @@
 
 import 'package:get_it/get_it.dart';
 import 'package:logger/logger.dart';
+import 'package:untitled3/presentation/providers/analytics_provider.dart';
 
 import 'data/services/database_service.dart';
 import 'presentation/providers/auth_provider.dart';
@@ -48,7 +49,9 @@ Future<void> init() async {
 
     // Theme Provider - Singleton
     sl.registerLazySingleton<ThemeProvider>(() => ThemeProvider());
-
+    sl.registerLazySingleton<AnalyticsProvider>(
+          () => AnalyticsProvider(sl<DatabaseService>()),
+    );
     // Interactive Moments Provider - Singleton
     sl.registerLazySingleton<InteractiveMomentsProvider>(
           () => InteractiveMomentsProvider(sl<DatabaseService>()),

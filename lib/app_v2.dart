@@ -1,5 +1,5 @@
 // ============================================================================
-// app_v2.dart - VERSIÓN SIN EL PROVIDER DE NOTIFICACIONES
+// app_v2.dart - VERSIÓN COMPLETA Y FUNCIONAL
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -10,7 +10,7 @@ import 'package:logger/logger.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/interactive_moments_provider.dart';
-// import 'presentation/providers/notifications_provider.dart'; // FIX: Removed notifications provider
+import 'presentation/providers/analytics_provider.dart'; // ✅ NUEVO
 
 // Screens V2
 import 'presentation/screens/v2/login_screen_v2.dart';
@@ -23,6 +23,9 @@ import 'presentation/screens/v2/calendar_screen_v2.dart';
 // Componentes modernos
 import 'presentation/screens/components/modern_design_system.dart';
 import 'presentation/screens/components/modern_navigation.dart';
+
+// Services
+import 'data/services/database_service.dart';
 
 // Dependency Injection
 import 'injection_container.dart' as di;
@@ -43,9 +46,10 @@ class ReflectAppV2 extends StatelessWidget {
         ChangeNotifierProvider<InteractiveMomentsProvider>(
           create: (_) => di.sl<InteractiveMomentsProvider>(),
         ),
-        // ChangeNotifierProvider<NotificationsProvider>(  // FIX: Removed notifications provider
-        //   create: (_) => di.sl<NotificationsProvider>()..initialize(),
-        // ),
+        // ✅ NUEVO: Analytics Provider
+        ChangeNotifierProvider<AnalyticsProvider>(
+          create: (_) => AnalyticsProvider(di.sl<DatabaseService>()),
+        ),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
@@ -53,10 +57,18 @@ class ReflectAppV2 extends StatelessWidget {
             title: 'ReflectApp v2 - Tu espacio de reflexión',
             debugShowCheckedModeBanner: false,
             theme: ModernTheme.darkTheme,
-            initialRoute: '/splash',
+
+            // ✅ CONFIGURACIÓN INICIAL CORRECTA
+            home: const AppInitializerV2(),
+
+            // ✅ RUTAS ACTUALIZADAS
             routes: _buildRoutes(),
-            builder: (context, child) {
-              return _AppWrapper(child: child);
+
+            // Manejar rutas no encontradas
+            onUnknownRoute: (settings) {
+              return MaterialPageRoute(
+                builder: (context) => const LoginScreenV2(),
+              );
             },
           );
         },
@@ -64,9 +76,9 @@ class ReflectAppV2 extends StatelessWidget {
     );
   }
 
+  // ✅ RUTAS COMPLETAS Y ACTUALIZADAS
   Map<String, WidgetBuilder> _buildRoutes() {
     return {
-      '/splash': (context) => const SplashScreenV2(),
       '/login': (context) => const LoginScreenV2(),
       '/home': (context) => const ModernNavigationWrapper(),
       '/interactive_moments': (context) => const InteractiveMomentsScreenV2(),
@@ -78,43 +90,30 @@ class ReflectAppV2 extends StatelessWidget {
 }
 
 // ============================================================================
-// WRAPPER PARA CONFIGURACIONES GLOBALES
+// INICIALIZADOR DE APP V2 - VERSIÓN CORREGIDA
 // ============================================================================
 
-class _AppWrapper extends StatelessWidget {
-  final Widget? child;
-
-  const _AppWrapper({this.child});
+class AppInitializerV2 extends StatefulWidget {
+  const AppInitializerV2({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return MediaQuery(
-      data: MediaQuery.of(context).copyWith(
-        textScaleFactor: 1.0,
-      ),
-      child: child ?? const SizedBox(),
-    );
-  }
+  State<AppInitializerV2> createState() => _AppInitializerV2State();
 }
 
-// ============================================================================
-// SPLASH SCREEN MODERNA (Debería estar en su propio archivo)
-// ============================================================================
-
-class SplashScreenV2 extends StatefulWidget {
-  const SplashScreenV2({super.key});
-
-  @override
-  State<SplashScreenV2> createState() => _SplashScreenV2State();
-}
-
-class _SplashScreenV2State extends State<SplashScreenV2> with TickerProviderStateMixin {
+class _AppInitializerV2State extends State<AppInitializerV2> with TickerProviderStateMixin {
+  final Logger _logger = Logger();
   late AnimationController _logoController;
   late Animation<double> _logoScale;
+  bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
+    _setupAnimation();
+    _initializeApp();
+  }
+
+  void _setupAnimation() {
     _logoController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
@@ -125,19 +124,42 @@ class _SplashScreenV2State extends State<SplashScreenV2> with TickerProviderStat
     );
 
     _logoController.forward();
-    _checkAuthStatus();
   }
 
-  void _checkAuthStatus() async {
-    await Future.delayed(const Duration(seconds: 3));
+  Future<void> _initializeApp() async {
+    _logger.i('🚀 Inicializando ReflectApp V2...');
 
-    if (mounted) {
+    try {
+      // Pequeña pausa para mostrar splash
+      await Future.delayed(const Duration(milliseconds: 2000));
+
+      if (!mounted) return;
+
+      // Inicializar providers
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.initialize();
+      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
 
+      await Future.wait([
+        authProvider.initialize(),
+        themeProvider.initialize(),
+      ]);
+
+      _logger.i('✅ Providers inicializados correctamente');
+
+      if (!mounted) return;
+
+      // Navegar según estado de autenticación
       if (authProvider.isLoggedIn) {
+        _logger.i('👤 Usuario logueado, navegando a home');
         Navigator.pushReplacementNamed(context, '/home');
       } else {
+        _logger.i('🔑 Usuario no logueado, navegando a login');
+        Navigator.pushReplacementNamed(context, '/login');
+      }
+
+    } catch (e) {
+      _logger.e('❌ Error en inicialización: $e');
+      if (mounted) {
         Navigator.pushReplacementNamed(context, '/login');
       }
     }
@@ -157,10 +179,7 @@ class _SplashScreenV2State extends State<SplashScreenV2> with TickerProviderStat
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0a0e27),
-              Color(0xFF2d1b69),
-            ],
+            colors: ModernColors.primaryGradient,
           ),
         ),
         child: Center(
@@ -169,15 +188,16 @@ class _SplashScreenV2State extends State<SplashScreenV2> with TickerProviderStat
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Logo principal
                 Container(
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: ModernColors.primaryGradient),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: ModernColors.primaryGradient.first.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                         blurRadius: 30,
                         spreadRadius: 10,
                       ),
@@ -189,9 +209,47 @@ class _SplashScreenV2State extends State<SplashScreenV2> with TickerProviderStat
                     size: 60,
                   ),
                 ),
+
+                const SizedBox(height: ModernSpacing.xl),
+
+                // Título
+                const Text(
+                  'ReflectApp',
+                  style: TextStyle(
+                    fontSize: 42,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+
+                const SizedBox(height: ModernSpacing.sm),
+
+                // Subtítulo
+                Text(
+                  'Tu espacio de reflexión',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: Colors.white.withValues(alpha: 0.8),
+                  ),
+                ),
+
+                const SizedBox(height: ModernSpacing.xxl),
+
+                // Indicador de carga
+                CircularProgressIndicator(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  strokeWidth: 2,
+                ),
+
                 const SizedBox(height: ModernSpacing.lg),
-                Text('ReflectApp', style: ModernTypography.heading1.copyWith(fontSize: 42)),
-                Text('Tu espacio de reflexión', style: ModernTypography.bodyLarge),
+
+                Text(
+                  'Inicializando...',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withValues(alpha: 0.7),
+                  ),
+                ),
               ],
             ),
           ),
