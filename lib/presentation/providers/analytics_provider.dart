@@ -572,4 +572,5 @@ class AnalyticsProvider with ChangeNotifier {
     if (hour >= 18 && hour < 22) return 'Reflexión del día: ¿Qué aprendiste hoy?';
     return 'Momento de calma: Agradece y prepárate para descansar';
   }
+
 }
