@@ -1,5 +1,5 @@
 // ============================================================================
-// presentation/screens/calendar_screen.dart - VERSIÓN SIMPLIFICADA SIN DEPENDENCIAS EXTERNAS
+// presentation/screens/calendar_screen_v2.dart - VERSIÓN SIMPLIFICADA SIN DEPENDENCIAS EXTERNAS
 // ============================================================================
 
 import 'package:flutter/material.dart';

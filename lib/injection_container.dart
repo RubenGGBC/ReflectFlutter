@@ -1,5 +1,5 @@
 // ============================================================================
-// injection_container.dart - Inyección de Dependencias CORREGIDA
+// injection_container.dart - VERSIÓN FINAL SIN NOTIFICACIONES
 // ============================================================================
 
 import 'package:get_it/get_it.dart';
@@ -9,7 +9,7 @@ import 'data/services/database_service.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/interactive_moments_provider.dart';
-import 'presentation/providers/notifications_provider.dart';
+// import 'presentation/providers/notifications_provider.dart'; // FIX: Removed notifications provider
 
 final sl = GetIt.instance;
 
@@ -33,9 +33,13 @@ Future<void> init() async {
         lineLength: 120,
         colors: true,
         printEmojis: true,
-        printTime: false, // ✅ CORREGIDO: printTime ya no existe
+        printTime: false,
       ),
     ));
+
+    // ============================================================================
+    // Providers
+    // ============================================================================
 
     // Auth Provider - Singleton
     sl.registerLazySingleton<AuthProvider>(
@@ -49,10 +53,12 @@ Future<void> init() async {
     sl.registerLazySingleton<InteractiveMomentsProvider>(
           () => InteractiveMomentsProvider(sl<DatabaseService>()),
     );
-    // Notifications Provider - Singleton
-    sl.registerLazySingleton<NotificationsProvider>(
-          () => NotificationsProvider(),
-    );
+
+    // Notifications Provider - Singleton  // FIX: Removed notifications provider
+    // sl.registerLazySingleton<NotificationsProvider>(
+    //       () => NotificationsProvider(),
+    // );
+
     logger.i('✅ Contenedor de dependencias inicializado');
 
   } catch (e) {

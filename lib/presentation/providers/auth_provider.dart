@@ -1,5 +1,5 @@
 // ============================================================================
-// presentation/providers/auth_provider.dart - ACTUALIZADO CON AUTO-LOGIN
+// presentation/providers/auth_provider.dart - VERSIÓN CORREGIDA Y ROBUSTA
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -36,25 +36,26 @@ class AuthProvider with ChangeNotifier {
     _setLoading(true);
 
     try {
-      // Verificar si hay sesión activa
       final hasSession = await _sessionService.hasActiveSession();
 
       if (hasSession) {
         final sessionData = await _sessionService.getSessionData();
 
         if (sessionData != null) {
-          final userId = sessionData['id'] as int;
+          // FIX: Safely cast the user ID to prevent runtime errors.
+          final userId = sessionData['id'];
 
-          // Obtener datos actualizados del usuario desde BD
-          final user = await _databaseService.getUserById(userId);
+          if (userId is int) {
+            final user = await _databaseService.getUserById(userId);
 
-          if (user != null) {
-            _currentUser = user;
-            await _sessionService.updateLastLogin();
-            _logger.i('🌺 Auto-login exitoso para: ${user.name}');
-          } else {
-            _logger.w('⚠️ Usuario de sesión no encontrado en BD');
-            await _sessionService.clearSession();
+            if (user != null) {
+              _currentUser = user;
+              await _sessionService.updateLastLogin();
+              _logger.i('🌺 Auto-login exitoso para: ${user.name}');
+            } else {
+              _logger.w('⚠️ Usuario de sesión no encontrado en BD');
+              await _sessionService.clearSession();
+            }
           }
         }
       } else {
@@ -82,10 +83,7 @@ class AuthProvider with ChangeNotifier {
 
       if (user != null) {
         _currentUser = user;
-
-        // Guardar sesión si el usuario lo solicitó
         await _sessionService.saveUserSession(user, rememberMe: rememberMe);
-
         _logger.i('✅ Login exitoso para: ${user.name}');
         return true;
       } else {
@@ -93,7 +91,6 @@ class AuthProvider with ChangeNotifier {
         _logger.w('❌ Login fallido para: $email');
         return false;
       }
-
     } catch (e) {
       _logger.e('❌ Error en login: $e');
       _setError('Error del sistema. Intenta de nuevo');
@@ -117,10 +114,7 @@ class AuthProvider with ChangeNotifier {
         final user = await _databaseService.getUserById(userId);
         if (user != null) {
           _currentUser = user;
-
-          // Guardar sesión automáticamente tras registro
           await _sessionService.saveUserSession(user, rememberMe: true);
-
           _logger.i('✅ Registro y login exitoso para: $name');
           return true;
         }
@@ -129,7 +123,6 @@ class AuthProvider with ChangeNotifier {
         _logger.w('❌ Registro fallido - email duplicado: $email');
         return false;
       }
-
       return false;
 
     } catch (e) {
@@ -144,39 +137,29 @@ class AuthProvider with ChangeNotifier {
   /// Logout completo
   Future<void> logout() async {
     _logger.i('🚪 Cerrando sesión para: ${_currentUser?.name}');
-
     try {
-      // Limpiar sesión guardada
       await _sessionService.clearSession();
-
-      // Limpiar estado actual
       _currentUser = null;
       _clearError();
-
       _logger.i('✅ Logout completado');
     } catch (e) {
       _logger.e('❌ Error en logout: $e');
     }
-
     notifyListeners();
   }
 
   /// Crear usuario de prueba para desarrollo
   Future<bool> createTestUser() async {
     _logger.i('🧪 Creando usuario de prueba');
-
     const email = 'zen@reflect.app';
     const password = 'reflect123';
     const name = 'Viajero Zen';
 
     try {
-      // Intentar crear usuario (fallará si ya existe, pero está bien)
       await _databaseService.createUser(email, password, name);
     } catch (e) {
       // Ignorar error si el usuario ya existe
     }
-
-    // Intentar login (funcionará incluso si el usuario ya existía)
     return await login(email, password, rememberMe: true);
   }
 
@@ -187,13 +170,14 @@ class AuthProvider with ChangeNotifier {
     String? bio,
     Map<String, dynamic>? preferences,
   }) async {
-    if (_currentUser == null) return false;
+    // FIX: Add a null check for both the user and their ID.
+    if (_currentUser == null || _currentUser!.id == null) return false;
 
     _setLoading(true);
 
     try {
       final success = await _databaseService.updateUserProfile(
-        _currentUser!.id!,
+        _currentUser!.id!, // This is now safe.
         name: name,
         avatarEmoji: avatarEmoji,
         bio: bio,
@@ -201,14 +185,10 @@ class AuthProvider with ChangeNotifier {
       );
 
       if (success) {
-        // Recargar datos del usuario
         final updatedUser = await _databaseService.getUserById(_currentUser!.id!);
         if (updatedUser != null) {
           _currentUser = updatedUser;
-
-          // Actualizar sesión guardada
           await _sessionService.saveUserSession(_currentUser!, rememberMe: true);
-
           _logger.i('✅ Perfil actualizado correctamente');
           return true;
         }

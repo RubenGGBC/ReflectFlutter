@@ -1,5 +1,5 @@
 // ============================================================================
-// data/models/daily_entry_model.dart - NUEVO ARCHIVO SEPARADO
+// data/models/daily_entry_model.dart - VERSIÓN CORREGIDA Y ROBUSTA
 // ============================================================================
 
 import 'dart:convert';
@@ -48,9 +48,8 @@ class DailyEntryModel {
     bool? worthIt,
   }) {
     final now = DateTime.now();
-    final wordCount = freeReflection.split(' ').length;
+    final wordCount = freeReflection.split(' ').where((s) => s.isNotEmpty).length;
 
-    // Calcular mood score simple basado en balance
     final positiveCount = positiveTags.length;
     final negativeCount = negativeTags.length;
 
@@ -62,13 +61,9 @@ class DailyEntryModel {
     }
     moodScore = moodScore.clamp(1, 10);
 
-    // Sentimiento general
     String sentiment = "balanced";
-    if (moodScore >= 7) {
-      sentiment = "positive";
-    } else if (moodScore <= 4) {
-      sentiment = "negative";
-    }
+    if (moodScore >= 7) sentiment = "positive";
+    else if (moodScore <= 4) sentiment = "negative";
 
     return DailyEntryModel(
       userId: userId,
@@ -90,7 +85,6 @@ class DailyEntryModel {
 
   // Para base de datos
   factory DailyEntryModel.fromDatabase(Map<String, dynamic> map) {
-    // Parsear tags JSON de manera segura
     List<TagModel> parseTagsJson(String? jsonStr) {
       if (jsonStr == null || jsonStr.isEmpty) return [];
       try {
@@ -103,15 +97,17 @@ class DailyEntryModel {
 
     return DailyEntryModel(
       id: map['id'] as int?,
-      userId: map['user_id'] as int,
-      freeReflection: map['free_reflection'] as String,
+      // FIX: Safely cast userId and provide a default value to prevent crashes.
+      // Although the schema is NOT NULL, queries can sometimes result in null.
+      userId: (map['user_id'] as int?) ?? 0,
+      freeReflection: (map['free_reflection'] as String?) ?? '',
       positiveTags: parseTagsJson(map['positive_tags'] as String?),
       negativeTags: parseTagsJson(map['negative_tags'] as String?),
       worthIt: map['worth_it'] != null ? (map['worth_it'] as int) == 1 : null,
       overallSentiment: map['overall_sentiment'] as String?,
       moodScore: map['mood_score'] as int?,
       aiSummary: map['ai_summary'] as String?,
-      wordCount: map['word_count'] as int? ?? 0,
+      wordCount: (map['word_count'] as int?) ?? 0,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
       entryDate: DateTime.parse(map['entry_date'] as String),
@@ -125,7 +121,7 @@ class DailyEntryModel {
       'free_reflection': freeReflection,
       'positive_tags': json.encode(positiveTags.map((tag) => tag.toJson()).toList()),
       'negative_tags': json.encode(negativeTags.map((tag) => tag.toJson()).toList()),
-      'worth_it': worthIt != null ? (worthIt! ? 1 : 0) : null,
+      'worth_it': worthIt == null ? null : (worthIt! ? 1 : 0),
       'overall_sentiment': overallSentiment,
       'mood_score': moodScore,
       'ai_summary': aiSummary,
@@ -168,3 +164,4 @@ class DailyEntryModel {
     );
   }
 }
+

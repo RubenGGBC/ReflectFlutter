@@ -1,12 +1,14 @@
 // ============================================================================
-// main.dart - VERSIÓN SIMPLIFICADA SIN ERRORES DE NOTIFICACIONES
+// main.dart - VERSIÓN FINAL CON CORRECCIÓN PARA DESKTOP (sqflite_ffi)
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // FIX: Import for FFI
+import 'dart:io'; // FIX: Import to check platform
 
-import 'app.dart';
+import 'app_v2.dart';
 import 'injection_container.dart' as di;
 
 /// Punto de entrada principal de la aplicación
@@ -14,10 +16,16 @@ void main() async {
   // Asegurar inicialización de Flutter
   WidgetsFlutterBinding.ensureInitialized();
 
+  // FIX: Initialize FFI for sqflite on desktop platforms
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+
   final logger = Logger();
 
   try {
-    logger.i('🚀 Iniciando ReflectApp...');
+    logger.i('🚀 Iniciando ReflectApp v2...');
 
     // Configurar orientación (solo portrait)
     await SystemChrome.setPreferredOrientations([
@@ -29,58 +37,22 @@ void main() async {
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.light,
         systemNavigationBarColor: Colors.transparent,
-        systemNavigationBarIconBrightness: Brightness.dark,
+        systemNavigationBarIconBrightness: Brightness.light,
       ),
     );
 
-    // Inicializar dependencias de forma segura
-    await _initializeDependenciesSafely();
-
-    logger.i('✅ ReflectApp inicializado correctamente');
-
-    // Ejecutar aplicación
-    runApp(const ReflectApp());
-
-  } catch (e, stackTrace) {
-    logger.e('❌ Error crítico iniciando ReflectApp: $e');
-    logger.e('📋 Stack trace: $stackTrace');
-
-    // Ejecutar aplicación con pantalla de error
-    runApp(_buildErrorApp(e.toString()));
-  }
-}
-
-/// Inicializar dependencias de forma segura
-Future<void> _initializeDependenciesSafely() async {
-  final logger = Logger();
-
-  try {
-    logger.i('🔧 Inicializando dependencias...');
-
-    // Inicializar contenedor de dependencias
+    // Inicializar dependencias
     await di.init();
 
-    // Verificar dependencias
+    logger.i('✅ ReflectApp v2 inicializado correctamente');
 
-    
+    runApp(const ReflectAppV2());
 
-    logger.i('✅ Dependencias inicializadas correctamente');
-
-  } catch (e) {
-    logger.e('❌ Error inicializando dependencias: $e');
-
-    // Re-intentar una vez más
-    logger.w('🔄 Reintentando inicialización...');
-
-    try {
-      await di.init();
-      logger.i('✅ Dependencias inicializadas en segundo intento');
-    } catch (retryError) {
-      logger.e('❌ Error en segundo intento: $retryError');
-      throw Exception('Error crítico en inicialización de dependencias');
-    }
+  } catch (e, stackTrace) {
+    logger.e('❌ Error crítico iniciando ReflectApp: $e', error: e, stackTrace: stackTrace);
+    runApp(_buildErrorApp(e.toString()));
   }
 }
 
@@ -112,7 +84,6 @@ class ErrorScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Icono de error
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
@@ -125,10 +96,7 @@ class ErrorScreen extends StatelessWidget {
                   color: Colors.red.shade600,
                 ),
               ),
-
               const SizedBox(height: 32),
-
-              // Título
               Text(
                 'Error de Inicialización',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -137,19 +105,13 @@ class ErrorScreen extends StatelessWidget {
                 ),
                 textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: 16),
-
-              // Mensaje de error
               Text(
                 'ReflectApp no pudo inicializarse correctamente.',
                 style: Theme.of(context).textTheme.bodyLarge,
                 textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: 24),
-
-              // Detalles del error (expandible)
               ExpansionTile(
                 title: const Text('Detalles técnicos'),
                 children: [
@@ -169,220 +131,8 @@ class ErrorScreen extends StatelessWidget {
                   ),
                 ],
               ),
-
-              const SizedBox(height: 32),
-
-              // Botón de reintentar
-              ElevatedButton.icon(
-                onPressed: () => _restartApp(),
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Botón de modo seguro
-              OutlinedButton.icon(
-                onPressed: () => _startSafeMode(),
-                icon: const Icon(Icons.security),
-                label: const Text('Modo Seguro'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.orange.shade700,
-                  side: BorderSide(color: Colors.orange.shade300),
-                ),
-              ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  void _restartApp() {
-    // En una implementación real, esto reiniciaría la app
-    // Por ahora, solo mostramos un mensaje
-    print('🔄 Reintentando inicialización...');
-  }
-
-  void _startSafeMode() {
-    // En una implementación real, esto iniciaría en modo seguro
-    print('🛡️ Iniciando modo seguro...');
-  }
-}
-
-/// Pantalla de splash/loading mejorada
-class SplashScreen extends StatefulWidget {
-  const SplashScreen({super.key});
-
-  @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _animationController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeIn,
-    ));
-
-    _scaleAnimation = Tween<double>(
-      begin: 0.5,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.elasticOut,
-    ));
-
-    _animationController.forward();
-
-    // Simular carga
-    _initializeApp();
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _initializeApp() async {
-    try {
-      // Simular tiempo de carga
-      await Future.delayed(const Duration(seconds: 3));
-
-      // Navegar a pantalla principal
-      if (mounted) {
-        Navigator.of(context).pushReplacementNamed('/login');
-      }
-    } catch (e) {
-      // Manejar error de inicialización
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => ErrorScreen(error: e.toString()),
-          ),
-        );
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Scaffold(
-      backgroundColor: theme.colorScheme.surface,
-      body: Center(
-        child: AnimatedBuilder(
-          animation: _animationController,
-          builder: (context, child) {
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: ScaleTransition(
-                scale: _scaleAnimation,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Logo animado
-                    Container(
-                      padding: const EdgeInsets.all(32),
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            theme.colorScheme.primary,
-                            theme.colorScheme.secondary,
-                          ],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: theme.colorScheme.primary.withOpacity(0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.self_improvement,
-                        size: 64,
-                        color: Colors.white,
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Título
-                    Text(
-                      'ReflectApp',
-                      style: theme.textTheme.headlineLarge?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: theme.colorScheme.primary,
-                      ),
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // Subtítulo
-                    Text(
-                      'Tu espacio de reflexión zen',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
-                      ),
-                    ),
-
-                    const SizedBox(height: 48),
-
-                    // Loading indicator
-                    SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          theme.colorScheme.primary,
-                        ),
-                        strokeWidth: 3,
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    Text(
-                      'Preparando tu experiencia zen...',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: theme.colorScheme.onSurface.withOpacity(0.6),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
         ),
       ),
     );
