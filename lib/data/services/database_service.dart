@@ -4,6 +4,8 @@
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
+import 'dart:math' as math;
 
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -1265,4 +1267,556 @@ class DatabaseService {
 
     return null;
   }
+// ============================================================================
+// AGREGAR AL FINAL de lib/data/services/database_service.dart
+// Solo copiar y pegar estos métodos al final de la clase DatabaseService
+// ============================================================================
+
+  /// 🔥 Análisis de racha más preciso
+  Future<Map<String, dynamic>> getAdvancedStreakAnalysis(int userId) async {
+    try {
+      final db = await database;
+
+      // Obtener todas las rachas históricas
+      final streakData = await db.rawQuery('''
+        WITH daily_activity AS (
+          SELECT DISTINCT entry_date
+          FROM daily_entries 
+          WHERE user_id = ?
+          ORDER BY entry_date
+        ),
+        streak_groups AS (
+          SELECT 
+            entry_date,
+            entry_date - ROW_NUMBER() OVER (ORDER BY entry_date) as streak_group
+          FROM daily_activity
+        ),
+        streaks AS (
+          SELECT 
+            MIN(entry_date) as start_date,
+            MAX(entry_date) as end_date,
+            COUNT(*) as length,
+            streak_group
+          FROM streak_groups
+          GROUP BY streak_group
+        )
+        SELECT 
+          length as streak_length,
+          start_date,
+          end_date,
+          julianday(end_date) - julianday(start_date) + 1 as actual_days
+        FROM streaks
+        WHERE length > 1
+        ORDER BY length DESC
+      ''', [userId]);
+
+      final currentStreak = await calculateCurrentStreak(userId);
+      final longestStreak = streakData.isNotEmpty ?
+      streakData.map((s) => s['streak_length'] as int).reduce((a, b) => a > b ? a : b) : 0;
+
+      // Calcular consistencia semanal
+      final weeklyConsistency = await db.rawQuery('''
+        SELECT 
+          strftime('%Y-W%W', entry_date) as week,
+          COUNT(DISTINCT entry_date) as days_active,
+          COUNT(DISTINCT strftime('%w', entry_date)) as different_weekdays
+        FROM daily_entries 
+        WHERE user_id = ? AND entry_date >= date('now', '-12 weeks')
+        GROUP BY week
+        ORDER BY week DESC
+      ''', [userId]);
+
+      final avgDaysPerWeek = weeklyConsistency.isNotEmpty ?
+      weeklyConsistency.map((w) => w['days_active'] as int).reduce((a, b) => a + b) / weeklyConsistency.length : 0;
+
+      return {
+        'current_streak': currentStreak,
+        'longest_streak': longestStreak,
+        'total_streaks': streakData.length,
+        'avg_streak_length': streakData.isNotEmpty ?
+        streakData.map((s) => s['streak_length'] as int).reduce((a, b) => a + b) / streakData.length : 0,
+        'weekly_consistency': avgDaysPerWeek,
+        'streak_stability': longestStreak > 0 ? currentStreak / longestStreak : 0,
+        'all_streaks': streakData,
+      };
+    } catch (e) {
+      _logger.e('Error en análisis de racha: $e');
+      return {'current_streak': 0, 'longest_streak': 0};
+    }
+  }
+
+  /// 📊 Score de bienestar mejorado con más factores
+  Future<Map<String, dynamic>> getEnhancedWellbeingScore(int userId) async {
+    try {
+      final basicStats = await getUserComprehensiveStatistics(userId);
+      final streakAnalysis = await getAdvancedStreakAnalysis(userId);
+      final moodAnalysis = await getDetailedMoodAnalysis(userId);
+      final consistencyAnalysis = await getConsistencyAnalysis(userId);
+
+      // 1. FACTOR CONSISTENCIA (30 puntos)
+      final currentStreak = streakAnalysis['current_streak'] ?? 0;
+      final weeklyConsistency = streakAnalysis['weekly_consistency'] ?? 0;
+      final consistencyScore = (
+          (currentStreak / 30).clamp(0, 1) * 0.6 +  // Racha actual (60%)
+              (weeklyConsistency / 7).clamp(0, 1) * 0.4   // Consistencia semanal (40%)
+      ) * 30;
+
+      // 2. FACTOR BIENESTAR EMOCIONAL (25 puntos)
+      final avgMood = basicStats['avg_mood_score'] ?? 5.0;
+      final moodStability = moodAnalysis['stability_score'] ?? 0.5;
+      final positiveRatio = moodAnalysis['positive_days_ratio'] ?? 0.5;
+      final emotionalScore = (
+          (avgMood / 10) * 0.5 +           // Mood promedio (50%)
+              moodStability * 0.3 +            // Estabilidad (30%)
+              positiveRatio * 0.2              // Días positivos (20%)
+      ) * 25;
+
+      // 3. FACTOR PROGRESO (20 puntos)
+      final recentTrend = moodAnalysis['recent_trend'] ?? 0;
+      final improvementRate = moodAnalysis['improvement_rate'] ?? 0;
+      final progressScore = (
+          (recentTrend + 1) / 2 * 0.6 +    // Tendencia (-1 a 1, normalizada)
+              improvementRate * 0.4            // Rate de mejora
+      ) * 20;
+
+      // 4. FACTOR ACTIVIDAD (15 puntos)
+      final entriesThisMonth = basicStats['entries_this_month'] ?? 0;
+      final totalMoments = basicStats['total_moments'] ?? 0;
+      final activityScore = (
+          (entriesThisMonth / 25).clamp(0, 1) * 0.7 +  // Entradas este mes
+              (totalMoments / 100).clamp(0, 1) * 0.3       // Total de momentos
+      ) * 15;
+
+      // 5. FACTOR DIVERSIDAD (10 puntos)
+      final diversityAnalysis = await getDiversityAnalysis(userId);
+      final diversityScore = diversityAnalysis['diversity_score'] * 10;
+
+      final totalScore = (consistencyScore + emotionalScore + progressScore +
+          activityScore + diversityScore).round().clamp(0, 100);
+
+      // Determinar nivel
+      String level;
+      String emoji;
+      if (totalScore >= 85) {
+        level = 'Maestro del Bienestar';
+        emoji = '👑';
+      } else if (totalScore >= 70) {
+        level = 'Avanzado';
+        emoji = '🌟';
+      } else if (totalScore >= 55) {
+        level = 'Progresando Bien';
+        emoji = '🚀';
+      } else if (totalScore >= 40) {
+        level = 'En Desarrollo';
+        emoji = '🌱';
+      } else if (totalScore >= 25) {
+        level = 'Aprendiz';
+        emoji = '📚';
+      } else {
+        level = 'Iniciando';
+        emoji = '🌅';
+      }
+
+      return {
+        'total_score': totalScore,
+        'level': level,
+        'emoji': emoji,
+        'component_scores': {
+          'consistency': consistencyScore.round(),
+          'emotional': emotionalScore.round(),
+          'progress': progressScore.round(),
+          'activity': activityScore.round(),
+          'diversity': diversityScore.round(),
+        },
+        'insights': _generateScoreInsights(totalScore, {
+          'consistency': consistencyScore,
+          'emotional': emotionalScore,
+          'progress': progressScore,
+          'activity': activityScore,
+          'diversity': diversityScore,
+        }),
+        'next_level_target': _getNextLevelTarget(totalScore),
+      };
+    } catch (e) {
+      _logger.e('Error calculando score mejorado: $e');
+      return {
+        'total_score': 50,
+        'level': 'En Desarrollo',
+        'emoji': '🌱',
+        'component_scores': {},
+      };
+    }
+  }
+
+  /// 😊 Análisis detallado del mood
+  Future<Map<String, dynamic>> getDetailedMoodAnalysis(int userId) async {
+    try {
+      final db = await database;
+
+      final moodData = await db.rawQuery('''
+        SELECT 
+          mood_score,
+          entry_date,
+          strftime('%w', entry_date) as weekday,
+          strftime('%m', entry_date) as month
+        FROM daily_entries 
+        WHERE user_id = ? AND entry_date >= date('now', '-60 days')
+        ORDER BY entry_date
+      ''', [userId]);
+
+      if (moodData.isEmpty) {
+        return {
+          'stability_score': 0.5,
+          'positive_days_ratio': 0.5,
+          'recent_trend': 0,
+          'improvement_rate': 0,
+        };
+      }
+
+      final moods = moodData.map((row) => (row['mood_score'] as num).toDouble()).toList();
+
+      // 1. Calcular estabilidad (menor varianza = mayor estabilidad)
+      final avgMood = moods.reduce((a, b) => a + b) / moods.length;
+      final variance = moods.map((mood) => (mood - avgMood) * (mood - avgMood))
+          .reduce((a, b) => a + b) / moods.length;
+      final stabilityScore = (1 - (variance / 9)).clamp(0, 1); // Normalizado
+
+      // 2. Ratio de días positivos
+      final positiveDays = moods.where((mood) => mood >= 6).length;
+      final positiveRatio = positiveDays / moods.length;
+
+      // 3. Tendencia reciente (últimos 14 días vs anteriores)
+      final recentMoods = moods.length > 14 ? moods.sublist(moods.length - 14) : moods;
+      final olderMoods = moods.length > 14 ? moods.sublist(0, moods.length - 14) : [];
+
+      double recentTrend = 0;
+      if (olderMoods.isNotEmpty) {
+        final recentAvg = recentMoods.reduce((a, b) => a + b) / recentMoods.length;
+        final olderAvg = olderMoods.reduce((a, b) => a + b) / olderMoods.length;
+        recentTrend = (recentAvg - olderAvg) / 5; // Normalizado entre -1 y 1
+      }
+
+      // 4. Rate de mejora (tendencia lineal)
+      double improvementRate = 0;
+      if (moods.length >= 7) {
+        // Regresión lineal simple
+        final n = moods.length.toDouble();
+        final sumX = (n * (n - 1)) / 2; // 0 + 1 + 2 + ... + (n-1)
+        final sumY = moods.reduce((a, b) => a + b);
+        final sumXY = moods.asMap().entries.map((e) => e.key * e.value).reduce((a, b) => a + b);
+        final sumX2 = ((n - 1) * n * (2 * n - 1)) / 6; // 0² + 1² + 2² + ... + (n-1)²
+
+        final slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+        improvementRate = (slope / 0.1).clamp(-1, 1); // Normalizar
+      }
+
+      return {
+        'stability_score': stabilityScore,
+        'positive_days_ratio': positiveRatio,
+        'recent_trend': recentTrend.clamp(-1, 1),
+        'improvement_rate': improvementRate,
+        'avg_mood': avgMood,
+        'mood_variance': variance,
+        'total_days_analyzed': moods.length,
+      };
+    } catch (e) {
+      _logger.e('Error en análisis de mood: $e');
+      return {
+        'stability_score': 0.5,
+        'positive_days_ratio': 0.5,
+        'recent_trend': 0,
+        'improvement_rate': 0,
+      };
+    }
+  }
+
+  /// ⏰ Análisis de consistencia avanzado
+  Future<Map<String, dynamic>> getConsistencyAnalysis(int userId) async {
+    try {
+      final db = await database;
+
+      final consistencyData = await db.rawQuery('''
+        SELECT 
+          entry_date,
+          strftime('%w', entry_date) as weekday,
+          strftime('%H', created_at) as hour,
+          COUNT(*) as entries_that_day
+        FROM daily_entries 
+        WHERE user_id = ? AND entry_date >= date('now', '-30 days')
+        GROUP BY entry_date
+        ORDER BY entry_date
+      ''', [userId]);
+
+      if (consistencyData.isEmpty) {
+        return {'consistency_score': 0, 'time_regularity': 0, 'weekly_balance': 0};
+      }
+
+      // 1. Consistencia general (días activos / días totales)
+      final activeDays = consistencyData.length;
+      final totalDays = 30; // Últimos 30 días
+      final generalConsistency = activeDays / totalDays;
+
+      // 2. Regularidad temporal (consistencia en horarios)
+      final hours = consistencyData.map((row) => int.parse(row['hour'] as String)).toList();
+      final hourVariance = hours.isNotEmpty ?
+      _calculateVariance(hours.map((h) => h.toDouble()).toList()) : 24;
+      final timeRegularity = (1 - (hourVariance / 24)).clamp(0, 1);
+
+      // 3. Balance semanal (distribución entre días de la semana)
+      final weekdayCounts = <int, int>{};
+      for (final row in consistencyData) {
+        final weekday = int.parse(row['weekday'] as String);
+        weekdayCounts[weekday] = (weekdayCounts[weekday] ?? 0) + 1;
+      }
+
+      final weekdayValues = List.generate(7, (i) => weekdayCounts[i]?.toDouble() ?? 0);
+      final weekdayVariance = _calculateVariance(weekdayValues);
+      final expectedAvg = activeDays / 7;
+      final weeklyBalance = expectedAvg > 0 ? (1 - (weekdayVariance / (expectedAvg * expectedAvg))).clamp(0, 1) : 0;
+
+      final overallConsistency = (
+          generalConsistency * 0.5 +
+              timeRegularity * 0.3 +
+              weeklyBalance * 0.2
+      );
+
+      return {
+        'consistency_score': overallConsistency,
+        'general_consistency': generalConsistency,
+        'time_regularity': timeRegularity,
+        'weekly_balance': weeklyBalance,
+        'active_days': activeDays,
+        'total_days': totalDays,
+        'most_common_hour': hours.isNotEmpty ? _getMostCommonHour(hours) : null,
+        'weekday_distribution': weekdayCounts,
+      };
+    } catch (e) {
+      _logger.e('Error en análisis de consistencia: $e');
+      return {'consistency_score': 0, 'time_regularity': 0, 'weekly_balance': 0};
+    }
+  }
+
+  /// 🌈 Análisis de diversidad de experiencias
+  Future<Map<String, dynamic>> getDiversityAnalysis(int userId) async {
+    try {
+      final db = await database;
+
+      final diversityData = await db.rawQuery('''
+        SELECT 
+          category,
+          moment_type,
+          COUNT(*) as frequency
+        FROM interactive_moments 
+        WHERE user_id = ? AND entry_date >= date('now', '-30 days')
+        GROUP BY category, moment_type
+      ''', [userId]);
+
+      if (diversityData.isEmpty) {
+        return {'diversity_score': 0.3, 'categories_used': 0, 'variety_index': 0};
+      }
+
+      // 1. Número de categorías únicas
+      final uniqueCategories = diversityData.map((row) => row['category']).toSet().length;
+      final maxCategories = 6; // Asumiendo 6 categorías máximo
+      final categoryDiversity = (uniqueCategories / maxCategories).clamp(0, 1);
+
+      // 2. Índice de variedad (distribución uniforme es mejor)
+      final frequencies = diversityData.map((row) => (row['frequency'] as int).toDouble()).toList();
+      final totalMoments = frequencies.reduce((a, b) => a + b);
+      final proportions = frequencies.map((f) => f / totalMoments).toList();
+
+      // Calcular índice de Shannon (diversidad)
+      final shannonIndex = proportions.map((p) => p > 0 ? -p * (math.log(p) / math.log(2)) : 0).reduce((a, b) => a + b);
+      final maxShannon = math.log(proportions.length) / math.log(2);
+      final varietyIndex = maxShannon > 0 ? shannonIndex / maxShannon : 0;
+
+      // 3. Score general de diversidad
+      final diversityScore = (categoryDiversity * 0.6 + varietyIndex * 0.4);
+
+      return {
+        'diversity_score': diversityScore,
+        'categories_used': uniqueCategories,
+        'max_categories': maxCategories,
+        'variety_index': varietyIndex,
+        'total_moments': totalMoments.toInt(),
+        'category_breakdown': _getCategoryBreakdown(diversityData),
+      };
+    } catch (e) {
+      _logger.e('Error en análisis de diversidad: $e');
+      return {'diversity_score': 0.3, 'categories_used': 0, 'variety_index': 0};
+    }
+  }
+
+  /// 🚨 Detector simple de estrés elevado
+  Future<Map<String, dynamic>> detectStressPattern(int userId) async {
+    try {
+      final db = await database;
+
+      final stressData = await db.rawQuery('''
+        SELECT 
+          entry_date,
+          mood_score,
+          free_reflection
+        FROM daily_entries 
+        WHERE user_id = ? AND entry_date >= date('now', '-14 days')
+        ORDER BY entry_date DESC
+      ''', [userId]);
+
+      if (stressData.isEmpty) {
+        return {'stress_level': 'unknown', 'requires_attention': false};
+      }
+
+      final stressKeywords = [
+        'estresado', 'estrés', 'agobiado', 'presión', 'ansiedad', 'nervioso',
+        'abrumado', 'tensión', 'preocupado', 'agotado', 'cansado'
+      ];
+
+      int stressIndicators = 0;
+      int lowMoodDays = 0;
+
+      for (final row in stressData) {
+        final mood = (row['mood_score'] as num).toDouble();
+        final reflection = (row['free_reflection'] as String? ?? '').toLowerCase();
+
+        if (mood <= 4) lowMoodDays++;
+
+        for (final keyword in stressKeywords) {
+          if (reflection.contains(keyword)) {
+            stressIndicators++;
+            break; // Solo contar una vez por día
+          }
+        }
+      }
+
+      final totalDays = stressData.length;
+      final stressFrequency = stressIndicators / totalDays;
+      final lowMoodFrequency = lowMoodDays / totalDays;
+
+      String stressLevel;
+      bool requiresAttention = false;
+      List<String> recommendations = [];
+
+      if (stressFrequency >= 0.5 || lowMoodFrequency >= 0.6) {
+        stressLevel = 'high';
+        requiresAttention = true;
+        recommendations = [
+          'Considera técnicas de relajación como respiración profunda',
+          'Intenta hacer ejercicio ligero o caminar',
+          'Habla con alguien de confianza sobre lo que te preocupa',
+          'Si persiste, considera buscar apoyo profesional',
+        ];
+      } else if (stressFrequency >= 0.3 || lowMoodFrequency >= 0.4) {
+        stressLevel = 'moderate';
+        recommendations = [
+          'Mantén rutinas de autocuidado',
+          'Asegúrate de dormir lo suficiente',
+          'Toma descansos regulares durante el día',
+        ];
+      } else {
+        stressLevel = 'low';
+        recommendations = [
+          'Continúa con tus hábitos actuales',
+          'Sigue reflexionando regularmente',
+        ];
+      }
+
+      return {
+        'stress_level': stressLevel,
+        'stress_frequency': (stressFrequency * 100).round(),
+        'low_mood_frequency': (lowMoodFrequency * 100).round(),
+        'requires_attention': requiresAttention,
+        'recommendations': recommendations,
+        'days_analyzed': totalDays,
+      };
+    } catch (e) {
+      _logger.e('Error detectando patrón de estrés: $e');
+      return {'stress_level': 'unknown', 'requires_attention': false};
+    }
+  }
+
+  // ============================================================================
+  // MÉTODOS AUXILIARES
+  // ============================================================================
+
+  double _calculateVariance(List<double> values) {
+    if (values.isEmpty) return 0;
+    final mean = values.reduce((a, b) => a + b) / values.length;
+    final squaredDiffs = values.map((value) => (value - mean) * (value - mean));
+    return squaredDiffs.reduce((a, b) => a + b) / values.length;
+  }
+
+  int _getMostCommonHour(List<int> hours) {
+    final hourCounts = <int, int>{};
+    for (final hour in hours) {
+      hourCounts[hour] = (hourCounts[hour] ?? 0) + 1;
+    }
+    return hourCounts.entries.reduce((a, b) => a.value > b.value ? a : b).key;
+  }
+
+  Map<String, int> _getCategoryBreakdown(List<Map<String, dynamic>> diversityData) {
+    final breakdown = <String, int>{};
+    for (final row in diversityData) {
+      final category = row['category'] as String;
+      final frequency = row['frequency'] as int;
+      breakdown[category] = (breakdown[category] ?? 0) + frequency;
+    }
+    return breakdown;
+  }
+
+  List<String> _generateScoreInsights(int totalScore, Map<String, double> components) {
+    final insights = <String>[];
+
+    // Encontrar la componente más fuerte
+    final strongest = components.entries.reduce((a, b) => a.value > b.value ? a : b);
+    final strongestName = _getComponentName(strongest.key);
+    insights.add('Tu mayor fortaleza es $strongestName con ${strongest.value.round()} puntos');
+
+    // Encontrar área de mejora
+    final weakest = components.entries.reduce((a, b) => a.value < b.value ? a : b);
+    if (weakest.value < 15) {
+      final weakestName = _getComponentName(weakest.key);
+      insights.add('$weakestName es tu área de mayor oportunidad (${weakest.value.round()} puntos)');
+    }
+
+    // Insight general
+    if (totalScore >= 80) {
+      insights.add('¡Excelente! Estás en el rango superior de bienestar');
+    } else if (totalScore >= 60) {
+      insights.add('Vas muy bien. Tu bienestar está por encima del promedio');
+    } else if (totalScore >= 40) {
+      insights.add('Estás construyendo una base sólida. Cada día cuenta');
+    } else {
+      insights.add('Cada reflexión es un paso valioso en tu crecimiento');
+    }
+
+    return insights;
+  }
+
+  String _getComponentName(String component) {
+    switch (component) {
+      case 'consistency': return 'Consistencia';
+      case 'emotional': return 'Bienestar Emocional';
+      case 'progress': return 'Progreso';
+      case 'activity': return 'Actividad';
+      case 'diversity': return 'Diversidad';
+      default: return component;
+    }
+  }
+
+  Map<String, dynamic> _getNextLevelTarget(int currentScore) {
+    if (currentScore < 25) {
+      return {'target_score': 25, 'target_level': 'Aprendiz', 'points_needed': 25 - currentScore};
+    } else if (currentScore < 40) {
+      return {'target_score': 40, 'target_level': 'En Desarrollo', 'points_needed': 40 - currentScore};
+    } else if (currentScore < 55) {
+      return {'target_score': 55, 'target_level': 'Progresando Bien', 'points_needed': 55 - currentScore};
+    } else if (currentScore < 70) {
+      return {'target_score': 70, 'target_level': 'Avanzado', 'points_needed': 70 - currentScore};
+    } else if (currentScore < 85) {
+      return {'target_score': 85, 'target_level': 'Maestro del Bienestar', 'points_needed': 85 - currentScore};
+    } else {
+      return {'target_score': 100, 'target_level': 'Perfección', 'points_needed': 100 - currentScore};
+    }
+  }
+
 }

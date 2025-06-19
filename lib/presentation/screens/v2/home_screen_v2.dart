@@ -12,6 +12,7 @@ import '../../../data/services/database_service.dart';
 import '../../providers/analytics_provider.dart';
 import '../components/analytics_widgets.dart';
 
+import '../../widgets/improved_dashboard.dart';  // Tu nuevo dashboard
 
 class HomeScreenV2 extends StatefulWidget {
   const HomeScreenV2({super.key});
@@ -78,7 +79,7 @@ class _HomeScreenV2State extends State<HomeScreenV2> with TickerProviderStateMix
       final userId = authProvider.currentUser!.id!;
 
       // Cargar datos existentes
-      await momentsProvider.loadTodayMoments(userId);
+      await analyticsProvider.loadCompleteAnalytics(userId);
       final stats = await _databaseService.getUserComprehensiveStatistics(userId);
 
       // ✅ NUEVO: Cargar análisis avanzados
@@ -104,81 +105,116 @@ class _HomeScreenV2State extends State<HomeScreenV2> with TickerProviderStateMix
   }
 
   @override
-
   Widget build(BuildContext context) {
+    final isTablet = MediaQuery.of(context).size.width > 600;
+    final isLargeScreen = MediaQuery.of(context).size.width > 1200;
+
+    if (_isLoadingStats) {
+      return _buildLoadingState(isTablet);
+    }
+
     return Scaffold(
-      backgroundColor: ModernColors.darkPrimary,
-      body: FadeTransition(
-        opacity: _fadeAnimation,
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isTablet = constraints.maxWidth > 600;
-              final isLargeScreen = constraints.maxWidth > 900;
-
-              return RefreshIndicator(
-                onRefresh: _refreshRealData,
-                color: ModernColors.primaryGradient.first,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: SlideTransition(
-                    position: _slideAnimation,
-                    child: Padding(
-                      padding: EdgeInsets.all(isTablet ? ModernSpacing.xl : ModernSpacing.lg),
-                      child: _isLoadingStats
-                          ? _buildLoadingState(isTablet)
-                          : Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildRealPersonalizedHeader(isTablet),
-                          SizedBox(height: isTablet ? ModernSpacing.xxl : ModernSpacing.xl),
-
-                          // ✅ NUEVO: Análisis del día actual
-                          CurrentDayAnalysisWidget(isTablet: isTablet),
-                          SizedBox(height: isTablet ? ModernSpacing.xl : ModernSpacing.lg),
-
-                          _buildRealTodayInsights(isTablet, isLargeScreen),
-                          SizedBox(height: isTablet ? ModernSpacing.xl : ModernSpacing.lg),
-
-                          // ✅ NUEVO: Insights destacados
-                          HighlightedInsightsWidget(isTablet: isTablet),
-                          SizedBox(height: isTablet ? ModernSpacing.xl : ModernSpacing.lg),
-
-                          // ✅ NUEVO: Progreso de logros y bienestar
-                          AchievementProgressWidget(isTablet: isTablet),
-                          SizedBox(height: isTablet ? ModernSpacing.xl : ModernSpacing.lg),
-
-                          _buildRealLifetimeStats(isTablet, isLargeScreen),
-                          SizedBox(height: isTablet ? ModernSpacing.xl : ModernSpacing.lg),
-
-                          // ✅ NUEVO: Evolución del mood
-                          MoodEvolutionWidget(isTablet: isTablet),
-                          SizedBox(height: isTablet ? ModernSpacing.xl : ModernSpacing.lg),
-
-                          _buildSmartActions(isTablet, isLargeScreen),
-                          SizedBox(height: isTablet ? ModernSpacing.xl : ModernSpacing.lg),
-
-                          _buildRealRecentMomentsTimeline(isTablet),
-                          SizedBox(height: isTablet ? ModernSpacing.xl : ModernSpacing.lg),
-
-                          // ✅ NUEVO: Temas dominantes
-                          DominantThemesWidget(isTablet: isTablet),
-                          SizedBox(height: isTablet ? ModernSpacing.xl : ModernSpacing.lg),
-
-                          // ✅ NUEVO: Recomendaciones prioritarias
-                          PriorityRecommendationsWidget(isTablet: isTablet),
-                        ],
+      body: RefreshIndicator(
+        onRefresh: _loadRealUserData,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: CustomScrollView(
+              slivers: [
+                // App Bar existente
+                SliverAppBar(
+                  expandedHeight: isTablet ? 120 : 100,
+                  floating: true,
+                  pinned: false,
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: ModernColors.primaryGradient,
+                        ),
                       ),
                     ),
                   ),
+                  title: Text(
+                    'Mi Bienestar',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: isTablet ? 24 : 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  actions: [
+                    IconButton(
+                      icon: const Icon(Icons.refresh, color: Colors.white),
+                      onPressed: _loadRealUserData,
+                      tooltip: 'Actualizar datos',
+                    ),
+                  ],
                 ),
-              );
-            },
+
+                // ✅ CONTENIDO PRINCIPAL CON DASHBOARD MEJORADO
+                SliverToBoxAdapter(
+                  child: Column(
+                    children: [
+                      // Header personalizado existente
+                      _buildRealPersonalizedHeader(isTablet),
+
+                      const SizedBox(height: 16),
+
+                      // ✅ DASHBOARD MEJORADO INTEGRADO
+                      Consumer<AuthProvider>(
+                        builder: (context, authProvider, child) {
+                          if (authProvider.currentUser?.id != null) {
+                            return ImprovedDashboard(
+                              userId: authProvider.currentUser!.id!,
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        },
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // ✅ MANTENER WIDGETS EXISTENTES (OPCIONAL)
+                      // Si quieres mantener algunos widgets existentes, descoméntalos:
+
+                      // Padding(
+                      //   padding: EdgeInsets.symmetric(
+                      //     horizontal: isTablet ? ModernSpacing.xl : ModernSpacing.lg,
+                      //   ),
+                      //   child: Column(
+                      //     children: [
+                      //       // Widgets existentes que quieras mantener
+                      //       AchievementProgressWidget(isTablet: isTablet),
+                      //       SizedBox(height: isTablet ? ModernSpacing.xl : ModernSpacing.lg),
+                      //
+                      //       MoodEvolutionWidget(isTablet: isTablet),
+                      //       SizedBox(height: isTablet ? ModernSpacing.xl : ModernSpacing.lg),
+                      //
+                      //       DominantThemesWidget(isTablet: isTablet),
+                      //       SizedBox(height: isTablet ? ModernSpacing.xl : ModernSpacing.lg),
+                      //     ],
+                      //   ),
+                      // ),
+
+                      // Espaciado final
+                      const SizedBox(height: 100), // Para el floating action button
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
+
 
 
   Widget _buildLoadingState(bool isTablet) {
