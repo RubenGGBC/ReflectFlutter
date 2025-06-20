@@ -1,9 +1,10 @@
 // ============================================================================
-// login_screen_v2.dart - VERSIÓN CORREGIDA
+// login_screen_v2.dart - VERSIÓN FINAL
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:untitled3/data/services/database_service.dart';
 import '../../providers/auth_provider.dart';
 import '../components/modern_design_system.dart';
 
@@ -40,37 +41,28 @@ class _LoginScreenV2State extends State<LoginScreenV2>
   }
 
   void _setupAnimations() {
-    // Hero animation - Gradiente de fondo
     _heroController = AnimationController(
       duration: const Duration(seconds: 3),
       vsync: this,
     );
-
-    // Form animation - Elementos del formulario
     _formController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-
-    // Particle animation - Elementos flotantes
     _particleController = AnimationController(
       duration: const Duration(seconds: 4),
       vsync: this,
     );
-
     _heroAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _heroController, curve: Curves.easeInOut),
     );
-
     _formAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _formController, curve: Curves.elasticOut),
     );
-
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.5),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _formController, curve: Curves.easeOutCubic));
-
     _particleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _particleController, curve: Curves.linear),
     );
@@ -79,7 +71,6 @@ class _LoginScreenV2State extends State<LoginScreenV2>
   void _startAnimations() {
     _heroController.repeat(reverse: true);
     _particleController.repeat();
-
     Future.delayed(const Duration(milliseconds: 300), () {
       _formController.forward();
     });
@@ -151,7 +142,6 @@ class _LoginScreenV2State extends State<LoginScreenV2>
               (index * 0.7 + _particleAnimation.value) % 1.2 - 0.1,
               (index * 0.3 + _particleAnimation.value * 0.5) % 1.2 - 0.1,
             );
-
             return Positioned(
               left: MediaQuery.of(context).size.width * offset.dx,
               top: MediaQuery.of(context).size.height * offset.dy,
@@ -161,11 +151,11 @@ class _LoginScreenV2State extends State<LoginScreenV2>
                   width: 20 + (index % 4) * 10,
                   height: 20 + (index % 4) * 10,
                   decoration: BoxDecoration(
-                    color: Colors.white.withAlpha(25), // FIX: withOpacity -> withAlpha
+                    color: Colors.white.withAlpha(25),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.white.withAlpha(12), // FIX: withOpacity -> withAlpha
+                        color: Colors.white.withAlpha(12),
                         blurRadius: 10,
                         spreadRadius: 2,
                       ),
@@ -206,7 +196,6 @@ class _LoginScreenV2State extends State<LoginScreenV2>
         opacity: _formAnimation,
         child: Column(
           children: [
-            // Logo animado
             ScaleTransition(
               scale: _formAnimation,
               child: Container(
@@ -232,10 +221,7 @@ class _LoginScreenV2State extends State<LoginScreenV2>
                 ),
               ),
             ),
-
             const SizedBox(height: ModernSpacing.xl),
-
-            // Título principal
             Text(
               'Bienvenido de vuelta',
               style: ModernTypography.heading1.copyWith(
@@ -243,10 +229,7 @@ class _LoginScreenV2State extends State<LoginScreenV2>
               ),
               textAlign: TextAlign.center,
             ),
-
             const SizedBox(height: ModernSpacing.sm),
-
-            // Subtítulo
             Text(
               'Continúa tu viaje de reflexión y crecimiento personal',
               style: ModernTypography.bodyLarge.copyWith(
@@ -272,7 +255,6 @@ class _LoginScreenV2State extends State<LoginScreenV2>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Email field con validación en tiempo real
                 ModernTextField(
                   controller: _emailController,
                   labelText: 'Correo electrónico',
@@ -281,10 +263,7 @@ class _LoginScreenV2State extends State<LoginScreenV2>
                   keyboardType: TextInputType.emailAddress,
                   validator: _validateEmail,
                 ),
-
                 const SizedBox(height: ModernSpacing.lg),
-
-                // Password field
                 ModernTextField(
                   controller: _passwordController,
                   labelText: 'Contraseña',
@@ -301,10 +280,7 @@ class _LoginScreenV2State extends State<LoginScreenV2>
                   obscureText: _obscurePassword,
                   validator: _validatePassword,
                 ),
-
                 const SizedBox(height: ModernSpacing.md),
-
-                // Remember me & Forgot password
                 Row(
                   children: [
                     Expanded(
@@ -341,10 +317,7 @@ class _LoginScreenV2State extends State<LoginScreenV2>
                     ),
                   ],
                 ),
-
                 const SizedBox(height: ModernSpacing.xl),
-
-                // Login button con loading state
                 Consumer<AuthProvider>(
                   builder: (context, authProvider, child) {
                     return ModernButton(
@@ -371,13 +344,12 @@ class _LoginScreenV2State extends State<LoginScreenV2>
         opacity: _formAnimation,
         child: Column(
           children: [
-            // Divider con texto
             Row(
               children: [
                 Expanded(
                   child: Container(
                     height: 1,
-                    color: Colors.white.withAlpha(51), // FIX: withOpacity -> withAlpha
+                    color: Colors.white.withAlpha(51),
                   ),
                 ),
                 Padding(
@@ -392,27 +364,22 @@ class _LoginScreenV2State extends State<LoginScreenV2>
                 Expanded(
                   child: Container(
                     height: 1,
-                    color: Colors.white.withAlpha(51), // FIX: withOpacity -> withAlpha
+                    color: Colors.white.withAlpha(51),
                   ),
                 ),
               ],
             ),
-
             const SizedBox(height: ModernSpacing.xl),
-
-            // Register button
             ModernButton(
               text: 'Crear cuenta nueva',
               onPressed: () => Navigator.pushNamed(context, '/register'),
               isPrimary: false,
               width: double.infinity,
             ),
-
             const SizedBox(height: ModernSpacing.md),
-
-            // Demo button
+            // BOTÓN ACTUALIZADO
             TextButton(
-              onPressed: _createDemoAccount,
+              onPressed: _handleDeveloperLogin,
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -423,7 +390,7 @@ class _LoginScreenV2State extends State<LoginScreenV2>
                   ),
                   const SizedBox(width: ModernSpacing.sm),
                   Text(
-                    'Probar con cuenta demo',
+                    'Entrar como desarrollador', // <-- TEXTO CAMBIADO
                     style: ModernTypography.bodyMedium.copyWith(
                       decoration: TextDecoration.underline,
                     ),
@@ -437,20 +404,14 @@ class _LoginScreenV2State extends State<LoginScreenV2>
     );
   }
 
-  // ============================================================================
-  // VALIDATION METHODS
-  // ============================================================================
-
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'El correo electrónico es obligatorio';
     }
-
     final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(value)) {
       return 'Introduce un correo electrónico válido';
     }
-
     return null;
   }
 
@@ -458,37 +419,24 @@ class _LoginScreenV2State extends State<LoginScreenV2>
     if (value == null || value.isEmpty) {
       return 'La contraseña es obligatoria';
     }
-
     if (value.length < 6) {
       return 'La contraseña debe tener al menos 6 caracteres';
     }
-
     return null;
   }
-
-  // ============================================================================
-  // ACTION METHODS
-  // ============================================================================
 
   void _handleLogin() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
-
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-
     try {
-      // FIX: Changed call from named parameters to positional parameters
       final success = await authProvider.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
-
       if (success && mounted) {
-        // Navegar con animación suave
         Navigator.pushReplacementNamed(context, '/home');
-
-        // Mostrar mensaje de bienvenida
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -519,10 +467,11 @@ class _LoginScreenV2State extends State<LoginScreenV2>
     }
   }
 
-  void _createDemoAccount() async {
+  void _handleDeveloperLogin() async {
+    // Renombrado de _createDemoAccount a _handleDeveloperLogin para mayor claridad
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final dbService = context.read<DatabaseService>();
 
-    // Mostrar loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -534,21 +483,22 @@ class _LoginScreenV2State extends State<LoginScreenV2>
     );
 
     try {
-      final success = await authProvider.createTestUser();
+      // La lógica ahora llama a createDeveloperAccount directamente
+      await dbService.createDeveloperAccount();
+      final success = await authProvider.login('zen@reflect.app', 'password');
 
       if (mounted) {
         Navigator.pop(context); // Cerrar loading
 
         if (success) {
           Navigator.pushReplacementNamed(context, '/home');
-
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Row(
                 children: [
                   Icon(Icons.science, color: Colors.white),
                   SizedBox(width: ModernSpacing.sm),
-                  Text('¡Cuenta demo creada! Explora la aplicación'),
+                  Text('¡Bienvenido, Desarrollador! Datos de prueba cargados.'),
                 ],
               ),
               backgroundColor: ModernColors.info,
@@ -560,13 +510,13 @@ class _LoginScreenV2State extends State<LoginScreenV2>
             ),
           );
         } else {
-          _showErrorDialog('Error creando cuenta demo. Inténtalo de nuevo.');
+          _showErrorDialog('Error al iniciar sesión con la cuenta de desarrollador.');
         }
       }
     } catch (e) {
       if (mounted) {
         Navigator.pop(context);
-        _showErrorDialog('Error de conexión. Inténtalo de nuevo.');
+        _showErrorDialog('Error al crear datos de prueba: ${e.toString()}');
       }
     }
   }
@@ -628,7 +578,7 @@ class _LoginScreenV2State extends State<LoginScreenV2>
               ),
               const SizedBox(height: ModernSpacing.lg),
               const Text(
-                'Error de Inicio de Sesión',
+                'Error',
                 style: ModernTypography.heading3,
                 textAlign: TextAlign.center,
               ),

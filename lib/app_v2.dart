@@ -1,5 +1,5 @@
 // ============================================================================
-// app_v2.dart - VERSIÓN COMPLETA CON ENHANCED ANALYTICS
+// app_v2.dart - VERSIÓN CORREGIDA
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -11,7 +11,7 @@ import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/interactive_moments_provider.dart';
 import 'presentation/providers/analytics_provider.dart';
-import 'presentation/providers/enhanced_analytics_provider.dart'; // ✅ NUEVO
+import 'presentation/providers/enhanced_analytics_provider.dart';
 
 // Screens V2
 import 'presentation/screens/v2/login_screen_v2.dart';
@@ -36,23 +36,29 @@ class ReflectAppV2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ❌ REEMPLAZAR todo el MultiProvider por:
+    // ✅ CORRECCIÓN: Se usa MultiProvider para proveer las instancias
+    // ya inicializadas por GetIt (di.sl).
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider<AuthProvider>(
-          create: (_) => AuthProvider(di.sl<DatabaseService>())..initialize(),
-        ),
+        // Provider para servicios que no notifican cambios (si se necesita acceso directo).
+        Provider<DatabaseService>.value(value: di.sl<DatabaseService>()),
+
+        // Providers para clases que sí notifican cambios (ChangeNotifier).
+        // Obtenemos la instancia única desde el service locator 'di'.
         ChangeNotifierProvider<ThemeProvider>(
-          create: (_) => ThemeProvider()..initialize(),
+          create: (_) => di.sl<ThemeProvider>()..initialize(),
+        ),
+        ChangeNotifierProvider<AuthProvider>(
+          create: (_) => di.sl<AuthProvider>()..initialize(),
         ),
         ChangeNotifierProvider<InteractiveMomentsProvider>(
-          create: (_) => InteractiveMomentsProvider(di.sl<DatabaseService>()),
+          create: (_) => di.sl<InteractiveMomentsProvider>(),
         ),
         ChangeNotifierProvider<AnalyticsProvider>(
-          create: (_) => AnalyticsProvider(di.sl<DatabaseService>()),
+          create: (_) => di.sl<AnalyticsProvider>(),
         ),
         ChangeNotifierProvider<EnhancedAnalyticsProvider>(
-          create: (_) => EnhancedAnalyticsProvider(di.sl<DatabaseService>()),
+          create: (_) => di.sl<EnhancedAnalyticsProvider>(),
         ),
       ],
       child: Consumer<ThemeProvider>(
@@ -60,8 +66,6 @@ class ReflectAppV2 extends StatelessWidget {
           return MaterialApp(
             title: 'Reflect - Tu Compañero de Bienestar',
             debugShowCheckedModeBanner: false,
-
-            // Tema configurado
             theme: ThemeData(
               brightness: Brightness.dark,
               primarySwatch: Colors.blue,
@@ -91,8 +95,6 @@ class ReflectAppV2 extends StatelessWidget {
                 titleLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
               ),
             ),
-
-            // Ruta inicial basada en autenticación
             home: Consumer<AuthProvider>(
               builder: (context, auth, child) {
                 if (!auth.isInitialized) {
@@ -105,8 +107,6 @@ class ReflectAppV2 extends StatelessWidget {
                 }
               },
             ),
-
-            // Rutas definidas
             routes: {
               '/login': (context) => const LoginScreenV2(),
               '/home': (context) => const ModernNavigationWrapper(),
@@ -115,8 +115,6 @@ class ReflectAppV2 extends StatelessWidget {
               '/calendar': (context) => const CalendarScreenV2(),
               '/profile': (context) => const ProfileScreenV2(),
             },
-
-            // Ruta de error
             onUnknownRoute: (settings) {
               return MaterialPageRoute(
                 builder: (context) => _buildErrorScreen(context, settings.name),
@@ -127,8 +125,6 @@ class ReflectAppV2 extends StatelessWidget {
       ),
     );
   }
-
-  // ... (los métodos _buildLoadingScreen y _buildErrorScreen permanecen igual)
 
   Widget _buildLoadingScreen() {
     return Scaffold(

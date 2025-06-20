@@ -82,7 +82,7 @@ class InteractiveMomentModel {
       id: map['moment_id'] as String,
       emoji: map['emoji'] as String,
       text: map['text'] as String,
-      type: map['moment_type'] as String,
+      type: map['type'] as String, // Changed from moment_type
       // FIX: Safely cast 'intensity', providing a default value of 5 if it's null.
       intensity: (map['intensity'] as int?) ?? 5,
       category: map['category'] as String,
@@ -91,13 +91,14 @@ class InteractiveMomentModel {
       entryDate: DateTime.parse(map['entry_date'] as String),
     );
   }
+// ...
 
   Map<String, dynamic> toDatabase() {
     return {
       'moment_id': id,
       'emoji': emoji,
       'text': text,
-      'moment_type': type,
+      'type': type, // Changed from moment_type
       'intensity': intensity,
       'category': category,
       'time_str': timeStr,
@@ -106,6 +107,7 @@ class InteractiveMomentModel {
       'entry_date': entryDate.toIso8601String().split('T')[0],
     };
   }
+// ...
 
   TagModel toTag() {
     final contextParts = <String>[];

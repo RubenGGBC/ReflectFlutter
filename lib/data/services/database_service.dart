@@ -230,23 +230,33 @@ class DatabaseService {
           FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )
       ''');
-      await txn.execute('''
-        CREATE TABLE interactive_moments (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          user_id INTEGER NOT NULL,
-          moment_id TEXT NOT NULL,
-          emoji TEXT NOT NULL,
-          text TEXT NOT NULL,
-          moment_type TEXT NOT NULL CHECK (moment_type IN ('positive', 'negative')),
-          intensity INTEGER NOT NULL CHECK (intensity >= 1 AND intensity <= 10),
-          category TEXT NOT NULL,
-          time_str TEXT NOT NULL,
-          created_at TEXT DEFAULT (datetime('now')),
-          entry_date TEXT DEFAULT (date('now')),
-          timestamp_data TEXT,
-          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        )
-      ''');
+      // ... inside _onCreate method
+      // Replace both CREATE TABLE statements for interactive_moments with this one:
+      await db.execute('''
+  CREATE TABLE interactive_moments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    emoji TEXT NOT NULL,
+    text TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('positive', 'negative', 'neutral')),
+    intensity INTEGER DEFAULT 5 CHECK (intensity >= 1 AND intensity <= 10),
+    category TEXT DEFAULT 'general',
+    context TEXT,
+    location TEXT,
+    weather TEXT,
+    social_context TEXT,
+    energy_before INTEGER DEFAULT 5,
+    entry_date TEXT DEFAULT (date('now')),
+    energy_after INTEGER DEFAULT 5,
+    mood_before INTEGER DEFAULT 5,
+    mood_after INTEGER DEFAULT 5,
+    timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+  )
+''');
+// ...
       // En lib/data/services/database_service.dart, dentro de _onCreate
 
 // ... después de la tabla interactive_moments

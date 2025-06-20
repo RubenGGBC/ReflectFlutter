@@ -1,12 +1,13 @@
 // ============================================================================
-// main.dart - VERSIÓN FINAL CON CORRECCIÓN PARA DESKTOP (sqflite_ffi)
+// main.dart - VERSIÓN FINAL Y CORREGIDA
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:get_it/get_it.dart'; // FIX: Import GetIt para el allReady
 import 'package:logger/logger.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart'; // FIX: Import for FFI
-import 'dart:io'; // FIX: Import to check platform
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'dart:io';
 
 import 'app_v2.dart';
 import 'injection_container.dart' as di;
@@ -16,7 +17,7 @@ void main() async {
   // Asegurar inicialización de Flutter
   WidgetsFlutterBinding.ensureInitialized();
 
-  // FIX: Initialize FFI for sqflite on desktop platforms
+  // Inicializar FFI para sqflite en plataformas de escritorio
   if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
@@ -46,9 +47,16 @@ void main() async {
     // Inicializar dependencias
     await di.init();
 
+    // >>>>> CORRECCIÓN CLAVE <<<<<
+    // Espera a que todos los singletons asíncronos (como DatabaseService)
+    // estén completamente inicializados y listos para ser usados.
+    await GetIt.instance.allReady();
+
     logger.i('✅ ReflectApp v2 inicializado correctamente');
 
-    runApp(ReflectAppV2());
+    // Ahora es seguro ejecutar la aplicación
+    runApp(const ReflectAppV2());
+
   } catch (e, stackTrace) {
     logger.e('❌ Error crítico iniciando ReflectApp: $e',
         error: e, stackTrace: stackTrace);
