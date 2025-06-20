@@ -2060,6 +2060,8 @@ class DatabaseService {
 // 🧪 MÉTODOS DE DESARROLLADOR PARA TESTING Y DEMO
 // ============================================================================
 
+  // En lib/data/services/database_service.dart
+
   /// 👨‍💻 Crear cuenta de desarrollador con datos completos
   Future<int> createDeveloperAccount() async {
     try {
@@ -2078,13 +2080,20 @@ class DatabaseService {
         userId = existing.first['id'] as int;
         _logger.i('🔄 Usando cuenta existente: $userId');
       } else {
+        // ✅ INICIO DE LA CORRECCIÓN
+        // Se añade una contraseña por defecto y se hashea
+        final defaultPassword = 'devpassword123';
+        final passwordHash = sha256.convert(utf8.encode(defaultPassword)).toString();
+
         // Crear nueva cuenta de desarrollador
         userId = await db.insert('users', {
           'name': 'Alex Developer',
           'email': 'dev@reflect.com',
+          'password_hash': passwordHash, // <-- ¡Este es el campo que faltaba!
           'avatar_emoji': '👨‍💻',
           'created_at': DateTime.now().toIso8601String(),
         });
+        // ✅ FIN DE LA CORRECCIÓN
         _logger.i('✅ Cuenta de desarrollador creada: $userId');
       }
 
@@ -2534,4 +2543,38 @@ class DatabaseService {
   }
 
 
+}
+// ============================================================================
+// 📋 CLASES AUXILIARES PARA GENERACIÓN DE DATOS
+// ============================================================================
+
+class _PersonalityPhase {
+  final String name;
+  final int startDay;
+  final int endDay;
+  final double baseMood;
+  final double baseEnergy;
+  final double baseStress;
+
+  _PersonalityPhase(this.name, this.startDay, this.endDay, this.baseMood, this.baseEnergy, this.baseStress);
+}
+
+class _MomentData {
+  final String emoji;
+  final String text;
+  final String type;
+  final int intensity;
+  final String category;
+
+  _MomentData(this.emoji, this.text, this.type, this.intensity, this.category);
+}
+
+class _MilestoneData {
+  final int daysAgo;
+  final String emoji;
+  final String description;
+  final String type;
+  final int intensity;
+
+  _MilestoneData(this.daysAgo, this.emoji, this.description, this.type, this.intensity);
 }

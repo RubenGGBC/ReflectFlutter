@@ -1,9 +1,6 @@
-// ============================================================================
-// profile_screen_v2.dart - NUEVA VERSIÓN CON MEJORAS UI SEGÚN ESPECIFICACIONES
-// ============================================================================
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../data/services/database_service.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../components/modern_design_system.dart';
@@ -168,7 +165,6 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
               padding: const EdgeInsets.all(ModernSpacing.xl),
               child: Column(
                 children: [
-                  // Avatar personalizable animado
                   GestureDetector(
                     onTap: _showAvatarSelector,
                     child: ScaleTransition(
@@ -198,18 +194,13 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                       ),
                     ),
                   ),
-
                   const SizedBox(height: ModernSpacing.lg),
-
-                  // Información del usuario
                   Text(
                     user.name,
                     style: ModernTypography.heading2,
                     textAlign: TextAlign.center,
                   ),
-
                   const SizedBox(height: ModernSpacing.sm),
-
                   Text(
                     user.email,
                     style: ModernTypography.bodyMedium.copyWith(
@@ -217,10 +208,7 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                     ),
                     textAlign: TextAlign.center,
                   ),
-
                   const SizedBox(height: ModernSpacing.lg),
-
-                  // Badge de nivel
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: ModernSpacing.lg,
@@ -285,9 +273,7 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                 ),
               ],
             ),
-
             const SizedBox(height: ModernSpacing.md),
-
             Row(
               children: [
                 Expanded(
@@ -336,30 +322,25 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
               '🏆 Logros Desbloqueados',
               style: ModernTypography.heading3,
             ),
-
             const SizedBox(height: ModernSpacing.lg),
-
             _buildAchievementItem(
               '🌟',
               'Primer Paso',
               'Completaste tu primera reflexión',
               true,
             ),
-
             _buildAchievementItem(
               '🔥',
               'En Racha',
               'Mantuviste una racha de 7 días',
               true,
             ),
-
             _buildAchievementItem(
               '💎',
               'Reflexionador Constante',
               'Completaste 30 días de reflexiones',
               false,
             ),
-
             _buildAchievementItem(
               '🌈',
               'Maestro del Balance',
@@ -401,9 +382,7 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
               ),
             ),
           ),
-
           const SizedBox(width: ModernSpacing.md),
-
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -424,7 +403,6 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
               ],
             ),
           ),
-
           if (unlocked)
             const Icon(
               Icons.check_circle,
@@ -447,40 +425,38 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
               '⚙️ Configuración',
               style: ModernTypography.heading3,
             ),
-
             const SizedBox(height: ModernSpacing.lg),
-
             _buildSettingItem(
               Icons.palette_outlined,
               'Personalizar Tema',
               'Cambia los colores y estilos',
                   () => _showThemeSelector(),
             ),
-
             _buildSettingItem(
               Icons.notifications_outlined,
               'Notificaciones',
               'Configura recordatorios diarios',
                   () => Navigator.pushNamed(context, '/notifications'),
             ),
-
             _buildSettingItem(
               Icons.backup_outlined,
               'Exportar Datos',
               'Descarga tus reflexiones',
                   () => _showExportDialog(),
             ),
-
             _buildSettingItem(
               Icons.info_outline,
               'Acerca de',
               'Información de la aplicación',
                   () => _showAboutDialog(),
             ),
-
+            _buildSettingItem(
+              Icons.developer_mode,
+              'Opciones de Desarrollador',
+              'Generar datos de prueba',
+              _showDeveloperOptionsDialog,
+            ),
             const SizedBox(height: ModernSpacing.lg),
-
-            // Logout button
             ModernButton(
               text: 'Cerrar Sesión',
               onPressed: _handleLogout,
@@ -513,9 +489,7 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                 size: 20,
               ),
             ),
-
             const SizedBox(width: ModernSpacing.md),
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -531,7 +505,6 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                 ],
               ),
             ),
-
             Icon(
               Icons.arrow_forward_ios,
               color: ModernColors.textHint,
@@ -542,10 +515,6 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
       ),
     );
   }
-
-  // ============================================================================
-  // DIALOG METHODS
-  // ============================================================================
 
   void _showAvatarSelector() {
     showDialog(
@@ -561,9 +530,7 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                 '🎭 Elige tu Avatar',
                 style: ModernTypography.heading3,
               ),
-
               const SizedBox(height: ModernSpacing.lg),
-
               GridView.builder(
                 shrinkWrap: true,
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -606,9 +573,7 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                   );
                 },
               ),
-
               const SizedBox(height: ModernSpacing.lg),
-
               ModernButton(
                 text: 'Cerrar',
                 onPressed: () => Navigator.pop(context),
@@ -639,26 +604,20 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                 '✏️ Editar Perfil',
                 style: ModernTypography.heading3,
               ),
-
               const SizedBox(height: ModernSpacing.lg),
-
               ModernTextField(
                 controller: nameController,
                 labelText: 'Nombre',
                 prefixIcon: Icons.person_outline,
               ),
-
               const SizedBox(height: ModernSpacing.md),
-
               ModernTextField(
                 controller: emailController,
                 labelText: 'Email',
                 prefixIcon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
               ),
-
               const SizedBox(height: ModernSpacing.xl),
-
               Row(
                 children: [
                   Expanded(
@@ -698,17 +657,13 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                 '🎨 Personalizar Tema',
                 style: ModernTypography.heading3,
               ),
-
               const SizedBox(height: ModernSpacing.lg),
-
               const Text(
                 'Esta funcionalidad estará disponible próximamente. Podrás personalizar colores, fuentes y efectos visuales.',
                 style: ModernTypography.bodyMedium,
                 textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: ModernSpacing.xl),
-
               ModernButton(
                 text: 'Entendido',
                 onPressed: () => Navigator.pop(context),
@@ -736,24 +691,18 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                 color: ModernColors.info,
                 size: 48,
               ),
-
               const SizedBox(height: ModernSpacing.lg),
-
               Text(
                 '📥 Exportar Datos',
                 style: ModernTypography.heading3,
               ),
-
               const SizedBox(height: ModernSpacing.md),
-
               const Text(
                 'Descarga todas tus reflexiones y momentos en formato JSON para hacer respaldo o migrar a otra aplicación.',
                 style: ModernTypography.bodyMedium,
                 textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: ModernSpacing.xl),
-
               Row(
                 children: [
                   Expanded(
@@ -769,7 +718,6 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                       text: 'Exportar',
                       onPressed: () {
                         Navigator.pop(context);
-                        // Implementar lógica de exportación
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('📁 Datos exportados exitosamente'),
@@ -802,32 +750,24 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                 color: ModernColors.info,
                 size: 48,
               ),
-
               const SizedBox(height: ModernSpacing.lg),
-
               Text(
                 'ReflectApp v2.0',
                 style: ModernTypography.heading3,
               ),
-
               const SizedBox(height: ModernSpacing.md),
-
               const Text(
                 'Tu compañero de reflexión y crecimiento personal. Captura momentos, reflexiona sobre tu día y cultiva una mentalidad positiva.',
                 style: ModernTypography.bodyMedium,
                 textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: ModernSpacing.lg),
-
               const Text(
                 '✨ Nueva versión con UI moderna\n🎨 Sistema de diseño mejorado\n📊 Estadísticas visuales\n🏆 Sistema de logros',
                 style: ModernTypography.bodySmall,
                 textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: ModernSpacing.xl),
-
               ModernButton(
                 text: 'Cerrar',
                 onPressed: () => Navigator.pop(context),
@@ -840,14 +780,92 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
     );
   }
 
-  // ============================================================================
-  // HELPER METHODS
-  // ============================================================================
+  void _showDeveloperOptionsDialog() {
+    final dbService = DatabaseService();
+    final userId = context.read<AuthProvider>().currentUser?.id;
+
+    if (userId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ Error: No se pudo obtener el ID de usuario.')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: ModernCard(
+          padding: const EdgeInsets.all(ModernSpacing.xl),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('👨‍💻 Opciones de Dev', style: ModernTypography.heading3),
+              const SizedBox(height: ModernSpacing.lg),
+              ModernButton(
+                text: 'Crear Cuenta Dev y Datos',
+                icon: Icons.person_add,
+                onPressed: () async {
+                  final devUserId = await dbService.createDeveloperAccount();
+                  if (mounted) Navigator.pop(context);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('✅ Cuenta de desarrollador creada con ID: $devUserId')),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: ModernSpacing.md),
+              ModernButton(
+                text: 'Regenerar Datos (1 Mes)',
+                icon: Icons.refresh,
+                onPressed: () async {
+                  await dbService.regenerateLastMonthData(userId);
+                  if (mounted) Navigator.pop(context);
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('🔄 Datos del último mes regenerados')),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: ModernSpacing.md),
+              ModernButton(
+                text: 'Ver Estadísticas Dev',
+                icon: Icons.analytics,
+                onPressed: () async {
+                  final stats = await dbService.getDeveloperDataStats(userId);
+                  if (mounted) Navigator.pop(context);
+                  if (mounted) {
+                    print('Estadísticas Dev: $stats');
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Estadísticas de Datos Generados'),
+                        content: SingleChildScrollView(child: Text(stats.toString())),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar'))
+                        ],
+                      ),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: ModernSpacing.lg),
+              ModernButton(
+                text: 'Cerrar',
+                onPressed: () => Navigator.pop(context),
+                isPrimary: false,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   int _calculateUserLevel() {
-    // Lógica simplificada para calcular el nivel del usuario
-    // basado en días activos, momentos capturados, etc.
-    return 3; // Por ahora retornamos un valor fijo
+    return 3;
   }
 
   void _handleLogout() async {
@@ -865,24 +883,18 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                 color: ModernColors.warning,
                 size: 48,
               ),
-
               const SizedBox(height: ModernSpacing.lg),
-
               Text(
                 '¿Cerrar Sesión?',
                 style: ModernTypography.heading3,
               ),
-
               const SizedBox(height: ModernSpacing.md),
-
               const Text(
                 '¿Estás seguro de que deseas cerrar sesión? Perderás el acceso a tus reflexiones hasta que vuelvas a iniciar sesión.',
                 style: ModernTypography.bodyMedium,
                 textAlign: TextAlign.center,
               ),
-
               const SizedBox(height: ModernSpacing.xl),
-
               Row(
                 children: [
                   Expanded(
