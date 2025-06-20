@@ -1,5 +1,5 @@
 // ============================================================================
-// injection_container.dart - VERSIÓN COMPLETA CON ENHANCED ANALYTICS
+// injection_container.dart - VERSIÓN COMPLETA CORREGIDA
 // ============================================================================
 
 import 'package:get_it/get_it.dart';
@@ -7,14 +7,14 @@ import 'package:logger/logger.dart';
 
 // Services
 import 'data/services/database_service.dart';
-import 'data/services/advanced_user_analytics.dart'; // ✅ NUEVO
+import 'data/services/advanced_user_analytics.dart';
 
 // Providers
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/interactive_moments_provider.dart';
 import 'presentation/providers/analytics_provider.dart';
-import 'presentation/providers/enhanced_analytics_provider.dart'; // ✅ NUEVO
+import 'presentation/providers/enhanced_analytics_provider.dart';
 
 final sl = GetIt.instance;
 
@@ -42,28 +42,39 @@ Future<void> init() async {
     // Database Service - Singleton
     sl.registerLazySingleton<DatabaseService>(() => DatabaseService());
 
-    // ✅ NUEVO: Advanced User Analytics Service
+    // Advanced User Analytics Service
     sl.registerLazySingleton<AdvancedUserAnalytics>(
           () => AdvancedUserAnalytics(sl<DatabaseService>()),
     );
 
     // ============================================================================
-    // DATA PROVIDERS
+    // PROVIDERS - ¡ESTA SECCIÓN ESTABA FALTANDO!
     // ============================================================================
 
-    // ... (otras registraciones de providers)
+    // Auth Provider - Singleton
+    sl.registerLazySingleton<AuthProvider>(
+          () => AuthProvider(sl<DatabaseService>()),
+    );
 
-    // ✅ NUEVO: Enhanced Analytics Provider - Singleton
+    // Theme Provider - Singleton
+    sl.registerLazySingleton<ThemeProvider>(
+          () => ThemeProvider(),
+    );
+
+    // Interactive Moments Provider - Singleton
+    sl.registerLazySingleton<InteractiveMomentsProvider>(
+          () => InteractiveMomentsProvider(sl<DatabaseService>()),
+    );
+
+    // Analytics Provider - Singleton
+    sl.registerLazySingleton<AnalyticsProvider>(
+          () => AnalyticsProvider(sl<DatabaseService>()),
+    );
+
+    // Enhanced Analytics Provider - Singleton
     sl.registerLazySingleton<EnhancedAnalyticsProvider>(
           () => EnhancedAnalyticsProvider(sl<DatabaseService>()),
     );
-
-    // ============================================================================
-    // OPCIONAL: REGISTRAR FACTORIES PARA TESTING
-    // ============================================================================
-
-    // Factory para crear múltiples instancias en testing
-    // sl.registerFactory<DatabaseService>(() => DatabaseService()); //  <-- COMENTA O ELIMINA ESTA LÍNEA
 
     logger.i('✅ Contenedor de dependencias inicializado correctamente');
 
@@ -71,10 +82,6 @@ Future<void> init() async {
     logger.e('❌ Error inicializando dependencias: $e');
     rethrow;
   }
-}
-
-extension on Future<void> {
-  get length => null;
 }
 
 // ============================================================================
@@ -118,6 +125,10 @@ Map<String, dynamic> getContainerInfo() {
       'EnhancedAnalyticsProvider',
     ],
   };
+}
+
+extension on Future<void> {
+  get length => null;
 }
 
 /// Resetear contenedor (útil para testing)

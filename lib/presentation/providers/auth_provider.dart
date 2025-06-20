@@ -1,5 +1,5 @@
 // ============================================================================
-// presentation/providers/auth_provider.dart - VERSIÓN CORREGIDA Y ROBUSTA
+// presentation/providers/auth_provider.dart - VERSIÓN CORREGIDA COMPLETA
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -33,7 +33,9 @@ class AuthProvider with ChangeNotifier {
     if (_isInitialized) return;
 
     _logger.i('🔑 Inicializando AuthProvider con auto-login');
-    _setLoading(true);
+
+    // ✅ CORREGIDO: No llamar _setLoading inmediatamente para evitar setState durante build
+    _isLoading = true;
 
     try {
       final hasSession = await _sessionService.hasActiveSession();
@@ -42,39 +44,38 @@ class AuthProvider with ChangeNotifier {
         final sessionData = await _sessionService.getSessionData();
 
         if (sessionData != null) {
-          // FIX: Safely cast the user ID to prevent runtime errors.
-          final userId = sessionData['id'];
-
-          if (userId is int) {
+          final userId = sessionData['user_id'] as int?;
+          if (userId != null) {
             final user = await _databaseService.getUserById(userId);
 
             if (user != null) {
               _currentUser = user;
-              await _sessionService.updateLastLogin();
-              _logger.i('🌺 Auto-login exitoso para: ${user.name}');
+              _logger.i('✅ Auto-login exitoso para: ${user.name}');
             } else {
-              _logger.w('⚠️ Usuario de sesión no encontrado en BD');
+              _logger.w('⚠️ Usuario en sesión no encontrado en BD');
               await _sessionService.clearSession();
             }
           }
         }
       } else {
-        _logger.d('ℹ️ No hay sesión activa para auto-login');
+        _logger.i('ℹ️ No hay sesión activa para auto-login');
       }
 
       _isInitialized = true;
 
     } catch (e) {
-      _logger.e('❌ Error en inicialización: $e');
-      _setError('Error inicializando sesión');
+      _logger.e('❌ Error en auto-login: $e');
+      _errorMessage = 'Error verificando sesión';
     } finally {
-      _setLoading(false);
+      _isLoading = false;
+      // ✅ CORREGIDO: Solo notificar al final cuando todo esté listo
+      notifyListeners();
     }
   }
 
-  /// Login de usuario con opción "recordarme"
+  /// Login con email y password
   Future<bool> login(String email, String password, {bool rememberMe = false}) async {
-    _logger.i('🔑 Intentando login para: $email (Remember: $rememberMe)');
+    _logger.i('🔐 Iniciando login para: $email');
     _setLoading(true);
     _clearError();
 
@@ -83,51 +84,61 @@ class AuthProvider with ChangeNotifier {
 
       if (user != null) {
         _currentUser = user;
-        await _sessionService.saveUserSession(user, rememberMe: rememberMe);
+
+        if (rememberMe) {
+          await _sessionService.saveUserSession(user, rememberMe: true);
+        }
+
         _logger.i('✅ Login exitoso para: ${user.name}');
         return true;
       } else {
         _setError('Credenciales incorrectas');
-        _logger.w('❌ Login fallido para: $email');
+        _logger.w('⚠️ Login falló: credenciales incorrectas');
         return false;
       }
+
     } catch (e) {
       _logger.e('❌ Error en login: $e');
-      _setError('Error del sistema. Intenta de nuevo');
+      _setError('Error iniciando sesión. Intenta de nuevo');
       return false;
     } finally {
       _setLoading(false);
     }
   }
 
-  /// Registro de usuario
-  Future<bool> register(String email, String password, String name, {String avatarEmoji = '🧘‍♀️'}) async {
-    _logger.i('📝 Intentando registro para: $email');
+  /// Registro de nuevo usuario
+  Future<bool> register({
+    required String email,
+    required String password,
+    String? name,
+    bool rememberMe = false,
+  }) async {
+    _logger.i('📝 Registrando usuario: $email');
     _setLoading(true);
     _clearError();
 
     try {
-      final userId = await _databaseService.createUser(email, password, name, avatarEmoji: avatarEmoji);
+      final userId = await _databaseService.createUser(
+        email,
+        password,
+        name ?? 'Usuario',
+      );
 
       if (userId != null) {
-        // Login automático después del registro
-        final user = await _databaseService.getUserById(userId);
-        if (user != null) {
-          _currentUser = user;
-          await _sessionService.saveUserSession(user, rememberMe: true);
-          _logger.i('✅ Registro y login exitoso para: $name');
+        // Auto-login después del registro
+        final success = await login(email, password, rememberMe: rememberMe);
+        if (success) {
+          _logger.i('✅ Registro y login exitoso para: $email');
           return true;
         }
-      } else {
-        _setError('Este email ya está registrado');
-        _logger.w('❌ Registro fallido - email duplicado: $email');
-        return false;
       }
+
+      _setError('Error creando la cuenta');
       return false;
 
     } catch (e) {
       _logger.e('❌ Error en registro: $e');
-      _setError('Error del sistema. Intenta de nuevo');
+      _setError('Error creando cuenta. Intenta de nuevo');
       return false;
     } finally {
       _setLoading(false);
@@ -148,19 +159,73 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Crear usuario de prueba para desarrollo
+  /// ✅ CORREGIDO: Crear usuario de prueba para desarrollo
   Future<bool> createTestUser() async {
-    _logger.i('🧪 Creando usuario de prueba');
+    _logger.i('🧪 Creando/usando usuario de prueba');
+
+    // ✅ CREDENCIALES CORREGIDAS: Usar cuenta de desarrollador existente
+    const email = 'dev@reflect.com';
+    const password = 'devpassword123';
+
+    _setLoading(true);
+    _clearError();
+
+    try {
+      // Intentar crear cuenta de desarrollador (que ya maneja la creación correctamente)
+      await _databaseService.createDeveloperAccount();
+
+      // Hacer login con las credenciales correctas
+      final success = await login(email, password, rememberMe: true);
+
+      if (success) {
+        _logger.i('✅ Usuario de prueba listo: $email');
+        return true;
+      } else {
+        _logger.w('⚠️ Error en login de usuario de prueba');
+        _setError('Error activando cuenta de prueba');
+        return false;
+      }
+    } catch (e) {
+      _logger.e('❌ Error con usuario de prueba: $e');
+      _setError('Error creando cuenta de prueba');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Método alternativo para crear usuario zen (SIMPLIFICADO)
+  Future<bool> createZenTestUser() async {
+    _logger.i('🧪 Creando usuario zen de prueba');
     const email = 'zen@reflect.app';
     const password = 'reflect123';
     const name = 'Viajero Zen';
 
+    _setLoading(true);
+    _clearError();
+
     try {
+      // ✅ CORREGIDO: Simplificado sin deleteUser
+      // Intentar crear usuario - si ya existe, simplemente hacer login
       await _databaseService.createUser(email, password, name);
+
+      // Hacer login (funcionará independientemente de si el usuario ya existía)
+      final success = await login(email, password, rememberMe: true);
+
+      if (success) {
+        _logger.i('✅ Usuario zen listo: $email');
+        return true;
+      } else {
+        _setError('Error en credenciales zen');
+        return false;
+      }
     } catch (e) {
-      // Ignorar error si el usuario ya existe
+      _logger.e('❌ Error creando usuario zen: $e');
+      _setError('Error en creación de usuario');
+      return false;
+    } finally {
+      _setLoading(false);
     }
-    return await login(email, password, rememberMe: true);
   }
 
   /// Actualizar perfil de usuario
@@ -170,14 +235,13 @@ class AuthProvider with ChangeNotifier {
     String? bio,
     Map<String, dynamic>? preferences,
   }) async {
-    // FIX: Add a null check for both the user and their ID.
     if (_currentUser == null || _currentUser!.id == null) return false;
 
     _setLoading(true);
 
     try {
       final success = await _databaseService.updateUserProfile(
-        _currentUser!.id!, // This is now safe.
+        _currentUser!.id!,
         name: name,
         avatarEmoji: avatarEmoji,
         bio: bio,

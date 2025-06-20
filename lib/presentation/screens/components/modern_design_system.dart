@@ -8,6 +8,8 @@ import 'package:flutter/material.dart';
 
 class ModernColors {
   // Gradientes principales
+  static const Color accentPurple = Color(0xFF764ba2); // ✅ AGREGADO: Color faltante
+
   // Agregar estas líneas dentro de la clase ModernColors:
   static const Color accentBlue = Color(0xFF3B82F6);
   static const Color surfaceDark = Color(0xFF141B2D);
@@ -49,6 +51,7 @@ class ModernColors {
     'mental': Color(0xFF4ecdc4),
     'espiritual': Color(0xFF764ba2),
   };
+
 }
 
 // ... (El resto del archivo ModernSpacing, ModernTypography, etc., permanece igual)

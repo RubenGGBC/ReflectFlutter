@@ -1,12 +1,11 @@
 // ============================================================================
-// screens/v2/calendar_screen_v2.dart - CALENDARIO CON DISEÑO MODERNO
+// calendar_screen_v2.dart - VERSIÓN SIMPLE Y FUNCIONAL
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../components/modern_design_system.dart';
-import '../../../data/services/database_service.dart';
 
 class CalendarScreenV2 extends StatefulWidget {
   const CalendarScreenV2({super.key});
@@ -15,203 +14,244 @@ class CalendarScreenV2 extends StatefulWidget {
   State<CalendarScreenV2> createState() => _CalendarScreenV2State();
 }
 
-class _CalendarScreenV2State extends State<CalendarScreenV2> with TickerProviderStateMixin {
-  final DatabaseService _databaseService = DatabaseService();
-
-  late PageController _pageController;
-  late AnimationController _fadeController;
-  late Animation<double> _fadeAnimation;
-
+class _CalendarScreenV2State extends State<CalendarScreenV2> {
+  DateTime _selectedDate = DateTime.now();
   DateTime _focusedMonth = DateTime.now();
-  Map<int, Map<String, dynamic>> _daysData = {};
-  bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month);
-    _pageController = PageController(initialPage: _focusedMonth.month - 1);
-
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 600),
-      vsync: this,
-    );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0)
-        .animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut));
-    _fadeController.forward();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadMonthData(_focusedMonth);
-    });
-  }
-
-  @override
-  void dispose() {
-    _pageController.dispose();
-    _fadeController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadMonthData(DateTime month) async {
-    final authProvider = context.read<AuthProvider>();
-    if (authProvider.currentUser?.id == null) return;
-
-    setState(() => _isLoading = true);
-    final monthData = await _databaseService.getMonthSummary(
-      authProvider.currentUser!.id!,
-      month.year,
-      month.month,
-    );
-    if (mounted) {
-      setState(() {
-        _daysData = monthData;
-        _isLoading = false;
-      });
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ModernColors.darkPrimary,
-      body: SafeArea(
-        child: FadeTransition(
-          opacity: _fadeAnimation,
-          child: Column(
-            children: [
-              _buildHeader(),
-              _buildWeekDays(),
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: 12,
-                  onPageChanged: (index) {
-                    final newMonth = DateTime(_focusedMonth.year, index + 1);
-                    setState(() {
-                      _focusedMonth = newMonth;
-                    });
-                    _loadMonthData(newMonth);
-                  },
-                  itemBuilder: (context, index) {
-                    final month = DateTime(_focusedMonth.year, index + 1);
-                    return _buildDaysGrid(month);
-                  },
-                ),
+      body: CustomScrollView(
+        slivers: [
+          _buildAppBar(),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildCalendarHeader(),
+                  const SizedBox(height: 20),
+                  _buildCalendarGrid(),
+                  const SizedBox(height: 20),
+                  _buildDayDetails(),
+                ],
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader() {
-    final monthNames = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
-    return Padding(
-      padding: const EdgeInsets.all(ModernSpacing.lg),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.chevron_left, color: Colors.white),
-            onPressed: () {
-              _pageController.previousPage(
-                duration: ModernAnimations.fast,
-                curve: Curves.easeInOut,
-              );
-            },
-          ),
-          Text(
-            '${monthNames[_focusedMonth.month - 1]} ${_focusedMonth.year}',
-            style: ModernTypography.heading2,
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_right, color: Colors.white),
-            onPressed: () {
-              _pageController.nextPage(
-                duration: ModernAnimations.fast,
-                curve: Curves.easeInOut,
-              );
-            },
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildWeekDays() {
-    final weekDays = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: ModernSpacing.lg, vertical: ModernSpacing.sm),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: weekDays.map((day) => Text(day, style: ModernTypography.bodySmall)).toList(),
+  Widget _buildAppBar() {
+    return SliverAppBar(
+      backgroundColor: ModernColors.darkPrimary,
+      elevation: 0,
+      pinned: true,
+      title: const Text(
+        'Calendario',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.today, color: Colors.white),
+          onPressed: () {
+            setState(() {
+              _selectedDate = DateTime.now();
+              _focusedMonth = DateTime.now();
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCalendarHeader() {
+    final monthNames = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.chevron_left, color: Colors.white),
+          onPressed: () {
+            setState(() {
+              _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1);
+            });
+          },
+        ),
+        Text(
+          '${monthNames[_focusedMonth.month - 1]} ${_focusedMonth.year}',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.chevron_right, color: Colors.white),
+          onPressed: () {
+            setState(() {
+              _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1);
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCalendarGrid() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ModernColors.surfaceDark,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          // Días de la semana
+          Row(
+            children: ['L', 'M', 'X', 'J', 'V', 'S', 'D']
+                .map((day) => Expanded(
+              child: Center(
+                child: Text(
+                  day,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ))
+                .toList(),
+          ),
+          const SizedBox(height: 10),
+          // Grid de días
+          _buildDaysGrid(),
+        ],
       ),
     );
   }
 
-  Widget _buildDaysGrid(DateTime month) {
-    final daysInMonth = DateUtils.getDaysInMonth(month.year, month.month);
-    final firstDayOffset = (DateUtils.firstDayOffset(month.year, month.month, MaterialLocalizations.of(context)) -1) % 7;
+  Widget _buildDaysGrid() {
+    final firstDay = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
+    final lastDay = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0);
+    final daysInMonth = lastDay.day;
+    final startWeekday = firstDay.weekday;
 
-    return GridView.builder(
-      padding: const EdgeInsets.all(ModernSpacing.md),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 7,
-        crossAxisSpacing: ModernSpacing.sm,
-        mainAxisSpacing: ModernSpacing.sm,
-      ),
-      itemCount: daysInMonth + firstDayOffset,
-      itemBuilder: (context, index) {
-        if (index < firstDayOffset) {
-          return Container(); // Empty cell
-        }
-        final day = index - firstDayOffset + 1;
-        final dayData = _daysData[day];
-        return _buildDayCell(day, dayData);
-      },
-    );
-  }
+    List<Widget> dayWidgets = [];
 
-  Widget _buildDayCell(int day, Map<String, dynamic>? dayData) {
-    final hasData = dayData != null && dayData['submitted'] == true;
-    Color cellColor = ModernColors.glassSecondary;
-
-    if (hasData) {
-      final positive = (dayData['positive'] as int?) ?? 0;
-      final negative = (dayData['negative'] as int?) ?? 0;
-      if (positive > negative) {
-        cellColor = ModernColors.success.withOpacity(0.3);
-      } else if (negative > positive) {
-        cellColor = ModernColors.warning.withOpacity(0.3);
-      } else {
-        cellColor = ModernColors.info.withOpacity(0.3);
-      }
+    // Días vacíos al inicio
+    for (int i = 1; i < startWeekday; i++) {
+      dayWidgets.add(const SizedBox());
     }
 
-    return GestureDetector(
-      onTap: () {
-        // No action on tap as requested
-      },
-      child: AnimatedContainer(
-        duration: ModernAnimations.fast,
-        decoration: BoxDecoration(
-          color: cellColor,
-          borderRadius: BorderRadius.circular(ModernSpacing.radiusMedium),
-        ),
-        child: Center(
-          child: Text(
-            day.toString(),
-            style: ModernTypography.bodyMedium.copyWith(
-              color: hasData ? Colors.white : ModernColors.textHint,
-              fontWeight: hasData ? FontWeight.bold : FontWeight.normal,
+    // Días del mes
+    for (int day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(_focusedMonth.year, _focusedMonth.month, day);
+      final isSelected = _isSameDay(date, _selectedDate);
+      final isToday = _isSameDay(date, DateTime.now());
+
+      dayWidgets.add(
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedDate = date;
+            });
+          },
+          child: Container(
+            margin: const EdgeInsets.all(2),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? ModernColors.accentBlue
+                  : isToday
+                  ? ModernColors.accentBlue.withOpacity(0.3)
+                  : null,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Center(
+              child: Text(
+                '$day',
+                style: TextStyle(
+                  color: isSelected
+                      ? Colors.white
+                      : isToday
+                      ? ModernColors.accentBlue
+                      : Colors.white70,
+                  fontWeight: isSelected || isToday ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
             ),
           ),
         ),
+      );
+    }
+
+    return GridView.count(
+      crossAxisCount: 7,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: dayWidgets,
+    );
+  }
+
+  Widget _buildDayDetails() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ModernColors.surfaceDark,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Detalles del día ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'No hay entradas registradas para este día.',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              // Navegar a crear entrada para este día
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Funcionalidad en desarrollo'),
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: ModernColors.accentBlue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Agregar entrada para este día'),
+          ),
+        ],
       ),
     );
+  }
+
+  bool _isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 }
