@@ -2,7 +2,10 @@
 // PROVIDER DE ANALYTICS MEJORADO
 // ============================================================================
 
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import 'package:provider/provider.dart';
 
 import '../../data/services/advanced_user_analytics.dart';
 import '../../data/services/database_service.dart';
@@ -35,6 +38,7 @@ class EnhancedAnalyticsProvider with ChangeNotifier {
   Map<String, dynamic> get moodDeclineAnalysis => _moodDeclineAnalysis;
   Map<String, dynamic> get progressTimeline => _progressTimeline;
   Map<String, dynamic> get personalizedGoals => _personalizedGoals;
+  Map<String, dynamic> get temporalComparisons => _temporalComparisons;
 
   /// 🚀 Cargar análisis completo del usuario
   Future<void> loadCompleteAdvancedAnalytics(int userId) async {
@@ -60,6 +64,7 @@ class EnhancedAnalyticsProvider with ChangeNotifier {
       _progressTimeline = results[3];
       _personalizedGoals = results[4];
       _temporalComparisons = results[5];
+
 
       _logger.i('✅ Análisis completo cargado. Score: ${_wellbeingData['overall_score']}');
 
@@ -208,9 +213,56 @@ class EnhancedAnalyticsProvider with ChangeNotifier {
     };
   }
 
+  /// Métricas rápidas para vistas compactas
+  Map<String, dynamic> getQuickMetrics() {
+    final stressLevel = _stressAnalysis['alert_level'] ?? 'normal';
+    final moodLevel = _moodDeclineAnalysis['concern_level'] ?? 'normal';
+    final goals = _personalizedGoals['recommended_goals'] as List? ?? [];
+
+    return {
+      'wellbeing_score': _wellbeingData['overall_score'] ?? 0,
+      'stress_level': _mapStressLevel(stressLevel),
+      'mood_trend': _mapMoodLevel(moodLevel),
+      'active_goals': goals.length,
+      'completed_today': 0, // Debes implementar esta lógica si es necesaria
+    };
+  }
+
+  /// Datos para el gráfico de componentes de bienestar
+  List<Map<String, dynamic>> getWellbeingComponentsChartData() {
+    final components = _wellbeingData['components'] as Map<String, dynamic>? ?? {};
+
+    return components.entries.map((entry) {
+      return {
+        'name': _getComponentDisplayName(entry.key),
+        'value': (entry.value ?? 0).toDouble(),
+        'score': entry.value,
+        'maxScore': _getMaxScoreForComponent(entry.key),
+        'percentage': (entry.value / _getMaxScoreForComponent(entry.key) * 100).round(),
+        // Puedes añadir más propiedades como color o emoji si los necesitas
+      };
+    }).toList();
+  }
+
+
   // ============================================================================
   // MÉTODOS AUXILIARES PRIVADOS
   // ============================================================================
+
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void _setError(String message) {
+    _errorMessage = message;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
 
   Map<String, String> _getStressStatus() {
     final level = _stressAnalysis['alert_level'] ?? 'normal';
@@ -354,6 +406,38 @@ class EnhancedAnalyticsProvider with ChangeNotifier {
     }
   }
 
+  String _mapStressLevel(String level) {
+    switch (level) {
+      case 'low': return 'Bajo';
+      case 'normal': return 'Normal';
+      case 'moderate': return 'Moderado';
+      case 'high': return 'Alto';
+      case 'critical': return 'Crítico';
+      default: return 'Normal';
+    }
+  }
+
+  String _mapMoodLevel(String level) {
+    switch (level) {
+      case 'improving': return 'Mejorando';
+      case 'stable': return 'Estable';
+      case 'normal': return 'Normal';
+      case 'declining': return 'Descendiendo';
+      case 'concerning': return 'Preocupante';
+      default: return 'Normal';
+    }
+  }
+
+  String _getStressLevelText() {
+    final level = _stressAnalysis['alert_level'] ?? 'normal';
+    return _mapStressLevel(level);
+  }
+
+  String _getMoodTrendText() {
+    final level = _moodDeclineAnalysis['concern_level'] ?? 'normal';
+    return _mapMoodLevel(level);
+  }
+
   Future<void> _generateIntelligentNotifications(int userId) async {
     // Generar notificaciones basadas en el análisis
     final alerts = getCriticalAlerts();
@@ -385,22 +469,8 @@ class EnhancedAnalyticsProvider with ChangeNotifier {
     // Implementar datos para gráfico de progreso de objetivos
     return [];
   }
+} // <-- FIN DE LA CLASE EnhancedAnalyticsProvider
 
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
-
-  void _setError(String message) {
-    _errorMessage = message;
-    notifyListeners();
-  }
-
-  void _clearError() {
-    _errorMessage = null;
-    notifyListeners();
-  }
-}
 
 // ============================================================================
 // EJEMPLO DE USO EN UI - WIDGET DE DASHBOARD AVANZADO
@@ -701,28 +771,28 @@ class AdvancedDashboardWidget extends StatelessWidget {
     // Implementar gráfico de componentes de bienestar
     return Container(
       height: 200,
-      child: Text('Gráfico de Componentes de Bienestar'),
+      child: Center(child: Text('Gráfico de Componentes de Bienestar')),
     );
   }
 
   Widget _buildRecommendationsSection(List<Map<String, dynamic>> recommendations) {
     // Implementar sección de recomendaciones
     return Container(
-      child: Text('Recomendaciones Inteligentes'),
+      child: Center(child: Text('Recomendaciones Inteligentes')),
     );
   }
 
   Widget _buildGoalsProgressSection(EnhancedAnalyticsProvider analytics) {
     // Implementar sección de progreso de objetivos
     return Container(
-      child: Text('Progreso de Objetivos'),
+      child: Center(child: Text('Progreso de Objetivos')),
     );
   }
 
   Widget _buildProgressTimelineSection(EnhancedAnalyticsProvider analytics) {
     // Implementar timeline de progreso
     return Container(
-      child: Text('Timeline de Progreso'),
+      child: Center(child: Text('Timeline de Progreso')),
     );
   }
 }

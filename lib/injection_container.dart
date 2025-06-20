@@ -1,16 +1,20 @@
 // ============================================================================
-// injection_container.dart - VERSIÓN FINAL SIN NOTIFICACIONES
+// injection_container.dart - VERSIÓN COMPLETA CON ENHANCED ANALYTICS
 // ============================================================================
 
 import 'package:get_it/get_it.dart';
 import 'package:logger/logger.dart';
-import 'package:untitled3/presentation/providers/analytics_provider.dart';
 
+// Services
 import 'data/services/database_service.dart';
+import 'data/services/advanced_user_analytics.dart'; // ✅ NUEVO
+
+// Providers
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/interactive_moments_provider.dart';
-// import 'presentation/providers/notifications_provider.dart'; // FIX: Removed notifications provider
+import 'presentation/providers/analytics_provider.dart';
+import 'presentation/providers/enhanced_analytics_provider.dart'; // ✅ NUEVO
 
 final sl = GetIt.instance;
 
@@ -20,11 +24,8 @@ Future<void> init() async {
 
   try {
     // ============================================================================
-    // Core Services
+    // CORE SERVICES
     // ============================================================================
-
-    // Database Service - Singleton
-    sl.registerLazySingleton<DatabaseService>(() => DatabaseService());
 
     // Logger - Singleton
     sl.registerLazySingleton<Logger>(() => Logger(
@@ -38,34 +39,138 @@ Future<void> init() async {
       ),
     ));
 
+    // Database Service - Singleton
+    sl.registerLazySingleton<DatabaseService>(() => DatabaseService());
+
+    // ✅ NUEVO: Advanced User Analytics Service
+    sl.registerLazySingleton<AdvancedUserAnalytics>(
+          () => AdvancedUserAnalytics(sl<DatabaseService>()),
+    );
+
     // ============================================================================
-    // Providers
+    // DATA PROVIDERS
     // ============================================================================
 
-    // Auth Provider - Singleton
-    sl.registerLazySingleton<AuthProvider>(
-          () => AuthProvider(sl<DatabaseService>()),
+    // ... (otras registraciones de providers)
+
+    // ✅ NUEVO: Enhanced Analytics Provider - Singleton
+    sl.registerLazySingleton<EnhancedAnalyticsProvider>(
+          () => EnhancedAnalyticsProvider(sl<DatabaseService>()),
     );
 
-    // Theme Provider - Singleton
-    sl.registerLazySingleton<ThemeProvider>(() => ThemeProvider());
-    sl.registerLazySingleton<AnalyticsProvider>(
-          () => AnalyticsProvider(sl<DatabaseService>()),
-    );
-    // Interactive Moments Provider - Singleton
-    sl.registerLazySingleton<InteractiveMomentsProvider>(
-          () => InteractiveMomentsProvider(sl<DatabaseService>()),
-    );
+    // ============================================================================
+    // OPCIONAL: REGISTRAR FACTORIES PARA TESTING
+    // ============================================================================
 
-    // Notifications Provider - Singleton  // FIX: Removed notifications provider
-    // sl.registerLazySingleton<NotificationsProvider>(
-    //       () => NotificationsProvider(),
-    // );
+    // Factory para crear múltiples instancias en testing
+    // sl.registerFactory<DatabaseService>(() => DatabaseService()); //  <-- COMENTA O ELIMINA ESTA LÍNEA
 
-    logger.i('✅ Contenedor de dependencias inicializado');
+    logger.i('✅ Contenedor de dependencias inicializado correctamente');
 
   } catch (e) {
     logger.e('❌ Error inicializando dependencias: $e');
     rethrow;
+  }
+}
+
+extension on Future<void> {
+  get length => null;
+}
+
+// ============================================================================
+// FUNCIONES AUXILIARES PARA DEPENDENCY INJECTION
+// ============================================================================
+
+/// Verificar si todos los servicios están registrados
+bool areAllServicesRegistered() {
+  try {
+    // Verificar servicios core
+    sl<DatabaseService>();
+    sl<Logger>();
+    sl<AdvancedUserAnalytics>();
+
+    // Verificar providers
+    sl<AuthProvider>();
+    sl<ThemeProvider>();
+    sl<InteractiveMomentsProvider>();
+    sl<AnalyticsProvider>();
+    sl<EnhancedAnalyticsProvider>();
+
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/// Obtener información del contenedor
+Map<String, dynamic> getContainerInfo() {
+  return {
+    'total_services': sl.allReady().length,
+    'services_ready': areAllServicesRegistered(),
+    'registered_types': [
+      'DatabaseService',
+      'Logger',
+      'AdvancedUserAnalytics',
+      'AuthProvider',
+      'ThemeProvider',
+      'InteractiveMomentsProvider',
+      'AnalyticsProvider',
+      'EnhancedAnalyticsProvider',
+    ],
+  };
+}
+
+/// Resetear contenedor (útil para testing)
+Future<void> resetContainer() async {
+  await sl.reset();
+}
+
+/// Inicialización para testing
+Future<void> initForTesting() async {
+  if (sl.isRegistered<DatabaseService>()) {
+    await resetContainer();
+  }
+  await init();
+}
+
+// ============================================================================
+// CONSTANTES DE CONFIGURACIÓN
+// ============================================================================
+
+class DIConstants {
+  static const String databaseService = 'DatabaseService';
+  static const String logger = 'Logger';
+  static const String advancedAnalytics = 'AdvancedUserAnalytics';
+  static const String authProvider = 'AuthProvider';
+  static const String themeProvider = 'ThemeProvider';
+  static const String momentsProvider = 'InteractiveMomentsProvider';
+  static const String analyticsProvider = 'AnalyticsProvider';
+  static const String enhancedAnalyticsProvider = 'EnhancedAnalyticsProvider';
+}
+
+// ============================================================================
+// EXTENSION PARA FACILITAR EL USO
+// ============================================================================
+
+extension GetItExtension on GetIt {
+  /// Verificar si un tipo está registrado de forma segura
+  bool isRegisteredSafe<T extends Object>() {
+    try {
+      return isRegistered<T>();
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Obtener instancia de forma segura
+  T? getSafe<T extends Object>() {
+    try {
+      if (isRegistered<T>()) {
+        return get<T>();
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
   }
 }

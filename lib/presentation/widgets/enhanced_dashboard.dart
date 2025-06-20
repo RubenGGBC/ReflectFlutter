@@ -3,7 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../providers/enhanced_analytics_provider.dart';
+import '../providers/analytics_provider.dart'; // UPDATED
 import '../screens/components/modern_design_system.dart';
 
 class EnhancedDashboard extends StatefulWidget {
@@ -18,7 +18,8 @@ class EnhancedDashboard extends StatefulWidget {
   State<EnhancedDashboard> createState() => _EnhancedDashboardState();
 }
 
-class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTickerProviderStateMixin {
+class _EnhancedDashboardState extends State<EnhancedDashboard>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -28,7 +29,8 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
 
     // Cargar datos al iniciar
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<EnhancedAnalyticsProvider>().loadCompleteAdvancedAnalytics(widget.userId);
+      // UPDATED: Call the correct provider
+      context.read<AnalyticsProvider>().loadCompleteAnalytics(widget.userId);
     });
   }
 
@@ -40,7 +42,8 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
 
   @override
   Widget build(BuildContext context) {
-    final analytics = context.watch<EnhancedAnalyticsProvider>();
+    // UPDATED: Watch AnalyticsProvider
+    final analytics = context.watch<AnalyticsProvider>();
 
     if (analytics.isLoading) {
       return const Center(
@@ -100,7 +103,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
     );
   }
 
-  Widget _buildErrorState(EnhancedAnalyticsProvider analytics) {
+  Widget _buildErrorState(AnalyticsProvider analytics) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -111,16 +114,22 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
             const SizedBox(height: 16),
             Text(
               'Error al cargar los datos',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white),
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(color: Colors.white),
             ),
             const SizedBox(height: 8),
             Text(
               analytics.errorMessage!,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.white70),
+              style: Theme.of(context)
+                  .textTheme
+                  .bodyMedium
+                  ?.copyWith(color: Colors.white70),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => analytics.loadCompleteAdvancedAnalytics(widget.userId),
+              onPressed: () => analytics.loadCompleteAnalytics(widget.userId),
               icon: const Icon(Icons.refresh),
               label: const Text('Reintentar'),
               style: ElevatedButton.styleFrom(
@@ -138,11 +147,11 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
   // SCORE DE BIENESTAR AVANZADO
   // ============================================================================
 
-  Widget _buildAdvancedWellbeingScore(EnhancedAnalyticsProvider analytics) {
-    final wellbeing = analytics.wellbeingData;
-    final score = (wellbeing['overall_score'] ?? 0).toInt();
-    final level = wellbeing['level'] ?? 'Iniciando';
-    final components = wellbeing['components'] as Map<String, dynamic>? ?? {};
+  Widget _buildAdvancedWellbeingScore(AnalyticsProvider analytics) {
+    final summary = analytics.getDashboardSummary(); // UPDATED
+    final score = (summary['wellbeing_score'] as num? ?? 0).toInt();
+    final level = summary['level']?.toString() ?? 'Iniciando';
+    final components = analytics.getScoreComponents(); // UPDATED
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -213,11 +222,8 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
               _buildScoreVisualization(score),
             ],
           ),
-
           const SizedBox(height: 24),
-
-          // Componentes del score
-          _buildScoreComponents(components),
+          _buildScoreComponents(components), // UPDATED
         ],
       ),
     );
@@ -245,13 +251,14 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
     );
   }
 
-  Widget _buildScoreComponents(Map<String, dynamic> components) {
+  Widget _buildScoreComponents(List<Map<String, dynamic>> components) { // UPDATED
     return Column(
-      children: components.entries.map((entry) {
-        final name = _getComponentName(entry.key);
-        final value = (entry.value as num).toDouble();
-        final maxValue = _getComponentMaxValue(entry.key);
-        final percentage = (value / maxValue).clamp(0.0, 1.0);
+      children: components.map((component) {
+        final name = component['name']?.toString() ?? 'Componente';
+        final value = (component['score'] as num? ?? 0).toDouble();
+        final maxValue = (component['maxScore'] as num? ?? 10).toDouble();
+        final percentage = (value / (maxValue > 0 ? maxValue : 1)).clamp(0.0, 1.0);
+        final color = component['color'] as Color? ?? Colors.grey;
 
         return Padding(
           padding: const EdgeInsets.only(bottom: 12),
@@ -269,7 +276,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
                     ),
                   ),
                   Text(
-                    '${value.toStringAsFixed(1)}/${maxValue}',
+                    '${value.toStringAsFixed(1)}/${maxValue.toStringAsFixed(0)}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -282,9 +289,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
               LinearProgressIndicator(
                 value: percentage,
                 backgroundColor: Colors.white.withOpacity(0.2),
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  _getComponentColor(entry.key),
-                ),
+                valueColor: AlwaysStoppedAnimation<Color>(color),
                 minHeight: 6,
               ),
             ],
@@ -298,117 +303,13 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
   // TAB GENERAL
   // ============================================================================
 
-  Widget _buildGeneralTab(EnhancedAnalyticsProvider analytics) {
+  Widget _buildGeneralTab(AnalyticsProvider analytics) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildTemporalComparisons(analytics),
-          const SizedBox(height: 16),
           _buildKeyInsights(analytics),
           const SizedBox(height: 16),
-          _buildMoodPatternChart(analytics),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTemporalComparisons(EnhancedAnalyticsProvider analytics) {
-    final comparisons = analytics.temporalComparisons;
-    final weekData = comparisons['week_comparison'] ?? {};
-    final monthData = comparisons['month_comparison'] ?? {};
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141B2D),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '📊 Comparaciones Temporales',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildComparisonCard(
-                  'Esta Semana',
-                  weekData['current_mood']?.toStringAsFixed(1) ?? '0',
-                  weekData['mood_change'] ?? 0,
-                  Colors.blue.shade400,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildComparisonCard(
-                  'Este Mes',
-                  monthData['current_mood']?.toStringAsFixed(1) ?? '0',
-                  monthData['mood_change'] ?? 0,
-                  Colors.purple.shade400,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildComparisonCard(String period, String value, num change, Color color) {
-    final isPositive = change >= 0;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            period,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 12,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Icon(
-                isPositive ? Icons.arrow_upward : Icons.arrow_downward,
-                size: 16,
-                color: isPositive ? Colors.green : Colors.red,
-              ),
-              Text(
-                '${change.abs().toStringAsFixed(1)}%',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: isPositive ? Colors.green : Colors.red,
-                ),
-              ),
-            ],
-          ),
         ],
       ),
     );
@@ -418,22 +319,16 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
   // TAB ESTRÉS
   // ============================================================================
 
-  Widget _buildStressTab(EnhancedAnalyticsProvider analytics) {
-    final stress = analytics.stressAnalysis;
-    final stressLevel = stress['stress_level'] ?? 0;
-    final anxietyLevel = stress['anxiety_level'] ?? 0;
-    final triggers = stress['high_stress_triggers'] as List? ?? [];
-    final patterns = stress['stress_patterns'] as Map? ?? {};
+  Widget _buildStressTab(AnalyticsProvider analytics) {
+    final stress = analytics.getStressAlerts(); // UPDATED
+    final stressLevel = (stress['frequency'] as num? ?? 0).toDouble();
+    final recommendations = stress['recommendations'] as List? ?? [];
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          _buildStressOverview(stressLevel, anxietyLevel),
-          const SizedBox(height: 16),
-          _buildStressTriggers(triggers),
-          const SizedBox(height: 16),
-          _buildStressPatterns(patterns),
+          _buildStressOverview(stressLevel, 0), // Ansiedad no está en el provider normal
           const SizedBox(height: 16),
           _buildStressRecommendations(stress),
         ],
@@ -452,7 +347,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            '😰 Niveles de Estrés y Ansiedad',
+            '😰 Niveles de Estrés',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -460,16 +355,14 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
             ),
           ),
           const SizedBox(height: 16),
-          _buildStressIndicator('Nivel de Estrés', stressLevel.toDouble(), Colors.orange),
-          const SizedBox(height: 12),
-          _buildStressIndicator('Nivel de Ansiedad', anxietyLevel.toDouble(), Colors.red),
+          _buildStressIndicator('Frecuencia de Estrés', stressLevel.toDouble(), Colors.orange),
         ],
       ),
     );
   }
 
   Widget _buildStressIndicator(String label, double value, Color color) {
-    final percentage = (value / 10).clamp(0.0, 1.0);
+    final percentage = (value / 100).clamp(0.0, 1.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -485,7 +378,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
               ),
             ),
             Text(
-              value.toStringAsFixed(1),
+              '${value.toStringAsFixed(0)}%',
               style: TextStyle(
                 color: color,
                 fontWeight: FontWeight.bold,
@@ -520,9 +413,9 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
   // TAB PROGRESO
   // ============================================================================
 
-  Widget _buildProgressTab(EnhancedAnalyticsProvider analytics) {
-    final timeline = analytics.progressTimeline['timeline'] as List? ?? [];
-    final milestones = analytics.progressTimeline['milestones'] as List? ?? [];
+  Widget _buildProgressTab(AnalyticsProvider analytics) {
+    final timeline = analytics.getMoodChartData(); // UPDATED
+    final nextAchievement = analytics.getNextAchievementToUnlock();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -530,7 +423,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
         children: [
           _buildProgressChart(timeline),
           const SizedBox(height: 16),
-          _buildMilestones(milestones),
+          if(nextAchievement != null) _buildMilestones([nextAchievement]), // Adaptado
           const SizedBox(height: 16),
           _buildImprovementAreas(analytics),
         ],
@@ -554,7 +447,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            '📈 Línea de Progreso',
+            '📈 Línea de Progreso (Mood)', // UPDATED
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -579,17 +472,26 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
                           ),
                         );
                       },
+                      reservedSize: 28,
                     ),
                   ),
                   bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() < timeline.length) {
+                            return Text(
+                              timeline[value.toInt()]['date']?.toString() ?? '',
+                              style: const TextStyle(color: Colors.white54, fontSize: 10),
+                            );
+                          }
+                          return const Text('');
+                        },
+                        reservedSize: 22,
+                      )
                   ),
-                  rightTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
-                  topTitles: AxisTitles(
-                    sideTitles: SideTitles(showTitles: false),
-                  ),
+                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                 ),
                 borderData: FlBorderData(show: false),
                 lineBarsData: [
@@ -624,14 +526,14 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
     );
   }
 
+
   // ============================================================================
   // TAB METAS
   // ============================================================================
 
-  Widget _buildGoalsTab(EnhancedAnalyticsProvider analytics) {
-    final goals = analytics.personalizedGoals;
-    final recommendedGoals = goals['recommended_goals'] as List? ?? [];
-    final progressGoals = goals['progress_goals'] as List? ?? [];
+  Widget _buildGoalsTab(AnalyticsProvider analytics) {
+    final recommendedGoals = analytics.getTopRecommendations(); // UPDATED
+    final progressGoals = [analytics.getNextLevelProgress()]; // UPDATED
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -640,14 +542,12 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
           _buildRecommendedGoals(recommendedGoals),
           const SizedBox(height: 16),
           _buildActiveGoals(progressGoals),
-          const SizedBox(height: 16),
-          _buildNextSteps(analytics),
         ],
       ),
     );
   }
 
-  Widget _buildRecommendedGoals(List goals) {
+  Widget _buildRecommendedGoals(List<Map<String, String>> goals) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -672,20 +572,19 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
     );
   }
 
-  Widget _buildGoalCard(dynamic goal) {
+  Widget _buildGoalCard(Map<String, String> goal) { // UPDATED
     final title = goal['title'] ?? 'Meta';
     final description = goal['description'] ?? '';
-    final priority = goal['priority'] ?? 'medium';
-    final category = goal['category'] ?? 'general';
+    final type = goal['type'] ?? 'general';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: _getPriorityColor(priority).withOpacity(0.1),
+        color: _getPriorityColor(type).withOpacity(0.1),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: _getPriorityColor(priority).withOpacity(0.3),
+          color: _getPriorityColor(type).withOpacity(0.3),
         ),
       ),
       child: Row(
@@ -694,12 +593,12 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: _getPriorityColor(priority).withOpacity(0.2),
+              color: _getPriorityColor(type).withOpacity(0.2),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Center(
               child: Text(
-                _getCategoryEmoji(category),
+                _getCategoryEmoji(type),
                 style: const TextStyle(fontSize: 20),
               ),
             ),
@@ -736,22 +635,14 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
   }
 
   // ============================================================================
-  // MÉTODOS AUXILIARES
+  // MÉTODOS AUXILIARES (Algunos actualizados)
   // ============================================================================
 
   Color _getLevelColor(String level) {
-    switch (level.toLowerCase()) {
-      case 'maestro zen':
-        return Colors.purple.shade400;
-      case 'avanzado':
-        return Colors.blue.shade400;
-      case 'intermedio':
-        return Colors.green.shade400;
-      case 'principiante':
-        return Colors.orange.shade400;
-      default:
-        return Colors.grey.shade400;
-    }
+    if(level.toLowerCase().contains('maestro') || level.toLowerCase().contains('excelente')) return Colors.purple.shade400;
+    if(level.toLowerCase().contains('avanzado')) return Colors.blue.shade400;
+    if(level.toLowerCase().contains('progreso') || level.toLowerCase().contains('intermedio')) return Colors.green.shade400;
+    return Colors.orange.shade400;
   }
 
   Color _getScoreColor(int score) {
@@ -768,93 +659,42 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
     return '🔥';
   }
 
-  String _getComponentName(String key) {
-    final names = {
-      'consistency': '📅 Consistencia',
-      'emotional_balance': '⚖️ Balance Emocional',
-      'progress_trend': '📈 Tendencia',
-      'diversity': '🌈 Diversidad',
-      'stress_management': '🧘 Gestión del Estrés',
-      'reflection_quality': '✍️ Calidad de Reflexión',
-      'achievements': '🏆 Logros',
-      'temporal_stability': '⏰ Estabilidad',
-    };
-    return names[key] ?? key;
-  }
-
-  double _getComponentMaxValue(String key) {
-    final maxValues = {
-      'consistency': 25.0,
-      'emotional_balance': 20.0,
-      'progress_trend': 15.0,
-      'diversity': 10.0,
-      'stress_management': 10.0,
-      'reflection_quality': 10.0,
-      'achievements': 5.0,
-      'temporal_stability': 5.0,
-    };
-    return maxValues[key] ?? 10.0;
-  }
-
-  Color _getComponentColor(String key) {
-    final colors = {
-      'consistency': Colors.blue.shade400,
-      'emotional_balance': Colors.purple.shade400,
-      'progress_trend': Colors.green.shade400,
-      'diversity': Colors.orange.shade400,
-      'stress_management': Colors.red.shade400,
-      'reflection_quality': Colors.teal.shade400,
-      'achievements': Colors.amber.shade400,
-      'temporal_stability': Colors.indigo.shade400,
-    };
-    return colors[key] ?? Colors.grey.shade400;
-  }
-
   String _getStressLevelDescription(double level) {
-    if (level <= 3) return 'Bajo - Excelente manejo del estrés';
-    if (level <= 5) return 'Moderado - Mantén las estrategias actuales';
-    if (level <= 7) return 'Alto - Considera técnicas adicionales';
-    return 'Muy Alto - Se recomienda atención especial';
+    if (level <= 30) return 'Bajo';
+    if (level <= 60) return 'Moderado';
+    return 'Alto';
   }
 
-  Color _getPriorityColor(String priority) {
-    switch (priority.toLowerCase()) {
-      case 'high':
-        return Colors.red.shade400;
-      case 'medium':
-        return Colors.orange.shade400;
-      case 'low':
-        return Colors.green.shade400;
-      default:
-        return Colors.grey.shade400;
+  Color _getPriorityColor(String type) { // UPDATED
+    switch (type.toLowerCase()) {
+      case 'stress': return Colors.red.shade400;
+      case 'consistency': return Colors.orange.shade400;
+      case 'diversity': return Colors.purple.shade400;
+      default: return Colors.blue.shade400;
     }
   }
 
-  String _getCategoryEmoji(String category) {
-    final emojis = {
-      'consistency': '📅',
-      'emotional': '💖',
-      'stress': '🧘',
-      'habits': '🔄',
-      'wellness': '🌱',
-      'growth': '📈',
-      'mindfulness': '🧠',
-      'general': '🎯',
-    };
-    return emojis[category.toLowerCase()] ?? '🎯';
+  String _getCategoryEmoji(String type) {
+    switch (type.toLowerCase()) {
+      case 'stress': return '🧘';
+      case 'consistency': return '📅';
+      case 'diversity': return '🌈';
+      case 'mood': return '😊';
+      default: return '🎯';
+    }
   }
 
   List<FlSpot> _getProgressSpots(List timeline) {
     return timeline.asMap().entries.map((entry) {
       final index = entry.key.toDouble();
       final data = entry.value as Map<String, dynamic>;
-      final score = (data['overall_score'] ?? 0).toDouble();
+      final score = (data['mood'] as num? ?? 5.0).toDouble(); // UPDATED
       return FlSpot(index, score);
     }).toList();
   }
 
-  Widget _buildKeyInsights(EnhancedAnalyticsProvider analytics) {
-    final insights = analytics.wellbeingData['insights'] as List? ?? [];
+  Widget _buildKeyInsights(AnalyticsProvider analytics) {
+    final insights = analytics.getHighlightedInsights(); // UPDATED
 
     if (insights.isEmpty) return const SizedBox.shrink();
 
@@ -881,15 +721,11 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(
-                  Icons.lightbulb_outline,
-                  size: 16,
-                  color: Colors.amber,
-                ),
+                Text(insight['emoji'] ?? '💡', style: const TextStyle(fontSize: 16)),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    insight.toString(),
+                    insight['description'] ?? 'No hay insights disponibles.',
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 14,
@@ -904,106 +740,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
     );
   }
 
-  Widget _buildMoodPatternChart(EnhancedAnalyticsProvider analytics) {
-    // Implementar gráfico de patrones de mood por hora
-    return Container(
-      height: 200,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141B2D),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Center(
-        child: Text(
-          'Gráfico de Patrones de Humor',
-          style: TextStyle(color: Colors.white54),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStressTriggers(List triggers) {
-    if (triggers.isEmpty) {
-      return _buildEmptyState('No se detectaron triggers de estrés');
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141B2D),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '⚠️ Triggers de Estrés',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
-          ...triggers.take(5).map((trigger) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  size: 16,
-                  color: Colors.orange.shade400,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    trigger.toString(),
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          )),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStressPatterns(Map patterns) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF141B2D),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '📊 Patrones de Estrés',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Análisis de patrones temporales y situacionales',
-            style: TextStyle(
-              color: Colors.white54,
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStressRecommendations(Map stress) {
+  Widget _buildStressRecommendations(Map<String, dynamic> stress) {
     final recommendations = stress['recommendations'] as List? ?? [];
 
     if (recommendations.isEmpty) return const SizedBox.shrink();
@@ -1061,7 +798,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
 
   Widget _buildMilestones(List milestones) {
     if (milestones.isEmpty) {
-      return _buildEmptyState('Aún no has alcanzado milestones');
+      return _buildEmptyState('Aún no has alcanzado logros importantes');
     }
 
     return Container(
@@ -1074,7 +811,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            '🏆 Milestones Alcanzados',
+            '🏆 Próximo Logro', // UPDATED
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -1082,16 +819,16 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
             ),
           ),
           const SizedBox(height: 16),
-          ...milestones.take(5).map((milestone) => _buildMilestoneItem(milestone)),
+          ...milestones.take(1).map((milestone) => _buildMilestoneItem(milestone)),
         ],
       ),
     );
   }
 
   Widget _buildMilestoneItem(dynamic milestone) {
-    final type = milestone['type'] ?? '';
     final description = milestone['description'] ?? '';
-    final week = milestone['week'] ?? '';
+    final title = milestone['title'] ?? 'Logro';
+    final emoji = milestone['emoji'] ?? '🏆';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1105,18 +842,14 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
       ),
       child: Row(
         children: [
-          Icon(
-            Icons.emoji_events,
-            color: Colors.amber.shade400,
-            size: 24,
-          ),
+          Text(emoji, style: const TextStyle(fontSize: 24)),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  description,
+                  title,
                   style: const TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w600,
@@ -1125,8 +858,8 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Semana: $week',
-                  style: TextStyle(
+                  description,
+                  style: const TextStyle(
                     color: Colors.white54,
                     fontSize: 12,
                   ),
@@ -1139,8 +872,8 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
     );
   }
 
-  Widget _buildImprovementAreas(EnhancedAnalyticsProvider analytics) {
-    final areas = analytics.wellbeingData['improvement_areas'] as List? ?? [];
+  Widget _buildImprovementAreas(AnalyticsProvider analytics) {
+    final areas = analytics.getTopRecommendations();
 
     if (areas.isEmpty) return const SizedBox.shrink();
 
@@ -1154,7 +887,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            '🎯 Áreas de Mejora',
+            '🎯 Áreas de Mejora Sugeridas',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -1168,7 +901,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
     );
   }
 
-  Widget _buildImprovementAreaItem(dynamic area) {
+  Widget _buildImprovementAreaItem(Map<String, String> area) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(8),
@@ -1185,7 +918,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
           ),
           const SizedBox(width: 8),
           Text(
-            area.toString(),
+            area['title'] ?? 'Mejora sugerida',
             style: const TextStyle(
               color: Colors.white70,
               fontSize: 14,
@@ -1224,8 +957,10 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
   }
 
   Widget _buildActiveGoalItem(dynamic goal) {
-    final progress = (goal['progress'] ?? 0).toDouble();
-    final title = goal['title'] ?? '';
+    final progress = (goal['progress'] as num? ?? 0.0).toDouble();
+    final title = goal['description'] ?? '';
+    final currentValue = (goal['current_value'] as num? ?? 0).toInt();
+    final targetValue = (goal['target_value'] as num? ?? 1).toInt();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1243,7 +978,7 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
                 ),
               ),
               Text(
-                '${(progress * 100).toInt()}%',
+                '$currentValue/$targetValue',
                 style: TextStyle(
                   color: Colors.green.shade400,
                   fontWeight: FontWeight.bold,
@@ -1257,57 +992,6 @@ class _EnhancedDashboardState extends State<EnhancedDashboard> with SingleTicker
             value: progress,
             backgroundColor: Colors.white.withOpacity(0.1),
             valueColor: AlwaysStoppedAnimation<Color>(Colors.green.shade400),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNextSteps(EnhancedAnalyticsProvider analytics) {
-    final nextMilestone = analytics.wellbeingData['next_milestone'] as Map? ?? {};
-
-    if (nextMilestone.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.blue.shade900,
-            Colors.purple.shade900,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '🎯 Próximo Objetivo',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            nextMilestone['description'] ?? 'Sigue así para desbloquear nuevos logros',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              // Navegar a detalles o acción específica
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Colors.blue.shade900,
-            ),
-            child: const Text('Ver Detalles'),
           ),
         ],
       ),

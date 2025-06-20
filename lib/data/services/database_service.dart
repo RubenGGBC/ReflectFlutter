@@ -19,6 +19,7 @@ import '../models/interactive_moment_model.dart';
 import '../models/tag_model.dart';
 
 class DatabaseService {
+
   static const String _databaseName = 'reflect_zen.db';
   static const int _databaseVersion = 1;
 
@@ -51,6 +52,146 @@ class DatabaseService {
     } catch (e) {
       _logger.e('❌ Error inicializando base de datos: $e');
       rethrow;
+    }
+  }
+
+  Future<void> _addMissingColumns(Database db) async {
+    try {
+      _logger.i('🔧 Verificando columnas de analytics avanzados...');
+
+      // Verificar qué columnas existen
+      final tableInfo = await db.rawQuery("PRAGMA table_info(daily_entries)");
+      final existingColumns = tableInfo.map((row) => row['name'] as String).toSet();
+
+      _logger.d('📋 Columnas existentes: $existingColumns');
+
+      // Columnas necesarias para analytics avanzados
+      final requiredColumns = {
+        'energy_level': 'INTEGER DEFAULT 5',
+        'sleep_quality': 'INTEGER DEFAULT 5',
+        'stress_level': 'INTEGER DEFAULT 5',
+        'anxiety_level': 'INTEGER DEFAULT 5',
+        'motivation_level': 'INTEGER DEFAULT 5',
+        'social_interaction': 'INTEGER DEFAULT 5',
+        'physical_activity': 'INTEGER DEFAULT 5',
+        'work_productivity': 'INTEGER DEFAULT 5',
+        'sleep_hours': 'REAL DEFAULT 7.0',
+        'water_intake': 'INTEGER DEFAULT 8',
+        'meditation_minutes': 'INTEGER DEFAULT 0',
+        'exercise_minutes': 'INTEGER DEFAULT 0',
+        'screen_time_hours': 'REAL DEFAULT 6.0',
+        'gratitude_items': 'TEXT',
+        'weather_mood_impact': 'INTEGER DEFAULT 5',
+        'social_battery': 'INTEGER DEFAULT 5',
+        'creative_energy': 'INTEGER DEFAULT 5',
+        'emotional_stability': 'INTEGER DEFAULT 5',
+        'focus_level': 'INTEGER DEFAULT 5',
+        'life_satisfaction': 'INTEGER DEFAULT 5',
+      };
+
+      // Agregar columnas faltantes
+      for (final entry in requiredColumns.entries) {
+        final columnName = entry.key;
+        final columnDefinition = entry.value;
+
+        if (!existingColumns.contains(columnName)) {
+          _logger.i('➕ Agregando columna: $columnName');
+          await db.execute('''
+          ALTER TABLE daily_entries 
+          ADD COLUMN $columnName $columnDefinition
+        ''');
+        }
+      }
+
+      // Verificar columnas para interactive_moments si no existen
+      final momentsTableExists = await _tableExists(db, 'interactive_moments');
+      if (!momentsTableExists) {
+        _logger.i('📝 Creando tabla interactive_moments...');
+        await _createInteractiveMomentsTable(db);
+      } else {
+        await _updateInteractiveMomentsTable(db);
+      }
+
+      _logger.i('✅ Base de datos actualizada con columnas de analytics avanzados');
+
+    } catch (e) {
+      _logger.e('❌ Error agregando columnas: $e');
+      // No relanzar el error para evitar que falle la inicialización
+    }
+  }
+
+// ✅ AGREGAR métodos auxiliares:
+  Future<bool> _tableExists(Database db, String tableName) async {
+    final result = await db.rawQuery('''
+    SELECT name FROM sqlite_master 
+    WHERE type='table' AND name='$tableName'
+  ''');
+    return result.isNotEmpty;
+  }
+
+  Future<void> _createInteractiveMomentsTable(Database db) async {
+    await db.execute('''
+    CREATE TABLE interactive_moments (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      emoji TEXT NOT NULL,
+      text TEXT NOT NULL,
+      type TEXT NOT NULL CHECK (type IN ('positive', 'negative', 'neutral')),
+      intensity INTEGER DEFAULT 5 CHECK (intensity >= 1 AND intensity <= 10),
+      category TEXT DEFAULT 'general',
+      context TEXT,
+      location TEXT,
+      weather TEXT,
+      social_context TEXT,
+      energy_before INTEGER DEFAULT 5,
+      energy_after INTEGER DEFAULT 5,
+      mood_before INTEGER DEFAULT 5,
+      mood_after INTEGER DEFAULT 5,
+      timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    )
+  ''');
+
+    await db.execute('''
+    CREATE INDEX idx_interactive_moments_user_date 
+    ON interactive_moments (user_id, date(timestamp))
+  ''');
+  }
+
+  Future<void> _updateInteractiveMomentsTable(Database db) async {
+    try {
+      final tableInfo = await db.rawQuery("PRAGMA table_info(interactive_moments)");
+      final existingColumns = tableInfo.map((row) => row['name'] as String).toSet();
+
+      final requiredMomentsColumns = {
+        'intensity': 'INTEGER DEFAULT 5 CHECK (intensity >= 1 AND intensity <= 10)',
+        'category': 'TEXT DEFAULT "general"',
+        'context': 'TEXT',
+        'location': 'TEXT',
+        'weather': 'TEXT',
+        'social_context': 'TEXT',
+        'energy_before': 'INTEGER DEFAULT 5',
+        'energy_after': 'INTEGER DEFAULT 5',
+        'mood_before': 'INTEGER DEFAULT 5',
+        'mood_after': 'INTEGER DEFAULT 5',
+      };
+
+      for (final entry in requiredMomentsColumns.entries) {
+        final columnName = entry.key;
+        final columnDefinition = entry.value;
+
+        if (!existingColumns.contains(columnName)) {
+          _logger.i('➕ Agregando columna a interactive_moments: $columnName');
+          await db.execute('''
+          ALTER TABLE interactive_moments 
+          ADD COLUMN $columnName $columnDefinition
+        ''');
+        }
+      }
+    } catch (e) {
+      _logger.e('❌ Error actualizando interactive_moments: $e');
     }
   }
 
@@ -138,6 +279,8 @@ class DatabaseService {
   Future<void> _onOpen(Database db) async {
     _logger.d('🔓 Base de datos zen abierta');
     await db.execute('PRAGMA foreign_keys = ON');
+    await _addMissingColumns(db);
+
   }
 
   Future<void> close() async {
@@ -1909,5 +2052,486 @@ class DatabaseService {
       return {};
     }
   }
+  // Agregar este método:
+  Future<Map<String, dynamic>> getUserStatistics(int userId) async {
+    return getUserComprehensiveStatistics(userId);
+  }
+  // ============================================================================
+// 🧪 MÉTODOS DE DESARROLLADOR PARA TESTING Y DEMO
+// ============================================================================
+
+  /// 👨‍💻 Crear cuenta de desarrollador con datos completos
+  Future<int> createDeveloperAccount() async {
+    try {
+      final db = await database;
+      _logger.i('🧪 Creando cuenta de desarrollador...');
+
+      // Verificar si ya existe
+      final existing = await db.query(
+        'users',
+        where: 'email = ?',
+        whereArgs: ['dev@reflect.com'],
+      );
+
+      int userId;
+      if (existing.isNotEmpty) {
+        userId = existing.first['id'] as int;
+        _logger.i('🔄 Usando cuenta existente: $userId');
+      } else {
+        // Crear nueva cuenta de desarrollador
+        userId = await db.insert('users', {
+          'name': 'Alex Developer',
+          'email': 'dev@reflect.com',
+          'avatar_emoji': '👨‍💻',
+          'created_at': DateTime.now().toIso8601String(),
+        });
+        _logger.i('✅ Cuenta de desarrollador creada: $userId');
+      }
+
+      // Generar datos completos de demostración
+      await generateComprehensiveTestData(userId);
+
+      return userId;
+    } catch (e) {
+      _logger.e('❌ Error creando cuenta desarrollador: $e');
+      rethrow;
+    }
+  }
+
+  /// 📊 Generar datos comprehensivos para mostrar todas las funcionalidades
+  Future<void> generateComprehensiveTestData(int userId) async {
+    try {
+      final db = await database;
+      _logger.i('📊 Generando datos comprehensivos para usuario: $userId');
+
+      // Limpiar datos existentes
+      await _clearUserData(userId);
+
+      // Generar datos de diferentes períodos y patrones
+      await _generateHistoricalData(userId, db);
+      await _generateInteractiveMoments(userId, db);
+      await _generateMilestoneEvents(userId, db);
+
+      _logger.i('✅ Datos comprehensivos generados exitosamente');
+    } catch (e) {
+      _logger.e('❌ Error generando datos de prueba: $e');
+      rethrow;
+    }
+  }
+
+  /// 🗑️ Limpiar datos existentes del usuario
+  Future<void> _clearUserData(int userId) async {
+    final db = await database;
+    await db.delete('daily_entries', where: 'user_id = ?', whereArgs: [userId]);
+    await db.delete('interactive_moments', where: 'user_id = ?', whereArgs: [userId]);
+    _logger.i('🗑️ Datos previos limpiados');
+  }
+
+  /// 📈 Generar datos históricos con patrones realistas
+  Future<void> _generateHistoricalData(int userId, Database db) async {
+    _logger.i('📈 Generando datos históricos con patrones...');
+
+    final now = DateTime.now();
+    final scenarios = [
+      _PersonalityPhase('Período Difícil', -90, -61, 3.5, 2.0, 7.5), // 30 días difíciles
+      _PersonalityPhase('Recuperación', -60, -31, 5.0, 4.0, 6.0),    // 30 días mejorando
+      _PersonalityPhase('Crecimiento', -30, -1, 7.5, 7.0, 4.0),     // 30 días buenos
+    ];
+
+    for (final phase in scenarios) {
+      await _generatePhaseData(userId, db, now, phase);
+    }
+
+    // Agregar datos de hoy con alta calidad
+    await _generateTodayData(userId, db, now);
+  }
+
+  /// 📅 Generar datos para una fase específica
+  Future<void> _generatePhaseData(int userId, Database db, DateTime now, _PersonalityPhase phase) async {
+    _logger.i('📅 Generando fase: ${phase.name}');
+
+    for (int dayOffset = phase.startDay; dayOffset <= phase.endDay; dayOffset++) {
+      final date = now.add(Duration(days: dayOffset));
+      final dateStr = date.toIso8601String().split('T')[0];
+
+      // Añadir variación diaria realista
+      final dailyVariation = (Random().nextDouble() - 0.5) * 2;
+      final weekendBoost = date.weekday >= 6 ? 0.5 : 0.0;
+      final mondayDip = date.weekday == 1 ? -0.8 : 0.0;
+
+      final mood = (phase.baseMood + dailyVariation + weekendBoost + mondayDip).clamp(1.0, 10.0);
+      final energy = (phase.baseEnergy + dailyVariation + weekendBoost + mondayDip).clamp(1.0, 10.0);
+      final stress = (phase.baseStress - dailyVariation + mondayDip).clamp(1.0, 10.0);
+
+      // Crear entrada completa
+      await db.insert('daily_entries', {
+        'user_id': userId,
+        'entry_date': dateStr,
+        'mood_score': mood.round(),
+        'energy_level': energy.round(),
+        'stress_level': stress.round(),
+        'sleep_quality': _generateSleepQuality(energy, stress),
+        'anxiety_level': _generateAnxietyLevel(stress, mood),
+        'motivation_level': _generateMotivationLevel(mood, energy),
+        'social_interaction': _generateSocialLevel(mood, date.weekday),
+        'physical_activity': _generatePhysicalActivity(energy, date.weekday),
+        'work_productivity': _generateWorkProductivity(energy, stress, date.weekday),
+        'sleep_hours': _generateSleepHours(stress, energy),
+        'water_intake': _generateWaterIntake(energy),
+        'meditation_minutes': _generateMeditationMinutes(stress, mood),
+        'exercise_minutes': _generateExerciseMinutes(energy, date.weekday),
+        'screen_time_hours': _generateScreenTime(mood, energy),
+        'gratitude_items': _generateGratitudeItems(mood),
+        'weather_mood_impact': _generateWeatherImpact(date),
+        'social_battery': _generateSocialBattery(mood, date.weekday),
+        'creative_energy': _generateCreativeEnergy(mood, energy),
+        'emotional_stability': _generateEmotionalStability(mood, stress),
+        'focus_level': _generateFocusLevel(energy, stress),
+        'life_satisfaction': _generateLifeSatisfaction(mood, stress),
+        'free_reflection': _generateReflection(mood, energy, stress, phase.name),
+        'created_at': date.toIso8601String(),
+      });
+    }
+  }
+
+  /// 🎯 Generar datos específicos de hoy (alta calidad)
+  Future<void> _generateTodayData(int userId, Database db, DateTime now) async {
+    final dateStr = now.toIso8601String().split('T')[0];
+
+    await db.insert('daily_entries', {
+      'user_id': userId,
+      'entry_date': dateStr,
+      'mood_score': 8,
+      'energy_level': 7,
+      'stress_level': 3,
+      'sleep_quality': 8,
+      'anxiety_level': 2,
+      'motivation_level': 8,
+      'social_interaction': 7,
+      'physical_activity': 6,
+      'work_productivity': 8,
+      'sleep_hours': 7.5,
+      'water_intake': 9,
+      'meditation_minutes': 15,
+      'exercise_minutes': 45,
+      'screen_time_hours': 5.0,
+      'gratitude_items': 'Mi familia, el progreso en el proyecto, el buen tiempo',
+      'weather_mood_impact': 8,
+      'social_battery': 7,
+      'creative_energy': 8,
+      'emotional_stability': 8,
+      'focus_level': 8,
+      'life_satisfaction': 8,
+      'free_reflection': 'Hoy fue un día excelente. Me siento muy productivo y en equilibrio. Los nuevos analytics están funcionando perfectamente y puedo ver claramente mi progreso. Es increíble cómo los datos me ayudan a entender mis patrones.',
+      'created_at': now.toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  /// 🎭 Generar momentos interactivos variados
+  Future<void> _generateInteractiveMoments(int userId, Database db) async {
+    _logger.i('🎭 Generando momentos interactivos...');
+
+    final moments = [
+      // Momentos positivos recientes
+      _MomentData('😄', 'Completé una funcionalidad compleja sin bugs', 'positive', 8, 'profesional'),
+      _MomentData('🎉', 'El cliente quedó encantado con la demo', 'positive', 9, 'profesional'),
+      _MomentData('☕', 'Perfecto café de la mañana mientras programo', 'positive', 6, 'personal'),
+      _MomentData('🧘', 'Meditación de 20 minutos me centró completamente', 'positive', 7, 'bienestar'),
+      _MomentData('📚', 'Aprendí un nuevo patrón de diseño muy útil', 'positive', 7, 'crecimiento'),
+
+      // Momentos negativos para mostrar detección
+      _MomentData('😰', 'Bug crítico justo antes del release', 'negative', 8, 'profesional'),
+      _MomentData('🥱', 'Muy poco sueño, me siento agotado', 'negative', 6, 'bienestar'),
+      _MomentData('😤', 'Reunión improductiva de 2 horas', 'negative', 7, 'profesional'),
+
+      // Momentos neutrales
+      _MomentData('🚶', 'Caminata corta durante el almuerzo', 'positive', 5, 'bienestar'),
+      _MomentData('📱', 'Scroll sin propósito en redes sociales', 'neutral', 3, 'personal'),
+    ];
+
+    for (int i = 0; i < moments.length; i++) {
+      final moment = moments[i];
+      final timestamp = DateTime.now().subtract(Duration(hours: i * 2));
+
+      await db.insert('interactive_moments', {
+        'user_id': userId,
+        'emoji': moment.emoji,
+        'text': moment.text,
+        'type': moment.type,
+        'intensity': moment.intensity,
+        'category': moment.category,
+        'context': _generateMomentContext(moment.category),
+        'location': _generateLocation(),
+        'weather': 'Soleado',
+        'social_context': moment.category == 'profesional' ? 'Trabajo' : 'Solo',
+        'energy_before': (moment.intensity + Random().nextInt(3) - 1).clamp(1, 10),
+        'energy_after': moment.type == 'positive'
+            ? (moment.intensity + 1).clamp(1, 10)
+            : (moment.intensity - 1).clamp(1, 10),
+        'mood_before': (moment.intensity + Random().nextInt(2) - 1).clamp(1, 10),
+        'mood_after': moment.type == 'positive'
+            ? (moment.intensity + 1).clamp(1, 10)
+            : (moment.intensity - 1).clamp(1, 10),
+        'timestamp': timestamp.toIso8601String(),
+        'created_at': timestamp.toIso8601String(),
+        'updated_at': timestamp.toIso8601String(),
+      });
+    }
+  }
+
+  /// 🏆 Generar eventos de milestone
+  Future<void> _generateMilestoneEvents(int userId, Database db) async {
+    _logger.i('🏆 Generando eventos de milestone...');
+
+    final milestones = [
+      _MilestoneData(-7, '🔥', 'Semana completa de consistencia', 'positive', 9),
+      _MilestoneData(-14, '💪', 'Superé una semana muy estresante', 'positive', 8),
+      _MilestoneData(-21, '🎯', 'Alcancé mi objetivo de meditación diaria', 'positive', 7),
+      _MilestoneData(-45, '📈', 'Mejor mes de productividad del año', 'positive', 9),
+    ];
+
+    for (final milestone in milestones) {
+      final timestamp = DateTime.now().add(Duration(days: milestone.daysAgo));
+
+      await db.insert('interactive_moments', {
+        'user_id': userId,
+        'emoji': milestone.emoji,
+        'text': milestone.description,
+        'type': milestone.type,
+        'intensity': milestone.intensity,
+        'category': 'milestone',
+        'context': 'Logro personal importante',
+        'location': 'Casa',
+        'weather': 'Variable',
+        'social_context': 'Reflexión personal',
+        'energy_before': 6,
+        'energy_after': milestone.intensity,
+        'mood_before': 6,
+        'mood_after': milestone.intensity,
+        'timestamp': timestamp.toIso8601String(),
+        'created_at': timestamp.toIso8601String(),
+        'updated_at': timestamp.toIso8601String(),
+      });
+    }
+  }
+
+// ============================================================================
+// 🎲 GENERADORES DE DATOS ESPECÍFICOS
+// ============================================================================
+
+  int _generateSleepQuality(double energy, double stress) {
+    final base = energy - (stress * 0.3);
+    return (base + (Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
+  }
+
+  int _generateAnxietyLevel(double stress, double mood) {
+    final base = stress - (mood * 0.2);
+    return (base + (Random().nextDouble() - 0.5) * 1.5).clamp(1, 10).round();
+  }
+
+  int _generateMotivationLevel(double mood, double energy) {
+    final base = (mood + energy) / 2;
+    return (base + (Random().nextDouble() - 0.5) * 1.5).clamp(1, 10).round();
+  }
+
+  int _generateSocialLevel(double mood, int weekday) {
+    final weekendBoost = weekday >= 6 ? 2 : 0;
+    final base = mood * 0.7 + weekendBoost;
+    return (base + (Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
+  }
+
+  int _generatePhysicalActivity(double energy, int weekday) {
+    final weekendBoost = weekday >= 6 ? 1 : 0;
+    final base = energy * 0.8 + weekendBoost;
+    return (base + (Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
+  }
+
+  int _generateWorkProductivity(double energy, double stress, int weekday) {
+    if (weekday >= 6) return Random().nextInt(3) + 1; // Fin de semana bajo
+    final base = energy - (stress * 0.4);
+    return (base + (Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
+  }
+
+  double _generateSleepHours(double stress, double energy) {
+    final base = 7.5 - (stress * 0.3) + (energy * 0.1);
+    return (base + (Random().nextDouble() - 0.5) * 1.5).clamp(4.0, 10.0);
+  }
+
+  int _generateWaterIntake(double energy) {
+    final base = 6 + (energy * 0.3);
+    return (base + (Random().nextDouble() - 0.5) * 2).clamp(3, 12).round();
+  }
+
+  int _generateMeditationMinutes(double stress, double mood) {
+    if (stress > 7 || mood < 4) {
+      return (10 + Random().nextDouble() * 20).round(); // Más meditación cuando es necesario
+    }
+    return (Random().nextDouble() * 15).round();
+  }
+
+  int _generateExerciseMinutes(double energy, int weekday) {
+    if (weekday >= 6) return (Random().nextDouble() * 90).round(); // Más tiempo en fin de semana
+    final base = energy * 5;
+    return (base + (Random().nextDouble() - 0.5) * 20).clamp(0, 120).round();
+  }
+
+  double _generateScreenTime(double mood, double energy) {
+    // Más pantalla cuando mood bajo o energía baja (procrastinación)
+    final base = 6 - (mood * 0.2) - (energy * 0.1);
+    return (base + (Random().nextDouble() - 0.5) * 2).clamp(2.0, 12.0);
+  }
+
+  String _generateGratitudeItems(double mood) {
+    final gratitudeOptions = [
+      ['mi familia', 'la salud', 'el trabajo'],
+      ['el café matutino', 'la música', 'los amigos'],
+      ['el progreso', 'la tecnología', 'la naturaleza'],
+      ['el aprendizaje', 'las oportunidades', 'la paz'],
+      ['la creatividad', 'los desafíos', 'el crecimiento'],
+    ];
+
+    final items = gratitudeOptions[Random().nextInt(gratitudeOptions.length)];
+    if (mood > 7) {
+      return items.join(', ');
+    } else if (mood > 4) {
+      return items.take(2).join(', ');
+    } else {
+      return items.first;
+    }
+  }
+
+  int _generateWeatherImpact(DateTime date) {
+    // Simular impacto del clima según estación
+    final month = date.month;
+    if (month >= 3 && month <= 5) return 7; // Primavera
+    if (month >= 6 && month <= 8) return 8; // Verano
+    if (month >= 9 && month <= 11) return 6; // Otoño
+    return 5; // Invierno
+  }
+
+  int _generateSocialBattery(double mood, int weekday) {
+    if (weekday == 1) return 4; // Lunes agotado socialmente
+    final base = mood * 0.8;
+    return (base + (Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
+  }
+
+  int _generateCreativeEnergy(double mood, double energy) {
+    final base = (mood + energy) / 2.2;
+    return (base + (Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
+  }
+
+  int _generateEmotionalStability(double mood, double stress) {
+    final base = mood - (stress * 0.3);
+    return (base + (Random().nextDouble() - 0.5) * 1.5).clamp(1, 10).round();
+  }
+
+  int _generateFocusLevel(double energy, double stress) {
+    final base = energy - (stress * 0.4);
+    return (base + (Random().nextDouble() - 0.5) * 1.5).clamp(1, 10).round();
+  }
+
+  int _generateLifeSatisfaction(double mood, double stress) {
+    final base = mood - (stress * 0.2);
+    return (base + (Random().nextDouble() - 0.5) * 1.0).clamp(1, 10).round();
+  }
+
+  String _generateReflection(double mood, double energy, double stress, String phase) {
+    final reflections = {
+      'Período Difícil': [
+        'Hoy fue un día complicado. Me siento agotado y estresado.',
+        'Estoy pasando por un momento difícil, pero sé que es temporal.',
+        'Necesito enfocarme en el autocuidado y ser paciente conmigo mismo.',
+      ],
+      'Recuperación': [
+        'Siento que estoy mejorando poco a poco. Hay esperanza.',
+        'Cada día es un pequeño paso hacia adelante.',
+        'Empiezo a ver la luz al final del túnel.',
+      ],
+      'Crecimiento': [
+        'Me siento realmente bien hoy. Todo fluye naturalmente.',
+        'Estoy en mi mejor momento y aprovecho esta energía positiva.',
+        'Tengo mucha claridad mental y motivación para mis proyectos.',
+      ],
+    };
+
+    final options = reflections[phase] ?? ['Día normal, sin grandes altibajos.'];
+    return options[Random().nextInt(options.length)];
+  }
+
+  String _generateMomentContext(String category) {
+    final contexts = {
+      'profesional': ['Durante trabajo remoto', 'En la oficina', 'En reunión virtual'],
+      'personal': ['En casa', 'Durante tiempo libre', 'Con familia'],
+      'bienestar': ['Durante rutina matutina', 'En pausa activa', 'Antes de dormir'],
+      'crecimiento': ['Estudiando', 'Leyendo', 'Experimentando'],
+    };
+
+    final options = contexts[category] ?? ['Momento general'];
+    return options[Random().nextInt(options.length)];
+  }
+
+  String _generateLocation() {
+    final locations = ['Casa', 'Oficina', 'Cafetería', 'Parque', 'Gym', 'Transporte'];
+    return locations[Random().nextInt(locations.length)];
+  }
+
+// ============================================================================
+// 🗃️ MÉTODOS ADICIONALES PARA DESARROLLADOR
+// ============================================================================
+
+  /// 🔄 Regenerar solo datos del último mes
+  Future<void> regenerateLastMonthData(int userId) async {
+    try {
+      final db = await database;
+      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+
+      await db.delete(
+        'daily_entries',
+        where: 'user_id = ? AND entry_date >= ?',
+        whereArgs: [userId, thirtyDaysAgo.toIso8601String().split('T')[0]],
+      );
+
+      await _generateHistoricalData(userId, db);
+      _logger.i('✅ Datos del último mes regenerados');
+    } catch (e) {
+      _logger.e('❌ Error regenerando datos: $e');
+    }
+  }
+
+  /// 📊 Obtener estadísticas de los datos generados
+  Future<Map<String, dynamic>> getDeveloperDataStats(int userId) async {
+    try {
+      final db = await database;
+
+      final stats = await db.rawQuery('''
+      SELECT 
+        COUNT(*) as total_entries,
+        AVG(mood_score) as avg_mood,
+        AVG(energy_level) as avg_energy,
+        AVG(stress_level) as avg_stress,
+        MIN(entry_date) as first_entry,
+        MAX(entry_date) as last_entry
+      FROM daily_entries 
+      WHERE user_id = ?
+    ''', [userId]);
+
+      final momentsCount = await db.rawQuery('''
+      SELECT COUNT(*) as total_moments
+      FROM interactive_moments 
+      WHERE user_id = ?
+    ''', [userId]);
+
+      return {
+        'daily_entries': stats.first,
+        'interactive_moments': momentsCount.first,
+        'generated_at': DateTime.now().toIso8601String(),
+      };
+    } catch (e) {
+      _logger.e('❌ Error obteniendo estadísticas: $e');
+      return {};
+    }
+
+  }
+
 
 }

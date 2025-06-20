@@ -1,4 +1,6 @@
-// lib/presentation/screens/v2/advanced_analytics_screen.dart
+// ============================================================================
+// ADVANCED ANALYTICS SCREEN - VERSIÓN COMPLETA Y CORREGIDA
+// ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -18,14 +20,24 @@ class AdvancedAnalyticsScreen extends StatefulWidget {
   State<AdvancedAnalyticsScreen> createState() => _AdvancedAnalyticsScreenState();
 }
 
-class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
+class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> with TickerProviderStateMixin {
+  late TabController _tabController;
+
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+
     // Cargar análisis avanzados
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<EnhancedAnalyticsProvider>().loadCompleteAdvancedAnalytics(widget.userId);
     });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
@@ -37,40 +49,136 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
       appBar: AppBar(
         backgroundColor: ModernColors.darkPrimary,
         elevation: 0,
-        title: const Text('Análisis Avanzado'),
+        title: const Text('Análisis Avanzado', style: TextStyle(color: Colors.white)),
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: Colors.white),
             onPressed: () => analytics.loadCompleteAdvancedAnalytics(widget.userId),
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: ModernColors.accentBlue,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white54,
+          tabs: const [
+            Tab(text: '📊 Bienestar'),
+            Tab(text: '😰 Estrés'),
+            Tab(text: '📈 Progreso'),
+            Tab(text: '🎯 Objetivos'),
+          ],
+        ),
       ),
       body: analytics.isLoading
           ? const Center(child: CircularProgressIndicator())
-          : CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  _buildDetailedWellbeingAnalysis(analytics),
-                  const SizedBox(height: 24),
-                  _buildMoodDeclineDetection(analytics),
-                  const SizedBox(height: 24),
-                  _buildHourlyPatterns(analytics),
-                  const SizedBox(height: 24),
-                  _buildEmotionalBalance(analytics),
-                  const SizedBox(height: 24),
-                  _buildPersonalizedInsights(analytics),
-                  const SizedBox(height: 24),
-                  _buildActionPlan(analytics),
-                ],
-              ),
-            ),
-          ),
+          : analytics.errorMessage != null
+          ? _buildErrorState(analytics)
+          : TabBarView(
+        controller: _tabController,
+        children: [
+          _buildWellbeingTab(analytics),
+          _buildStressTab(analytics),
+          _buildProgressTab(analytics),
+          _buildGoalsTab(analytics),
         ],
       ),
+    );
+  }
+
+  // ============================================================================
+  // TAB DE BIENESTAR
+  // ============================================================================
+
+  Widget _buildWellbeingTab(EnhancedAnalyticsProvider analytics) {
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildDetailedWellbeingAnalysis(analytics),
+                const SizedBox(height: 24),
+                _buildEmotionalBalance(analytics),
+                const SizedBox(height: 24),
+                _buildPersonalizedInsights(analytics),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================================
+  // TAB DE ESTRÉS
+  // ============================================================================
+
+  Widget _buildStressTab(EnhancedAnalyticsProvider analytics) {
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildStressAnalysis(analytics),
+                const SizedBox(height: 24),
+                _buildStressRecommendations(analytics),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================================
+  // TAB DE PROGRESO
+  // ============================================================================
+
+  Widget _buildProgressTab(EnhancedAnalyticsProvider analytics) {
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildHourlyPatterns(analytics),
+                const SizedBox(height: 24),
+                _buildMoodDeclineDetection(analytics),
+                const SizedBox(height: 24),
+                _buildProgressTimeline(analytics),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================================
+  // TAB DE OBJETIVOS
+  // ============================================================================
+
+  Widget _buildGoalsTab(EnhancedAnalyticsProvider analytics) {
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildActionPlan(analytics),
+                const SizedBox(height: 24),
+                _buildGoalsProgress(analytics),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -83,245 +191,204 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
     final components = wellbeing['components'] as Map<String, dynamic>? ?? {};
     final strengths = wellbeing['strengths'] as List? ?? [];
     final improvements = wellbeing['improvement_areas'] as List? ?? [];
+    final score = wellbeing['overall_score'] ?? 0;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF1e3c72),
-            const Color(0xFF2a5298),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: ModernColors.surfaceDark,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        border: Border.all(color: ModernColors.accentBlue.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '🎯 Análisis Detallado de Bienestar',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Radar Chart de Componentes
-          SizedBox(
-            height: 250,
-            child: _buildRadarChart(components),
-          ),
-
-          const SizedBox(height: 20),
-
-          // Fortalezas y Áreas de Mejora
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildStrengthsSection(strengths),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: ModernColors.accentBlue.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.analytics, color: Colors.white),
               ),
               const SizedBox(width: 16),
-              Expanded(
-                child: _buildImprovementsSection(improvements),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRadarChart(Map<String, dynamic> components) {
-    // Implementación simplificada del radar chart
-    // En producción, usar una librería específica para radar charts
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.radar,
-              size: 48,
-              color: Colors.white54,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Radar Chart',
-              style: TextStyle(
-                color: Colors.white54,
-                fontSize: 14,
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Mostrar valores como lista temporal
-            ...components.entries.map((entry) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Text(
-                '${_getComponentName(entry.key)}: ${entry.value}',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                ),
-              ),
-            )),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStrengthsSection(List strengths) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.green.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.star, color: Colors.green.shade400, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'Fortalezas',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ...strengths.take(3).map((strength) => Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              '• $strength',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-              ),
-            ),
-          )),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImprovementsSection(List improvements) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.trending_up, color: Colors.orange.shade400, size: 20),
-              const SizedBox(width: 8),
-              const Text(
-                'Áreas de Mejora',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ...improvements.take(3).map((area) => Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Text(
-              '• $area',
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-              ),
-            ),
-          )),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================================
-  // DETECCIÓN DE DECLIVE DEL ÁNIMO
-  // ============================================================================
-
-  Widget _buildMoodDeclineDetection(EnhancedAnalyticsProvider analytics) {
-    final decline = analytics.moodDeclineAnalysis;
-    final isDecline = decline['is_mood_decline'] as bool? ?? false;
-    final severity = decline['decline_severity'] ?? 0;
-    final daysSince = decline['days_since_peak'] ?? 0;
-    final recommendations = decline['recommendations'] as List? ?? [];
-
-    if (!isDecline) {
-      return _buildPositiveMoodCard();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.red.shade900,
-            Colors.orange.shade900,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.warning_amber_rounded,
-                color: Colors.yellow.shade400,
-                size: 32,
-              ),
-              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Alerta de Declive del Ánimo',
+                      'Análisis de Bienestar',
                       style: TextStyle(
+                        color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
                       ),
                     ),
                     Text(
-                      'Severidad: ${_getSeverityText(severity)} • $daysSince días',
-                      style: TextStyle(
+                      'Score: $score/100',
+                      style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _getScoreColor(score).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  wellbeing['level'] ?? 'En Progreso',
+                  style: TextStyle(
+                    color: _getScoreColor(score),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Componentes del bienestar
+          if (components.isNotEmpty) ...[
+            const Text(
+              'Componentes del Bienestar',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...components.entries.map((entry) => _buildComponentBar(
+              _getComponentTitle(entry.key),
+              entry.value.toDouble(),
+            )),
+          ],
+
+          const SizedBox(height: 20),
+
+          // Fortalezas y áreas de mejora
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '✅ Fortalezas',
+                      style: TextStyle(
+                        color: Colors.green,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...strengths.map((strength) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '• $strength',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '🎯 Mejoras',
+                      style: TextStyle(
+                        color: Colors.orange,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ...improvements.map((improvement) => Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        '• $improvement',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================================
+  // ANÁLISIS DE ESTRÉS
+  // ============================================================================
+
+  Widget _buildStressAnalysis(EnhancedAnalyticsProvider analytics) {
+    final stress = analytics.stressAnalysis;
+    final alertLevel = stress['alert_level'] ?? 'normal';
+    final alertMessage = stress['alert_message'] ?? 'Niveles normales detectados';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: ModernColors.surfaceDark,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _getStressColor(alertLevel).withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _getStressColor(alertLevel).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _getStressIcon(alertLevel),
+                  color: _getStressColor(alertLevel),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Análisis de Estrés',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      _getStressLevelText(alertLevel),
+                      style: TextStyle(
+                        color: _getStressColor(alertLevel),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],
@@ -330,96 +397,11 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // Gráfico de tendencia
-          SizedBox(
-            height: 150,
-            child: _buildMoodTrendChart(decline),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Recomendaciones
-          if (recommendations.isNotEmpty) ...[
-            const Text(
-              'Recomendaciones:',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...recommendations.take(3).map((rec) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    size: 16,
-                    color: Colors.green.shade400,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      rec.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPositiveMoodCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.green.shade800,
-            Colors.green.shade600,
-          ],
-        ),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.sentiment_very_satisfied,
-            color: Colors.white,
-            size: 48,
-          ),
-          const SizedBox(width: 16),
-          const Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Estado de Ánimo Estable',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'No se detectan señales de declive. ¡Sigue así!',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
+          Text(
+            alertMessage,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
             ),
           ),
         ],
@@ -427,284 +409,257 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
     );
   }
 
-  Widget _buildMoodTrendChart(Map decline) {
-    // Implementación simplificada del gráfico de tendencia
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: const Center(
-        child: Text(
-          'Gráfico de Tendencia del Ánimo',
-          style: TextStyle(
-            color: Colors.white54,
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
-  }
+  Widget _buildStressRecommendations(EnhancedAnalyticsProvider analytics) {
+    final stress = analytics.stressAnalysis;
+    final recommendations = stress['recommendations'] as List? ?? [];
 
-  // ============================================================================
-  // PATRONES POR HORA
-  // ============================================================================
-
-  Widget _buildHourlyPatterns(EnhancedAnalyticsProvider analytics) {
-    final temporal = analytics._temporalComparisons;
-    final patterns = temporal['hourly_patterns'] as Map? ?? {};
+    if (recommendations.isEmpty) return const SizedBox.shrink();
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF141B2D),
+        color: ModernColors.surfaceDark,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '⏰ Patrones por Hora del Día',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Heat Map de Horas
-          _buildHourlyHeatMap(patterns),
-
-          const SizedBox(height: 20),
-
-          // Mejores y peores horas
-          Row(
+          const Row(
             children: [
-              Expanded(
-                child: _buildTimeCard(
-                  '🌅 Mejor Hora',
-                  patterns['best_hour'] ?? '12:00',
-                  'Mayor energía positiva',
-                  Colors.green.shade400,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildTimeCard(
-                  '🌙 Hora Difícil',
-                  patterns['worst_hour'] ?? '15:00',
-                  'Mayor cansancio',
-                  Colors.red.shade400,
+              Icon(Icons.lightbulb, color: Colors.yellow),
+              SizedBox(width: 12),
+              Text(
+                'Recomendaciones para el Estrés',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHourlyHeatMap(Map patterns) {
-    // Implementación del heat map
-    return Container(
-      height: 200,
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: const Center(
-        child: Text(
-          'Heat Map de Actividad por Hora',
-          style: TextStyle(
-            color: Colors.white54,
-            fontSize: 14,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTimeCard(String title, String time, String description, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
+          const SizedBox(height: 16),
+          ...recommendations.map((rec) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('• ', style: TextStyle(color: Colors.blue)),
+                Expanded(
+                  child: Text(
+                    rec.toString(),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            time,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            description,
-            style: const TextStyle(
-              color: Colors.white54,
-              fontSize: 12,
-            ),
-          ),
+          )),
         ],
       ),
     );
   }
 
   // ============================================================================
-  // BALANCE EMOCIONAL
+  // DETECCIÓN DE DECLIVE DE ÁNIMO
   // ============================================================================
 
-  Widget _buildEmotionalBalance(EnhancedAnalyticsProvider analytics) {
-    final wellbeing = analytics.wellbeingData;
-    final emotionalBalance = wellbeing['components']?['emotional_balance'] ?? 0;
+  Widget _buildMoodDeclineDetection(EnhancedAnalyticsProvider analytics) {
+    final mood = analytics.moodDeclineAnalysis;
+    final concernLevel = mood['concern_level'] ?? 'normal';
+    final message = mood['message'] ?? 'Tu ánimo se mantiene estable';
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.purple.shade900,
-            Colors.purple.shade700,
-          ],
-        ),
+        color: ModernColors.surfaceDark,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _getMoodColor(concernLevel).withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '⚖️ Balance Emocional Detallado',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _getMoodColor(concernLevel).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _getMoodIcon(concernLevel),
+                  color: _getMoodColor(concernLevel),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Tendencia de Ánimo',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      _getMoodLevelText(concernLevel),
+                      style: TextStyle(
+                        color: _getMoodColor(concernLevel),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
-
-          // Visualización del balance
-          _buildEmotionalBalanceVisualization(emotionalBalance),
-
-          const SizedBox(height: 20),
-
-          // Distribución de emociones
-          _buildEmotionDistribution(analytics),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmotionalBalanceVisualization(dynamic balance) {
-    final score = (balance as num).toDouble();
-    final percentage = (score / 20 * 100).clamp(0, 100);
-
-    return Column(
-      children: [
-        Text(
-          '${percentage.toInt()}%',
-          style: const TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          _getBalanceDescription(percentage),
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 16,
-          ),
-        ),
-        const SizedBox(height: 16),
-        LinearProgressIndicator(
-          value: percentage / 100,
-          backgroundColor: Colors.white.withOpacity(0.2),
-          valueColor: AlwaysStoppedAnimation<Color>(
-            _getBalanceColor(percentage),
-          ),
-          minHeight: 8,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmotionDistribution(EnhancedAnalyticsProvider analytics) {
-    // Distribución de emociones basada en los datos
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Distribución Emocional',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildEmotionBar('😊 Positivas', 0.7, Colors.green),
-          const SizedBox(height: 8),
-          _buildEmotionBar('😐 Neutrales', 0.2, Colors.blue),
-          const SizedBox(height: 8),
-          _buildEmotionBar('😔 Negativas', 0.1, Colors.red),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmotionBar(String label, double value, Color color) {
-    return Row(
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(
-            label,
+          const SizedBox(height: 16),
+          Text(
+            message,
             style: const TextStyle(
               color: Colors.white70,
               fontSize: 14,
             ),
           ),
-        ),
-        Expanded(
-          child: LinearProgressIndicator(
-            value: value,
-            backgroundColor: color.withOpacity(0.2),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-            minHeight: 6,
+        ],
+      ),
+    );
+  }
+
+  // ============================================================================
+  // PATRONES HORARIOS
+  // ============================================================================
+
+  Widget _buildHourlyPatterns(EnhancedAnalyticsProvider analytics) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: ModernColors.surfaceDark,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: ModernColors.accentBlue.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.schedule, color: Colors.blue),
+              SizedBox(width: 12),
+              Text(
+                'Patrones Horarios',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '${(value * 100).toInt()}%',
-          style: TextStyle(
-            color: color,
-            fontWeight: FontWeight.bold,
-            fontSize: 14,
+          const SizedBox(height: 16),
+          const Text(
+            'Análisis de patrones temporales en desarrollo...',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  // ============================================================================
+  // TIMELINE DE PROGRESO
+  // ============================================================================
+
+  Widget _buildProgressTimeline(EnhancedAnalyticsProvider analytics) {
+    final timeline = analytics.progressTimeline;
+    final progressSummary = timeline['progress_summary'] ?? 'Continúa registrando para ver tu progreso';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: ModernColors.surfaceDark,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.green.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.timeline, color: Colors.green),
+              SizedBox(width: 12),
+              Text(
+                'Timeline de Progreso',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            progressSummary,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================================
+  // EQUILIBRIO EMOCIONAL
+  // ============================================================================
+
+  Widget _buildEmotionalBalance(EnhancedAnalyticsProvider analytics) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: ModernColors.surfaceDark,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.purple.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.balance, color: Colors.purple),
+              SizedBox(width: 12),
+              Text(
+                'Equilibrio Emocional',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Análisis de equilibrio emocional en desarrollo...',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -713,173 +668,52 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
   // ============================================================================
 
   Widget _buildPersonalizedInsights(EnhancedAnalyticsProvider analytics) {
-    final insights = analytics.wellbeingData['insights'] as List? ?? [];
-    final goals = analytics.personalizedGoals;
+    final wellbeing = analytics.wellbeingData;
+    final insights = wellbeing['insights'] as List? ?? ['Continúa registrando para obtener insights personalizados'];
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.teal.shade900,
-            Colors.cyan.shade900,
-          ],
-        ),
+        color: ModernColors.surfaceDark,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '💡 Insights Personalizados',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+          const Row(
+            children: [
+              Icon(Icons.psychology, color: Colors.orange),
+              SizedBox(width: 12),
+              Text(
+                'Insights Personalizados',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 20),
-
-          // Insights principales
-          ...insights.take(5).map((insight) => _buildInsightCard(insight)),
-
           const SizedBox(height: 16),
-
-          // Correlaciones encontradas
-          _buildCorrelations(analytics),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInsightCard(dynamic insight) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: Colors.amber.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Center(
-              child: Icon(
-                Icons.lightbulb,
-                size: 18,
-                color: Colors.amber,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              insight.toString(),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCorrelations(EnhancedAnalyticsProvider analytics) {
-    // Correlaciones entre diferentes métricas
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '🔗 Correlaciones Detectadas',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildCorrelationItem(
-            'Sueño → Estado de ánimo',
-            0.85,
-            'Fuerte correlación positiva',
-          ),
-          _buildCorrelationItem(
-            'Ejercicio → Energía',
-            0.72,
-            'Correlación positiva',
-          ),
-          _buildCorrelationItem(
-            'Estrés → Productividad',
-            -0.65,
-            'Correlación negativa',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCorrelationItem(String title, double value, String description) {
-    final color = value > 0 ? Colors.green : Colors.red;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
+          ...insights.map((insight) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  description,
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 12,
+                const Text('💡 ', style: TextStyle(fontSize: 16)),
+                Expanded(
+                  child: Text(
+                    insight.toString(),
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
               ],
             ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              '${(value.abs() * 100).toInt()}%',
-              style: TextStyle(
-                color: color,
-                fontWeight: FontWeight.bold,
-                fontSize: 12,
-              ),
-            ),
-          ),
+          )),
         ],
       ),
     );
@@ -892,210 +726,243 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
   Widget _buildActionPlan(EnhancedAnalyticsProvider analytics) {
     final goals = analytics.personalizedGoals;
     final recommendedGoals = goals['recommended_goals'] as List? ?? [];
-    final progressGoals = goals['progress_goals'] as List? ?? [];
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFF2E3192),
-            const Color(0xFF1BFFFF),
-          ],
-        ),
+        color: ModernColors.surfaceDark,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.green.withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '🚀 Plan de Acción Personalizado',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Acciones inmediatas
-          _buildImmediateActions(recommendedGoals),
-
-          const SizedBox(height: 20),
-
-          // Plan semanal
-          _buildWeeklyPlan(analytics),
-
-          const SizedBox(height: 20),
-
-          // Botón de acción principal
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                // Implementar navegación o acción
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF2E3192),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'Comenzar Plan de Mejora',
+          const Row(
+            children: [
+              Icon(Icons.checklist, color: Colors.green),
+              SizedBox(width: 12),
+              Text(
+                'Plan de Acción',
                 style: TextStyle(
-                  fontSize: 16,
+                  color: Colors.white,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImmediateActions(List goals) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Acciones Inmediatas',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 12),
-        ...goals.take(3).map((goal) => _buildActionItem(goal)),
-      ],
-    );
-  }
-
-  Widget _buildActionItem(dynamic goal) {
-    final title = goal['title'] ?? '';
-    final time = goal['estimated_time'] ?? '5 min';
-    final impact = goal['impact_level'] ?? 'medium';
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: _getImpactColor(impact).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Icon(
-                Icons.flash_on,
-                color: _getImpactColor(impact),
-                size: 20,
-              ),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                  ),
-                ),
-                Text(
-                  time,
-                  style: const TextStyle(
-                    color: Colors.white54,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.arrow_forward_ios,
-            color: Colors.white.withOpacity(0.5),
-            size: 16,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWeeklyPlan(EnhancedAnalyticsProvider analytics) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Plan Semanal',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildWeekDay('Lunes', 'Meditación 10 min', Colors.blue),
-          _buildWeekDay('Miércoles', 'Reflexión profunda', Colors.purple),
-          _buildWeekDay('Viernes', 'Revisión semanal', Colors.green),
-          _buildWeekDay('Domingo', 'Planificación', Colors.orange),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWeekDay(String day, String activity, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 80,
-            child: Text(
-              day,
-              style: const TextStyle(
+          const SizedBox(height: 16),
+          if (recommendedGoals.isEmpty) ...[
+            const Text(
+              'No hay objetivos recomendados disponibles',
+              style: TextStyle(
                 color: Colors.white70,
                 fontSize: 14,
               ),
             ),
+          ] else ...[
+            ...recommendedGoals.take(3).map((goal) => _buildGoalCard(goal, analytics)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGoalsProgress(EnhancedAnalyticsProvider analytics) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: ModernColors.surfaceDark,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.trending_up, color: Colors.blue),
+              SizedBox(width: 12),
+              Text(
+                'Progreso de Objetivos',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
-          Expanded(
-            child: Text(
-              activity,
-              style: const TextStyle(
+          const SizedBox(height: 16),
+          const Text(
+            'Seguimiento detallado de objetivos en desarrollo...',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGoalCard(Map<String, dynamic> goal, EnhancedAnalyticsProvider analytics) {
+    final title = goal['title'] ?? 'Objetivo';
+    final description = goal['description'] ?? '';
+    final emoji = goal['emoji'] ?? '🎯';
+    final progress = goal['progress_percentage'] ?? 0;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.black26,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    if (description.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        description,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Text(
+                '$progress%',
+                style: const TextStyle(
+                  color: Colors.green,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          LinearProgressIndicator(
+            value: progress / 100,
+            backgroundColor: Colors.white10,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              progress >= 80 ? Colors.green : progress >= 50 ? Colors.orange : Colors.red,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================================
+  // WIDGETS DE ERROR
+  // ============================================================================
+
+  Widget _buildErrorState(EnhancedAnalyticsProvider analytics) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.red,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Error cargando análisis',
+              style: TextStyle(
                 color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              analytics.errorMessage ?? 'Error desconocido',
+              style: const TextStyle(
+                color: Colors.white70,
                 fontSize: 14,
               ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton(
+              onPressed: () => analytics.loadCompleteAdvancedAnalytics(widget.userId),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ModernColors.accentBlue,
+              ),
+              child: const Text('Reintentar'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============================================================================
+  // COMPONENTES AUXILIARES
+  // ============================================================================
+
+  Widget _buildComponentBar(String title, double value) {
+    final percentage = (value * 100 / 25).clamp(0, 100); // Asumiendo max 25 puntos por componente
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                '${percentage.round()}%',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          LinearProgressIndicator(
+            value: percentage / 100,
+            backgroundColor: Colors.white10,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              percentage >= 80 ? Colors.green :
+              percentage >= 60 ? Colors.blue :
+              percentage >= 40 ? Colors.orange : Colors.red,
             ),
           ),
         ],
@@ -1107,52 +974,90 @@ class _AdvancedAnalyticsScreenState extends State<AdvancedAnalyticsScreen> {
   // MÉTODOS AUXILIARES
   // ============================================================================
 
-  String _getComponentName(String key) {
-    final names = {
-      'consistency': 'Consistencia',
-      'emotional_balance': 'Balance Emocional',
-      'progress_trend': 'Tendencia',
-      'diversity': 'Diversidad',
-      'stress_management': 'Gestión del Estrés',
-      'reflection_quality': 'Calidad de Reflexión',
-      'achievements': 'Logros',
-      'temporal_stability': 'Estabilidad',
-    };
-    return names[key] ?? key;
+  Color _getScoreColor(int score) {
+    if (score >= 80) return Colors.green;
+    if (score >= 60) return Colors.blue;
+    if (score >= 40) return Colors.orange;
+    return Colors.red;
   }
 
-  String _getSeverityText(dynamic severity) {
-    final level = (severity as num).toInt();
-    if (level <= 2) return 'Leve';
-    if (level <= 5) return 'Moderada';
-    if (level <= 7) return 'Alta';
-    return 'Crítica';
+  Color _getStressColor(String level) {
+    switch (level) {
+      case 'low': return Colors.green;
+      case 'normal': return Colors.blue;
+      case 'moderate': return Colors.orange;
+      case 'high': return Colors.red;
+      case 'critical': return Colors.red[900]!;
+      default: return Colors.blue;
+    }
   }
 
-  String _getBalanceDescription(double percentage) {
-    if (percentage >= 80) return 'Excelente equilibrio emocional';
-    if (percentage >= 60) return 'Buen balance emocional';
-    if (percentage >= 40) return 'Balance emocional en desarrollo';
-    return 'Necesitas trabajar en tu equilibrio emocional';
+  Color _getMoodColor(String level) {
+    switch (level) {
+      case 'improving': return Colors.green;
+      case 'stable': return Colors.blue;
+      case 'normal': return Colors.blue;
+      case 'declining': return Colors.orange;
+      case 'concerning': return Colors.red;
+      default: return Colors.blue;
+    }
   }
 
-  Color _getBalanceColor(double percentage) {
-    if (percentage >= 80) return Colors.green.shade400;
-    if (percentage >= 60) return Colors.blue.shade400;
-    if (percentage >= 40) return Colors.orange.shade400;
-    return Colors.red.shade400;
+  IconData _getStressIcon(String level) {
+    switch (level) {
+      case 'low': return Icons.sentiment_very_satisfied;
+      case 'normal': return Icons.sentiment_satisfied;
+      case 'moderate': return Icons.sentiment_neutral;
+      case 'high': return Icons.sentiment_dissatisfied;
+      case 'critical': return Icons.sentiment_very_dissatisfied;
+      default: return Icons.sentiment_satisfied;
+    }
   }
 
-  Color _getImpactColor(String impact) {
-    switch (impact.toLowerCase()) {
-      case 'high':
-        return Colors.green.shade400;
-      case 'medium':
-        return Colors.blue.shade400;
-      case 'low':
-        return Colors.orange.shade400;
-      default:
-        return Colors.grey.shade400;
+  IconData _getMoodIcon(String level) {
+    switch (level) {
+      case 'improving': return Icons.trending_up;
+      case 'stable': return Icons.trending_flat;
+      case 'normal': return Icons.trending_flat;
+      case 'declining': return Icons.trending_down;
+      case 'concerning': return Icons.warning;
+      default: return Icons.trending_flat;
+    }
+  }
+
+  String _getStressLevelText(String level) {
+    switch (level) {
+      case 'low': return 'Nivel Bajo';
+      case 'normal': return 'Nivel Normal';
+      case 'moderate': return 'Nivel Moderado';
+      case 'high': return 'Nivel Alto';
+      case 'critical': return 'Nivel Crítico';
+      default: return 'Normal';
+    }
+  }
+
+  String _getMoodLevelText(String level) {
+    switch (level) {
+      case 'improving': return 'Mejorando';
+      case 'stable': return 'Estable';
+      case 'normal': return 'Normal';
+      case 'declining': return 'Descendiendo';
+      case 'concerning': return 'Preocupante';
+      default: return 'Normal';
+    }
+  }
+
+  String _getComponentTitle(String key) {
+    switch (key) {
+      case 'consistency': return 'Consistencia';
+      case 'emotional_balance': return 'Balance Emocional';
+      case 'progress_trend': return 'Tendencia de Progreso';
+      case 'diversity': return 'Diversidad';
+      case 'stress_management': return 'Gestión de Estrés';
+      case 'reflection_quality': return 'Calidad de Reflexión';
+      case 'achievements': return 'Logros';
+      case 'temporal_stability': return 'Estabilidad Temporal';
+      default: return key.replaceAll('_', ' ').split(' ').map((e) => e[0].toUpperCase() + e.substring(1)).join(' ');
     }
   }
 }

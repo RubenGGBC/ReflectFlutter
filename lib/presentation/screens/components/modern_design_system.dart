@@ -8,6 +8,9 @@ import 'package:flutter/material.dart';
 
 class ModernColors {
   // Gradientes principales
+  // Agregar estas líneas dentro de la clase ModernColors:
+  static const Color accentBlue = Color(0xFF3B82F6);
+  static const Color surfaceDark = Color(0xFF141B2D);
   static const List<Color> primaryGradient = [Color(0xFF667eea), Color(0xFF764ba2)];
   static const List<Color> positiveGradient = [Color(0xFF11998e), Color(0xFF38ef7d)];
   static const List<Color> negativeGradient = [Color(0xFFff6b6b), Color(0xFFfeca57)];

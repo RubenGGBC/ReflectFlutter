@@ -1,5 +1,5 @@
 // ============================================================================
-// app_v2.dart - VERSIÓN COMPLETA Y FUNCIONAL
+// app_v2.dart - VERSIÓN COMPLETA CON ENHANCED ANALYTICS
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -10,7 +10,8 @@ import 'package:logger/logger.dart';
 import 'presentation/providers/auth_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/interactive_moments_provider.dart';
-import 'presentation/providers/analytics_provider.dart'; // ✅ NUEVO
+import 'presentation/providers/analytics_provider.dart';
+import 'presentation/providers/enhanced_analytics_provider.dart'; // ✅ NUEVO
 
 // Screens V2
 import 'presentation/screens/v2/login_screen_v2.dart';
@@ -35,39 +36,90 @@ class ReflectAppV2 extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // ❌ REEMPLAZAR todo el MultiProvider por:
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthProvider>(
-          create: (_) => di.sl<AuthProvider>()..initialize(),
+          create: (_) => AuthProvider(di.sl<DatabaseService>())..initialize(),
         ),
         ChangeNotifierProvider<ThemeProvider>(
-          create: (_) => di.sl<ThemeProvider>()..initialize(),
+          create: (_) => ThemeProvider()..initialize(),
         ),
         ChangeNotifierProvider<InteractiveMomentsProvider>(
-          create: (_) => di.sl<InteractiveMomentsProvider>(),
+          create: (_) => InteractiveMomentsProvider(di.sl<DatabaseService>()),
         ),
-        // ✅ NUEVO: Analytics Provider
         ChangeNotifierProvider<AnalyticsProvider>(
           create: (_) => AnalyticsProvider(di.sl<DatabaseService>()),
+        ),
+        ChangeNotifierProvider<EnhancedAnalyticsProvider>(
+          create: (_) => EnhancedAnalyticsProvider(di.sl<DatabaseService>()),
         ),
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
-            title: 'ReflectApp v2 - Tu espacio de reflexión',
+            title: 'Reflect - Tu Compañero de Bienestar',
             debugShowCheckedModeBanner: false,
-            theme: ModernTheme.darkTheme,
 
-            // ✅ CONFIGURACIÓN INICIAL CORRECTA
-            home: const AppInitializerV2(),
+            // Tema configurado
+            theme: ThemeData(
+              brightness: Brightness.dark,
+              primarySwatch: Colors.blue,
+              scaffoldBackgroundColor: ModernColors.darkPrimary,
+              appBarTheme: const AppBarTheme(
+                backgroundColor: ModernColors.darkPrimary,
+                elevation: 0,
+                iconTheme: IconThemeData(color: Colors.white),
+                titleTextStyle: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ModernColors.accentBlue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              textTheme: const TextTheme(
+                bodyLarge: TextStyle(color: Colors.white),
+                bodyMedium: TextStyle(color: Colors.white70),
+                titleLarge: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            ),
 
-            // ✅ RUTAS ACTUALIZADAS
-            routes: _buildRoutes(),
+            // Ruta inicial basada en autenticación
+            home: Consumer<AuthProvider>(
+              builder: (context, auth, child) {
+                if (!auth.isInitialized) {
+                  return _buildLoadingScreen();
+                }
+                if (auth.isLoggedIn) {
+                  return const ModernNavigationWrapper();
+                } else {
+                  return const LoginScreenV2();
+                }
+              },
+            ),
 
-            // Manejar rutas no encontradas
+            // Rutas definidas
+            routes: {
+              '/login': (context) => const LoginScreenV2(),
+              '/home': (context) => const ModernNavigationWrapper(),
+              '/moments': (context) => const InteractiveMomentsScreenV2(),
+              '/daily-review': (context) => const DailyReviewScreenV2(),
+              '/calendar': (context) => const CalendarScreenV2(),
+              '/profile': (context) => const ProfileScreenV2(),
+            },
+
+            // Ruta de error
             onUnknownRoute: (settings) {
               return MaterialPageRoute(
-                builder: (context) => const LoginScreenV2(),
+                builder: (context) => _buildErrorScreen(context, settings.name),
               );
             },
           );
@@ -76,104 +128,11 @@ class ReflectAppV2 extends StatelessWidget {
     );
   }
 
-  // ✅ RUTAS COMPLETAS Y ACTUALIZADAS
-  Map<String, WidgetBuilder> _buildRoutes() {
-    return {
-      '/login': (context) => const LoginScreenV2(),
-      '/home': (context) => const ModernNavigationWrapper(),
-      '/interactive_moments': (context) => const InteractiveMomentsScreenV2(),
-      '/daily_review': (context) => const DailyReviewScreenV2(),
-      '/profile': (context) => const ProfileScreenV2(),
-      '/calendar': (context) => const CalendarScreenV2(),
-    };
-  }
-}
+  // ... (los métodos _buildLoadingScreen y _buildErrorScreen permanecen igual)
 
-// ============================================================================
-// INICIALIZADOR DE APP V2 - VERSIÓN CORREGIDA
-// ============================================================================
-
-class AppInitializerV2 extends StatefulWidget {
-  const AppInitializerV2({super.key});
-
-  @override
-  State<AppInitializerV2> createState() => _AppInitializerV2State();
-}
-
-class _AppInitializerV2State extends State<AppInitializerV2> with TickerProviderStateMixin {
-  final Logger _logger = Logger();
-  late AnimationController _logoController;
-  late Animation<double> _logoScale;
-  bool _isInitializing = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _setupAnimation();
-    _initializeApp();
-  }
-
-  void _setupAnimation() {
-    _logoController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-
-    _logoScale = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
-    );
-
-    _logoController.forward();
-  }
-
-  Future<void> _initializeApp() async {
-    _logger.i('🚀 Inicializando ReflectApp V2...');
-
-    try {
-      // Pequeña pausa para mostrar splash
-      await Future.delayed(const Duration(milliseconds: 2000));
-
-      if (!mounted) return;
-
-      // Inicializar providers
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-
-      await Future.wait([
-        authProvider.initialize(),
-        themeProvider.initialize(),
-      ]);
-
-      _logger.i('✅ Providers inicializados correctamente');
-
-      if (!mounted) return;
-
-      // Navegar según estado de autenticación
-      if (authProvider.isLoggedIn) {
-        _logger.i('👤 Usuario logueado, navegando a home');
-        Navigator.pushReplacementNamed(context, '/home');
-      } else {
-        _logger.i('🔑 Usuario no logueado, navegando a login');
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-
-    } catch (e) {
-      _logger.e('❌ Error en inicialización: $e');
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/login');
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _logoController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildLoadingScreen() {
     return Scaffold(
+      backgroundColor: ModernColors.darkPrimary,
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -182,76 +141,112 @@ class _AppInitializerV2State extends State<AppInitializerV2> with TickerProvider
             colors: ModernColors.primaryGradient,
           ),
         ),
-        child: Center(
-          child: ScaleTransition(
-            scale: _logoScale,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo principal
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.3),
-                        blurRadius: 30,
-                        spreadRadius: 10,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.self_improvement,
-                    color: Colors.white,
-                    size: 60,
+        child: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.psychology,
+                size: 80,
+                color: Colors.white,
+              ),
+              SizedBox(height: 24),
+              Text(
+                'Reflect',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Tu Compañero de Bienestar',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+              SizedBox(height: 48),
+              CircularProgressIndicator(
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                strokeWidth: 3,
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Inicializando...',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorScreen(BuildContext context, String? routeName) {
+    return Scaffold(
+      backgroundColor: ModernColors.darkPrimary,
+      appBar: AppBar(
+        title: const Text('Error'),
+        backgroundColor: ModernColors.darkPrimary,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 80,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Ruta no encontrada',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                routeName != null
+                    ? 'La ruta "$routeName" no existe'
+                    : 'La página solicitada no se encontró',
+                style: const TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pushNamedAndRemoveUntil(
+                    context,
+                    '/home',
+                        (route) => false,
+                  );
+                },
+                icon: const Icon(Icons.home),
+                label: const Text('Ir al Inicio'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: ModernColors.accentBlue,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
                   ),
                 ),
-
-                const SizedBox(height: ModernSpacing.xl),
-
-                // Título
-                const Text(
-                  'ReflectApp',
-                  style: TextStyle(
-                    fontSize: 42,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-
-                const SizedBox(height: ModernSpacing.sm),
-
-                // Subtítulo
-                Text(
-                  'Tu espacio de reflexión',
-                  style: TextStyle(
-                    fontSize: 18,
-                    color: Colors.white.withValues(alpha: 0.8),
-                  ),
-                ),
-
-                const SizedBox(height: ModernSpacing.xxl),
-
-                // Indicador de carga
-                CircularProgressIndicator(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  strokeWidth: 2,
-                ),
-
-                const SizedBox(height: ModernSpacing.lg),
-
-                Text(
-                  'Inicializando...',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
