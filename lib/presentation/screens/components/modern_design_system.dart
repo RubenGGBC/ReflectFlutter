@@ -1,49 +1,56 @@
+// ============================================================================
 // lib/presentation/screens/components/modern_design_system.dart
+// VERSIÓN COMPLETA CORREGIDA CON TODAS LAS PROPIEDADES FALTANTES
+// ============================================================================
 
 import 'package:flutter/material.dart';
 
 // ============================================================================
-// 🎨 COLORES MODERNOS - VERSIÓN CORREGIDA Y AMPLIADA
+// 🎨 COLORES MODERNOS - VERSIÓN COMPLETA
 // ============================================================================
 
 class ModernColors {
-  // Gradientes principales
-  static const Color accentPurple = Color(0xFF764ba2); // ✅ AGREGADO: Color faltante
-
-  // Agregar estas líneas dentro de la clase ModernColors:
+  // ✅ COLORES PRINCIPALES
   static const Color accentBlue = Color(0xFF3B82F6);
-  static const Color surfaceDark = Color(0xFF141B2D);
-  static const List<Color> primaryGradient = [Color(0xFF667eea), Color(0xFF764ba2)];
-  static const List<Color> positiveGradient = [Color(0xFF11998e), Color(0xFF38ef7d)];
-  static const List<Color> negativeGradient = [Color(0xFFff6b6b), Color(0xFFfeca57)];
-  static const List<Color> neutralGradient = [Color(0xFF2c3e50), Color(0xFF3498db)];
+  static const Color accentPurple = Color(0xFF764ba2);
+  static const Color accentGreen = Color(0xFF10B981);
+  static const Color accentOrange = Color(0xFFF97316);
 
-  // ✅ NUEVO: Gradientes añadidos para warning y error
-  static const List<Color> warningGradient = [Color(0xFFfeca57), Color(0xFFff9f43)];
-  static const List<Color> errorGradient = [Color(0xFFff6b6b), Color(0xFFee5253)];
-
-
-  // Surfaces con glassmorphism
-  static const Color glassSurface = Color(0x1AFFFFFF);
-  static const Color glassSecondary = Color(0x0DFFFFFF);
-
-  // Backgrounds
+  // ✅ BACKGROUNDS
   static const Color darkPrimary = Color(0xFF0a0e27);
   static const Color darkSecondary = Color(0xFF2d1b69);
   static const Color darkAccent = Color(0xFF11998e);
+  static const Color surfaceDark = Color(0xFF141B2D);
 
-  // Text colors
+  // ✅ GLASS Y SURFACES
+  static const Color glassPrimary = Color(0x1AFFFFFF);
+  static const Color glassSecondary = Color(0x0DFFFFFF);
+  static const Color glassSurface = Color(0x1AFFFFFF);
+
+  // ✅ BORDERS
+  static const Color borderPrimary = Color(0x33FFFFFF);
+  static const Color borderSecondary = Color(0x1AFFFFFF);
+
+  // ✅ TEXT COLORS
   static const Color textPrimary = Colors.white;
   static const Color textSecondary = Color(0xB3FFFFFF);
   static const Color textHint = Color(0x66FFFFFF);
 
-  // Status colors
+  // ✅ STATUS COLORS
   static const Color success = Color(0xFF10B981);
   static const Color warning = Color(0xFFF59E0B);
   static const Color error = Color(0xFFEF4444);
   static const Color info = Color(0xFF3B82F6);
 
-  // Category colors
+  // ✅ GRADIENTES PRINCIPALES
+  static const List<Color> primaryGradient = [Color(0xFF667eea), Color(0xFF764ba2)];
+  static const List<Color> positiveGradient = [Color(0xFF11998e), Color(0xFF38ef7d)];
+  static const List<Color> negativeGradient = [Color(0xFFff6b6b), Color(0xFFfeca57)];
+  static const List<Color> neutralGradient = [Color(0xFF2c3e50), Color(0xFF3498db)];
+  static const List<Color> warningGradient = [Color(0xFFfeca57), Color(0xFFff9f43)];
+  static const List<Color> errorGradient = [Color(0xFFff6b6b), Color(0xFFee5253)];
+
+  // ✅ CATEGORÍAS
   static const Map<String, Color> categories = {
     'emocional': Color(0xFF667eea),
     'fisico': Color(0xFF11998e),
@@ -51,10 +58,11 @@ class ModernColors {
     'mental': Color(0xFF4ecdc4),
     'espiritual': Color(0xFF764ba2),
   };
-
 }
 
-// ... (El resto del archivo ModernSpacing, ModernTypography, etc., permanece igual)
+// ============================================================================
+// 📏 SPACING Y RADIOS
+// ============================================================================
 
 class ModernSpacing {
   static const double xs = 4.0;
@@ -70,6 +78,54 @@ class ModernSpacing {
   static const double radiusXLarge = 20.0;
   static const double radiusRound = 25.0;
 }
+
+// ============================================================================
+// 🎭 SOMBRAS MODERNAS
+// ============================================================================
+
+class ModernShadows {
+  static const List<BoxShadow> glass = [
+    BoxShadow(
+      color: Color(0x1A000000),
+      blurRadius: 20,
+      offset: Offset(0, 8),
+    ),
+    BoxShadow(
+      color: Color(0x0D000000),
+      blurRadius: 6,
+      offset: Offset(0, 2),
+    ),
+  ];
+
+  static const List<BoxShadow> card = [
+    BoxShadow(
+      color: Color(0x1A000000),
+      blurRadius: 15,
+      offset: Offset(0, 5),
+    ),
+  ];
+
+  static const List<BoxShadow> floating = [
+    BoxShadow(
+      color: Color(0x33000000),
+      blurRadius: 25,
+      offset: Offset(0, 15),
+    ),
+  ];
+
+  static const List<BoxShadow> inner = [
+    BoxShadow(
+      color: Color(0x1A000000),
+      blurRadius: 8,
+      offset: Offset(0, 2),
+      spreadRadius: -2,
+    ),
+  ];
+}
+
+// ============================================================================
+// 📝 TIPOGRAFÍA MODERNA
+// ============================================================================
 
 class ModernTypography {
   static const TextStyle heading1 = TextStyle(
@@ -88,6 +144,13 @@ class ModernTypography {
 
   static const TextStyle heading3 = TextStyle(
     fontSize: 20,
+    fontWeight: FontWeight.w600,
+    color: ModernColors.textPrimary,
+    height: 1.4,
+  );
+
+  static const TextStyle heading4 = TextStyle(
+    fontSize: 18,
     fontWeight: FontWeight.w600,
     color: ModernColors.textPrimary,
     height: 1.4,
@@ -127,6 +190,53 @@ class ModernTypography {
   );
 }
 
+// ============================================================================
+// 🎬 ANIMACIONES COMPLETAS
+// ============================================================================
+
+class ModernAnimations {
+  // ✅ DURACIONES
+  static const Duration fast = Duration(milliseconds: 200);
+  static const Duration medium = Duration(milliseconds: 300);
+  static const Duration slow = Duration(milliseconds: 500);
+  static const Duration ultraSlow = Duration(milliseconds: 800);
+
+  // ✅ CURVAS
+  static const Curve easeInOut = Curves.easeInOut;
+  static const Curve elasticOut = Curves.elasticOut;
+  static const Curve bounceOut = Curves.bounceOut;
+  static const Curve smoothOut = Curves.easeOutCubic;
+  static const Curve smoothIn = Curves.easeInCubic;
+  static const Curve spring = Curves.elasticOut;
+
+  // ✅ TRANSICIONES PREDEFINIDAS
+  static SlideTransition slideFromBottom(Widget child, Animation<double> animation) {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: animation, curve: smoothOut)),
+      child: child,
+    );
+  }
+
+  static SlideTransition slideFromRight(Widget child, Animation<double> animation) {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(1, 0),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: animation, curve: smoothOut)),
+      child: child,
+    );
+  }
+
+  static FadeTransition fadeIn(Widget child, Animation<double> animation) {
+    return FadeTransition(
+      opacity: CurvedAnimation(parent: animation, curve: easeInOut),
+      child: child,
+    );
+  }
+}
 
 // ============================================================================
 // 🎭 COMPONENTES MODERNOS REUTILIZABLES
@@ -167,19 +277,13 @@ class ModernCard extends StatelessWidget {
         gradient: gradient != null
             ? LinearGradient(colors: gradient!)
             : null,
-        color: backgroundColor ?? (gradient == null ? ModernColors.glassSurface : null),
+        color: backgroundColor ?? (gradient == null ? ModernColors.glassPrimary : null),
         borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: ModernColors.borderPrimary,
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        boxShadow: blur ? ModernShadows.glass : null,
       ),
       child: child,
     );
@@ -230,11 +334,11 @@ class _ModernButtonState extends State<ModernButton>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 150),
+      duration: ModernAnimations.fast,
       vsync: this,
     );
     _scaleAnimation = Tween<double>(begin: 1.0, end: 0.95).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+      CurvedAnimation(parent: _controller, curve: ModernAnimations.easeInOut),
     );
   }
 
@@ -265,12 +369,12 @@ class _ModernButtonState extends State<ModernButton>
               colors: widget.gradient ?? ModernColors.primaryGradient,
             )
                 : null,
-            color: widget.isPrimary ? null : Colors.white.withOpacity(0.1),
+            color: widget.isPrimary ? null : ModernColors.glassPrimary,
             borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
             border: Border.all(
               color: widget.isPrimary
                   ? Colors.transparent
-                  : Colors.white.withOpacity(0.2),
+                  : ModernColors.borderPrimary,
             ),
             boxShadow: widget.isPrimary ? [
               BoxShadow(
@@ -324,7 +428,7 @@ class ModernTextField extends StatefulWidget {
   final IconData? suffixIcon;
   final VoidCallback? onSuffixTap;
   final String? Function(String?)? validator;
-  final void Function(String)? onFieldSubmitted; // FIX: Added this parameter
+  final void Function(String)? onFieldSubmitted;
   final int maxLines;
   final int? maxLength;
   final TextInputType keyboardType;
@@ -339,7 +443,7 @@ class ModernTextField extends StatefulWidget {
     this.suffixIcon,
     this.onSuffixTap,
     this.validator,
-    this.onFieldSubmitted, // FIX: Added this to constructor
+    this.onFieldSubmitted,
     this.maxLines = 1,
     this.maxLength,
     this.keyboardType = TextInputType.text,
@@ -374,7 +478,7 @@ class _ModernTextFieldState extends State<ModernTextField> {
             controller: widget.controller,
             obscureText: widget.obscureText,
             validator: widget.validator,
-            onFieldSubmitted: widget.onFieldSubmitted, // FIX: Passed parameter to TextFormField
+            onFieldSubmitted: widget.onFieldSubmitted,
             maxLines: widget.maxLines,
             maxLength: widget.maxLength,
             keyboardType: widget.keyboardType,
@@ -401,7 +505,7 @@ class _ModernTextFieldState extends State<ModernTextField> {
               )
                   : null,
               filled: true,
-              fillColor: ModernColors.glassSurface,
+              fillColor: ModernColors.glassPrimary,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
                 borderSide: BorderSide.none,
@@ -432,8 +536,6 @@ class _ModernTextFieldState extends State<ModernTextField> {
   }
 }
 
-// ... Rest of the file remains the same ...
-
 class ModernMoodSelector extends StatefulWidget {
   final int selectedMood;
   final ValueChanged<int> onMoodChanged;
@@ -455,18 +557,18 @@ class _ModernMoodSelectorState extends State<ModernMoodSelector>
   late AnimationController _controller;
 
   final List<Map<String, dynamic>> moods = [
-    {'emoji': '😢', 'label': 'Muy mal', 'color': const Color(0xFFEF4444)},
-    {'emoji': '😔', 'label': 'Mal', 'color': const Color(0xFFF97316)},
-    {'emoji': '😐', 'label': 'Regular', 'color': const Color(0xFFF59E0B)},
-    {'emoji': '🙂', 'label': 'Bien', 'color': const Color(0xFF10B981)},
-    {'emoji': '😊', 'label': 'Muy bien', 'color': const Color(0xFF059669)},
+    {'emoji': '😢', 'label': 'Muy mal', 'color': ModernColors.error},
+    {'emoji': '😔', 'label': 'Mal', 'color': ModernColors.warning},
+    {'emoji': '😐', 'label': 'Regular', 'color': ModernColors.info},
+    {'emoji': '🙂', 'label': 'Bien', 'color': ModernColors.success},
+    {'emoji': '😊', 'label': 'Muy bien', 'color': ModernColors.accentGreen},
   ];
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(milliseconds: 300),
+      duration: ModernAnimations.medium,
       vsync: this,
     );
   }
@@ -504,7 +606,7 @@ class _ModernMoodSelectorState extends State<ModernMoodSelector>
                   widget.onMoodChanged(index + 1);
                 },
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
+                  duration: ModernAnimations.fast,
                   padding: const EdgeInsets.all(ModernSpacing.md),
                   decoration: BoxDecoration(
                     color: isSelected
@@ -514,14 +616,14 @@ class _ModernMoodSelectorState extends State<ModernMoodSelector>
                     border: Border.all(
                       color: isSelected
                           ? mood['color']
-                          : Colors.white.withOpacity(0.1),
+                          : ModernColors.borderPrimary,
                       width: 2,
                     ),
                   ),
                   child: Column(
                     children: [
                       AnimatedDefaultTextStyle(
-                        duration: const Duration(milliseconds: 200),
+                        duration: ModernAnimations.fast,
                         style: TextStyle(
                           fontSize: isSelected ? 32 : 24,
                         ),
@@ -610,7 +712,7 @@ class ModernProgressCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(ModernSpacing.radiusSmall),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: Colors.white.withOpacity(0.1),
+              backgroundColor: ModernColors.borderSecondary,
               valueColor: AlwaysStoppedAnimation<Color>(color),
               minHeight: 6,
             ),
@@ -619,20 +721,6 @@ class ModernProgressCard extends StatelessWidget {
       ),
     );
   }
-}
-
-// ============================================================================
-// 🎬 ANIMACIONES PREDEFINIDAS
-// ============================================================================
-
-class ModernAnimations {
-  static const Duration fast = Duration(milliseconds: 200);
-  static const Duration medium = Duration(milliseconds: 300);
-  static const Duration slow = Duration(milliseconds: 500);
-
-  static const Curve easeInOut = Curves.easeInOut;
-  static const Curve elasticOut = Curves.elasticOut;
-  static const Curve bounceOut = Curves.bounceOut;
 }
 
 // ============================================================================
@@ -674,7 +762,7 @@ class ModernTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: ModernColors.glassSurface,
+        fillColor: ModernColors.glassPrimary,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
           borderSide: BorderSide.none,
@@ -686,7 +774,7 @@ class ModernTheme {
       ),
       cardTheme: CardThemeData(
         elevation: 0,
-        color: ModernColors.glassSurface,
+        color: ModernColors.glassPrimary,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
         ),

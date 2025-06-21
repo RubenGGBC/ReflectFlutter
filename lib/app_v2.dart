@@ -23,7 +23,7 @@ import 'presentation/screens/v2/calendar_screen_v2.dart';
 
 // Componentes modernos
 import 'presentation/screens/components/modern_design_system.dart';
-import 'presentation/screens/components/modern_navigation.dart'; // ✅ RESTAURADO: Necesario para navegación
+import 'presentation/screens/components/modern_navigation.dart';
 
 // Services
 import 'data/services/database_service.dart';
@@ -38,11 +38,12 @@ class ReflectAppV2 extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        // ✅ CORREGIDO: Quitar ..initialize() para evitar setState durante build
         ChangeNotifierProvider<AuthProvider>(
           create: (_) => di.sl<AuthProvider>(),
         ),
         ChangeNotifierProvider<ThemeProvider>(
+          // CORRECCIÓN: Se elimina la llamada a '.loadTheme()' que ya no existe.
+          // La inicialización se maneja en AppV2Initializer.
           create: (_) => di.sl<ThemeProvider>(),
         ),
         ChangeNotifierProvider<InteractiveMomentsProvider>(
@@ -54,7 +55,6 @@ class ReflectAppV2 extends StatelessWidget {
         ChangeNotifierProvider<EnhancedAnalyticsProvider>(
           create: (_) => di.sl<EnhancedAnalyticsProvider>(),
         ),
-        // ✅ NUEVO: Agregar DatabaseService como provider también
         Provider<DatabaseService>(
           create: (_) => di.sl<DatabaseService>(),
         ),
@@ -65,49 +65,24 @@ class ReflectAppV2 extends StatelessWidget {
             title: 'Reflect - Tu Compañero de Bienestar',
             debugShowCheckedModeBanner: false,
 
-            // Tema configurado
-            theme: ThemeData(
-              brightness: Brightness.dark,
-              primarySwatch: Colors.blue,
-              scaffoldBackgroundColor: ModernColors.darkPrimary,
-              appBarTheme: const AppBarTheme(
-                backgroundColor: ModernColors.darkPrimary,
-                elevation: 0,
-                iconTheme: IconThemeData(color: Colors.white),
-                titleTextStyle: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              elevatedButtonTheme: ElevatedButtonThemeData(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: ModernColors.accentBlue,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
+            // CORRECCIÓN: La propiedad se llama 'currentThemeData', no 'currentTheme'.
+            theme: themeProvider.currentThemeData,
 
-            // Página inicial
             home: const AppV2Initializer(),
 
-            // Rutas V2 corregidas
             routes: {
               '/login_v2': (context) => const LoginScreenV2(),
-              '/login': (context) => const LoginScreenV2(), // ✅ AGREGADO: Alias para compatibilidad
-              '/home_v2': (context) => const HomeScreenV2(),
-              '/home': (context) => const HomeScreenV2(), // ✅ AGREGADO: Alias para compatibilidad
+              '/login': (context) => const LoginScreenV2(),
+              // CORRECCIÓN: La ruta home debe apuntar al Wrapper de navegación.
+              '/home_v2': (context) => const ModernNavigationWrapper(),
+              '/home': (context) => const ModernNavigationWrapper(),
               '/moments_v2': (context) => const InteractiveMomentsScreenV2(),
-              '/moments': (context) => const InteractiveMomentsScreenV2(), // ✅ AGREGADO: Alias
+              '/moments': (context) => const InteractiveMomentsScreenV2(),
               '/review_v2': (context) => const DailyReviewScreenV2(),
               '/profile_v2': (context) => const ProfileScreenV2(),
               '/calendar_v2': (context) => const CalendarScreenV2(),
             },
 
-            // Manejo de rutas desconocidas
             onUnknownRoute: (settings) {
               return MaterialPageRoute(
                 builder: (context) => const LoginScreenV2(),
@@ -120,7 +95,6 @@ class ReflectAppV2 extends StatelessWidget {
   }
 }
 
-/// Widget que maneja la inicialización de App V2
 class AppV2Initializer extends StatefulWidget {
   const AppV2Initializer({super.key});
 
@@ -130,65 +104,36 @@ class AppV2Initializer extends StatefulWidget {
 
 class _AppV2InitializerState extends State<AppV2Initializer> {
   final Logger _logger = Logger();
-  bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
-    _initializeAppV2();
-  }
-
-  Future<void> _initializeAppV2() async {
-    _logger.i('🚀 Inicializando ReflectApp V2...');
-
-    try {
-      // ✅ CORREGIDO: Esperar a que el context esté disponible antes de inicializar
-      await Future.delayed(const Duration(milliseconds: 100));
-
-      if (!mounted) return;
-
-      // Inicializar providers de forma segura
-      final authProvider = context.read<AuthProvider>();
-      final themeProvider = context.read<ThemeProvider>();
-
-      await Future.wait([
-        authProvider.initialize(),
-        themeProvider.initialize(),
-      ]);
-
-      _logger.i('✅ ReflectApp V2 inicializada correctamente');
-
-      // Pequeña pausa para mostrar splash
-      await Future.delayed(const Duration(milliseconds: 500));
-
-    } catch (e) {
-      _logger.e('❌ Error en inicialización V2: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isInitializing = false;
-        });
-      }
-    }
+    // Se llama al método de inicialización aquí
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // CORRECCIÓN: El método se llama 'initialize()', no 'checkInitialAuthStatus()'.
+      Provider.of<AuthProvider>(context, listen: false).initialize();
+      Provider.of<ThemeProvider>(context, listen: false).initialize();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isInitializing) {
-      return const ModernSplashScreen();
-    }
-
     return Consumer<AuthProvider>(
       builder: (context, authProvider, child) {
+        // Mientras el provider no esté inicializado, muestra el splash.
         if (!authProvider.isInitialized) {
           return const ModernSplashScreen();
         }
 
+        // Una vez inicializado, decide a dónde navegar.
         if (authProvider.isLoggedIn) {
-          _logger.d('👤 Usuario logueado V2: ${authProvider.currentUser?.name}');
-          return const HomeScreenV2();
+          // CORRECCIÓN: Se cambia el logger de 'd' (debug) a 'i' (info) para evitar el error del analizador.
+          _logger.i('👤 Usuario logueado V2: ${authProvider.currentUser?.name}');
+          // CORRECCIÓN: Carga el wrapper de navegación que contiene la HomeScreen.
+          return const ModernNavigationWrapper();
         } else {
-          _logger.d('🔑 Usuario no logueado V2, mostrando login');
+          // CORRECCIÓN: Se cambia el logger de 'd' a 'i'.
+          _logger.i('🔑 Usuario no logueado V2, mostrando login');
           return const LoginScreenV2();
         }
       },
@@ -196,7 +141,6 @@ class _AppV2InitializerState extends State<AppV2Initializer> {
   }
 }
 
-/// Pantalla de splash moderna para V2
 class ModernSplashScreen extends StatelessWidget {
   const ModernSplashScreen({super.key});
 
@@ -208,7 +152,6 @@ class ModernSplashScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Logo animado
             Container(
               width: 120,
               height: 120,
@@ -219,7 +162,7 @@ class ModernSplashScreen extends StatelessWidget {
                   end: Alignment.bottomRight,
                   colors: [
                     ModernColors.accentBlue,
-                    ModernColors.accentPurple, // ✅ CORREGIDO: Ahora este color existe
+                    ModernColors.accentPurple,
                   ],
                 ),
                 boxShadow: [
@@ -236,10 +179,7 @@ class ModernSplashScreen extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-
             const SizedBox(height: 32),
-
-            // Título
             const Text(
               'ReflectApp V2',
               style: TextStyle(
@@ -248,10 +188,7 @@ class ModernSplashScreen extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-
             const SizedBox(height: 12),
-
-            // Subtítulo
             Text(
               'Tu compañero de bienestar',
               style: TextStyle(
@@ -259,10 +196,7 @@ class ModernSplashScreen extends StatelessWidget {
                 color: Colors.white.withOpacity(0.7),
               ),
             ),
-
             const SizedBox(height: 48),
-
-            // Loading indicator
             SizedBox(
               width: 40,
               height: 40,
