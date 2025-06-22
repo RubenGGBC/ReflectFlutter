@@ -1,5 +1,5 @@
 // ============================================================================
-// presentation/screens/v2/daily_review_screen_v2.dart - ACTUALIZADA PARA PROVIDERS OPTIMIZADOS
+// presentation/screens/v2/daily_review_screen_v2.dart - CÓDIGO COMPLETO Y CORREGIDO
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -96,46 +96,45 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
   }
 
   Future<void> _loadExistingEntry() async {
-    final authProvider = context.read<OptimizedAuthProvider>();
-    final entriesProvider = context.read<OptimizedDailyEntriesProvider>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final authProvider = context.read<OptimizedAuthProvider>();
+      final entriesProvider = context.read<OptimizedDailyEntriesProvider>();
+      final user = authProvider.currentUser;
+      if (user == null) return;
 
-    final user = authProvider.currentUser;
-    if (user == null) return;
+      final todayEntry = entriesProvider.getEntryByDate(DateTime.now());
 
-    await entriesProvider.loadEntries(user.id, limitDays: 1);
-    final todayEntry = entriesProvider.todayEntry;
-
-    if (todayEntry != null && mounted) {
-      // Cargar datos existentes en el formulario
-      _reflectionController.text = todayEntry.freeReflection;
-      _gratitudeController.text = todayEntry.gratitudeItems ?? '';
-      _positiveTagsController.text = todayEntry.positiveTags.join(', ');
-      _negativeTagsController.text = todayEntry.negativeTags.join(', ');
-
-      setState(() {
-        _moodScore = todayEntry.moodScore ?? 5;
-        _energyLevel = todayEntry.energyLevel ?? 5;
-        _stressLevel = todayEntry.stressLevel ?? 5;
-        _sleepQuality = todayEntry.sleepQuality ?? 5;
-        _anxietyLevel = todayEntry.anxietyLevel ?? 5;
-        _motivationLevel = todayEntry.motivationLevel ?? 5;
-        _socialInteraction = todayEntry.socialInteraction ?? 5;
-        _physicalActivity = todayEntry.physicalActivity ?? 5;
-        _workProductivity = todayEntry.workProductivity ?? 5;
-        _sleepHours = todayEntry.sleepHours ?? 8.0;
-        _waterIntake = todayEntry.waterIntake ?? 8;
-        _meditationMinutes = todayEntry.meditationMinutes ?? 0;
-        _exerciseMinutes = todayEntry.exerciseMinutes ?? 0;
-        _screenTimeHours = todayEntry.screenTimeHours ?? 4.0;
-        _weatherMoodImpact = todayEntry.weatherMoodImpact ?? 0;
-        _socialBattery = todayEntry.socialBattery ?? 5;
-        _creativeEnergy = todayEntry.creativeEnergy ?? 5;
-        _emotionalStability = todayEntry.emotionalStability ?? 5;
-        _focusLevel = todayEntry.focusLevel ?? 5;
-        _lifeSatisfaction = todayEntry.lifeSatisfaction ?? 5;
-        _worthIt = todayEntry.worthIt;
-      });
-    }
+      if (todayEntry != null && mounted) {
+        setState(() {
+          _reflectionController.text = todayEntry.freeReflection;
+          _gratitudeController.text = todayEntry.gratitudeItems ?? '';
+          _positiveTagsController.text = todayEntry.positiveTags.join(', ');
+          _negativeTagsController.text = todayEntry.negativeTags.join(', ');
+          _moodScore = todayEntry.moodScore ?? 5;
+          _energyLevel = todayEntry.energyLevel ?? 5;
+          _stressLevel = todayEntry.stressLevel ?? 5;
+          _sleepQuality = todayEntry.sleepQuality ?? 5;
+          _anxietyLevel = todayEntry.anxietyLevel ?? 5;
+          _motivationLevel = todayEntry.motivationLevel ?? 5;
+          _socialInteraction = todayEntry.socialInteraction ?? 5;
+          _physicalActivity = todayEntry.physicalActivity ?? 5;
+          _workProductivity = todayEntry.workProductivity ?? 5;
+          _sleepHours = todayEntry.sleepHours ?? 8.0;
+          _waterIntake = todayEntry.waterIntake ?? 8;
+          _meditationMinutes = todayEntry.meditationMinutes ?? 0;
+          _exerciseMinutes = todayEntry.exerciseMinutes ?? 0;
+          _screenTimeHours = todayEntry.screenTimeHours ?? 4.0;
+          _weatherMoodImpact = todayEntry.weatherMoodImpact ?? 0;
+          _socialBattery = todayEntry.socialBattery ?? 5;
+          _creativeEnergy = todayEntry.creativeEnergy ?? 5;
+          _emotionalStability = todayEntry.emotionalStability ?? 5;
+          _focusLevel = todayEntry.focusLevel ?? 5;
+          _lifeSatisfaction = todayEntry.lifeSatisfaction ?? 5;
+          _worthIt = todayEntry.worthIt;
+        });
+      }
+    });
   }
 
   @override
@@ -220,9 +219,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               ),
             ],
           ),
-
           const SizedBox(height: 12),
-
           Text(
             '$dayName, ${today.day} de $monthName',
             style: const TextStyle(
@@ -240,15 +237,12 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       padding: const EdgeInsets.all(20),
       child: Row(
         children: List.generate(4, (index) {
-          final isActive = index <= _currentStep;
-          final isCompleted = index < _currentStep;
-
           return Expanded(
             child: Container(
               height: 4,
               margin: EdgeInsets.only(right: index < 3 ? 8 : 0),
               decoration: BoxDecoration(
-                color: isActive
+                color: index <= _currentStep
                     ? ModernColors.primaryGradient.first
                     : Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(2),
@@ -270,9 +264,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             '✍️ Reflexión Personal',
             'Comparte cómo ha sido tu día',
           ),
-
           const SizedBox(height: 24),
-
           _buildSectionCard(
             title: 'Reflexión libre',
             child: TextField(
@@ -291,9 +283,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               ),
             ),
           ),
-
           const SizedBox(height: 20),
-
           _buildSectionCard(
             title: 'Aspectos positivos',
             child: TextField(
@@ -311,9 +301,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               ),
             ),
           ),
-
           const SizedBox(height: 20),
-
           _buildSectionCard(
             title: 'Desafíos o aspectos a mejorar',
             child: TextField(
@@ -331,9 +319,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               ),
             ),
           ),
-
           const SizedBox(height: 20),
-
           _buildSectionCard(
             title: 'Gratitud',
             child: TextField(
@@ -367,40 +353,15 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             '💖 Bienestar Emocional',
             'Evalúa cómo te has sentido hoy',
           ),
-
           const SizedBox(height: 24),
-
-          _buildSliderCard('Estado de ánimo general', _moodScore, '😔', '😊', (value) {
-            setState(() => _moodScore = value);
-          }),
-
-          _buildSliderCard('Nivel de energía', _energyLevel, '🔋', '⚡', (value) {
-            setState(() => _energyLevel = value);
-          }),
-
-          _buildSliderCard('Nivel de estrés', _stressLevel, '😌', '😰', (value) {
-            setState(() => _stressLevel = value);
-          }),
-
-          _buildSliderCard('Nivel de ansiedad', _anxietyLevel, '😊', '😟', (value) {
-            setState(() => _anxietyLevel = value);
-          }),
-
-          _buildSliderCard('Motivación', _motivationLevel, '😴', '🔥', (value) {
-            setState(() => _motivationLevel = value);
-          }),
-
-          _buildSliderCard('Estabilidad emocional', _emotionalStability, '🌪️', '🧘', (value) {
-            setState(() => _emotionalStability = value);
-          }),
-
-          _buildSliderCard('Nivel de enfoque', _focusLevel, '🤯', '🎯', (value) {
-            setState(() => _focusLevel = value);
-          }),
-
-          _buildSliderCard('Satisfacción con la vida', _lifeSatisfaction, '😞', '🌟', (value) {
-            setState(() => _lifeSatisfaction = value);
-          }),
+          _buildSliderCard('Estado de ánimo general', _moodScore, '😔', '😊', (value) { setState(() => _moodScore = value); }),
+          _buildSliderCard('Nivel de energía', _energyLevel, '🔋', '⚡', (value) { setState(() => _energyLevel = value); }),
+          _buildSliderCard('Nivel de estrés', _stressLevel, '😌', '😰', (value) { setState(() => _stressLevel = value); }),
+          _buildSliderCard('Nivel de ansiedad', _anxietyLevel, '😊', '😟', (value) { setState(() => _anxietyLevel = value); }),
+          _buildSliderCard('Motivación', _motivationLevel, '😴', '🔥', (value) { setState(() => _motivationLevel = value); }),
+          _buildSliderCard('Estabilidad emocional', _emotionalStability, '🌪️', '🧘', (value) { setState(() => _emotionalStability = value); }),
+          _buildSliderCard('Nivel de enfoque', _focusLevel, '🤯', '🎯', (value) { setState(() => _focusLevel = value); }),
+          _buildSliderCard('Satisfacción con la vida', _lifeSatisfaction, '😞', '🌟', (value) { setState(() => _lifeSatisfaction = value); }),
         ],
       ),
     );
@@ -416,49 +377,37 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             '🏃‍♀️ Estilo de Vida',
             'Registra tus actividades del día',
           ),
-
           const SizedBox(height: 24),
-
           _buildSliderCard('Calidad del sueño', _sleepQuality, '😴', '✨', (value) {
             setState(() => _sleepQuality = value);
           }),
-
           _buildNumberCard('Horas de sueño', _sleepHours, 'horas', 0, 12, (value) {
             setState(() => _sleepHours = value);
           }),
-
           _buildSliderCard('Interacción social', _socialInteraction, '🏠', '👥', (value) {
             setState(() => _socialInteraction = value);
           }),
-
           _buildSliderCard('Actividad física', _physicalActivity, '🛋️', '🏃‍♀️', (value) {
             setState(() => _physicalActivity = value);
           }),
-
           _buildSliderCard('Productividad laboral', _workProductivity, '😴', '🚀', (value) {
             setState(() => _workProductivity = value);
           }),
-
-          _buildNumberCard('Vasos de agua', _waterIntake as double, 'vasos', 0, 20, (value) {
+          _buildNumberCard('Vasos de agua', _waterIntake.toDouble(), 'vasos', 0, 20, (value) {
             setState(() => _waterIntake = value.round());
           }),
-
-          _buildNumberCard('Minutos de meditación', _meditationMinutes as double, 'min', 0, 120, (value) {
+          _buildNumberCard('Minutos de meditación', _meditationMinutes.toDouble(), 'min', 0, 120, (value) {
             setState(() => _meditationMinutes = value.round());
           }),
-
-          _buildNumberCard('Minutos de ejercicio', _exerciseMinutes as double, 'min', 0, 180, (value) {
+          _buildNumberCard('Minutos de ejercicio', _exerciseMinutes.toDouble(), 'min', 0, 180, (value) {
             setState(() => _exerciseMinutes = value.round());
           }),
-
           _buildNumberCard('Horas de pantalla', _screenTimeHours, 'horas', 0, 16, (value) {
             setState(() => _screenTimeHours = value);
           }),
-
           _buildSliderCard('Batería social', _socialBattery, '🔋', '⚡', (value) {
             setState(() => _socialBattery = value);
           }),
-
           _buildSliderCard('Energía creativa', _creativeEnergy, '🎨', '🌟', (value) {
             setState(() => _creativeEnergy = value);
           }),
@@ -477,9 +426,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             '🎯 Reflexión Final',
             'Evalúa tu día en general',
           ),
-
           const SizedBox(height: 24),
-
           _buildSectionCard(
             title: '¿Ha valido la pena este día?',
             child: Column(
@@ -487,33 +434,21 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Expanded(
-                      child: _buildWorthItButton(true, '👍 Sí', 'Ha sido un buen día'),
-                    ),
+                    Expanded(child: _buildWorthItButton(true, '👍 Sí', 'Ha sido un buen día')),
                     const SizedBox(width: 12),
-                    Expanded(
-                      child: _buildWorthItButton(false, '👎 No', 'Podría haber sido mejor'),
-                    ),
+                    Expanded(child: _buildWorthItButton(false, '👎 No', 'Podría haber sido mejor')),
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (_worthIt == null)
-                  TextButton(
-                    onPressed: () => setState(() => _worthIt = null),
-                    child: const Text('Prefiero no responder'),
-                  ),
+                if (_worthIt == null) TextButton(onPressed: () => setState(() => _worthIt = null), child: const Text('Prefiero no responder')),
               ],
             ),
           ),
-
           const SizedBox(height: 20),
-
-          _buildSliderCard('Impacto del clima en el ánimo', _weatherMoodImpact, '☔', '☀️', (value) {
+          _buildSliderCard('Impacto del clima en el ánimo', _weatherMoodImpact + 5, '☔', '☀️', (value) {
             setState(() => _weatherMoodImpact = value - 5);
-          }, min: -5, max: 5, initialValue: _weatherMoodImpact + 5),
-
+          }, min: 0, max: 10),
           const SizedBox(height: 24),
-
           _buildSummaryCard(),
         ],
       ),
@@ -524,22 +459,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        Text(title, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
-        Text(
-          subtitle,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 16,
-          ),
-        ),
+        Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 16)),
       ],
     );
   }
@@ -551,22 +473,12 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           child,
         ],
@@ -574,28 +486,14 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     );
   }
 
-  Widget _buildSliderCard(
-      String title,
-      int value,
-      String lowEmoji,
-      String highEmoji,
-      Function(int) onChanged, {
-        int min = 1,
-        int max = 10,
-        int? initialValue,
-      }) {
-    final displayValue = initialValue ?? value;
-
+  Widget _buildSliderCard(String title, int value, String lowEmoji, String highEmoji, Function(int) onChanged, {int min = 1, int max = 10}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -603,40 +501,21 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: ModernColors.primaryGradient.first.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  displayValue.toString(),
-                  style: TextStyle(
-                    color: ModernColors.primaryGradient.first,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                decoration: BoxDecoration(color: ModernColors.primaryGradient.first.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                child: Text(value.toString(), style: TextStyle(color: ModernColors.primaryGradient.first, fontSize: 14, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
           Row(
             children: [
               Text(lowEmoji, style: const TextStyle(fontSize: 20)),
               Expanded(
                 child: Slider(
-                  value: displayValue.toDouble(),
+                  value: value.toDouble(),
                   min: min.toDouble(),
                   max: max.toDouble(),
                   divisions: max - min,
@@ -653,24 +532,14 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     );
   }
 
-  Widget _buildNumberCard(
-      String title,
-      double value,
-      String unit,
-      double min,
-      double max,
-      Function(double) onChanged
-      ) {
+  Widget _buildNumberCard(String title, double value, String unit, double min, double max, Function(double) onChanged) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.1),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -678,39 +547,20 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+              Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: ModernColors.primaryGradient.first.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '${value.toStringAsFixed(value == value.roundToDouble() ? 0 : 1)} $unit',
-                  style: TextStyle(
-                    color: ModernColors.primaryGradient.first,
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                decoration: BoxDecoration(color: ModernColors.primaryGradient.first.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                child: Text('${value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1)} $unit', style: TextStyle(color: ModernColors.primaryGradient.first, fontSize: 14, fontWeight: FontWeight.bold)),
               ),
             ],
           ),
-
           const SizedBox(height: 16),
-
           Slider(
             value: value,
             min: min,
             max: max,
-            divisions: ((max - min) * (unit == 'horas' ? 2 : 1)).round(),
+            divisions: ((max - min) * (unit == 'horas' ? 2 : 1)).round().clamp(1, 1000),
             activeColor: ModernColors.primaryGradient.first,
             inactiveColor: Colors.white.withOpacity(0.2),
             onChanged: onChanged,
@@ -722,42 +572,20 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   Widget _buildWorthItButton(bool value, String title, String description) {
     final isSelected = _worthIt == value;
-
     return GestureDetector(
       onTap: () => setState(() => _worthIt = value),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected
-              ? ModernColors.primaryGradient.first.withOpacity(0.2)
-              : Colors.white.withOpacity(0.05),
+          color: isSelected ? ModernColors.primaryGradient.first.withOpacity(0.2) : Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected
-                ? ModernColors.primaryGradient.first
-                : Colors.white.withOpacity(0.1),
-            width: 2,
-          ),
+          border: Border.all(color: isSelected ? ModernColors.primaryGradient.first : Colors.white.withOpacity(0.1), width: 2),
         ),
         child: Column(
           children: [
-            Text(
-              title,
-              style: TextStyle(
-                color: isSelected ? ModernColors.primaryGradient.first : Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+            Text(title, style: TextStyle(color: isSelected ? ModernColors.primaryGradient.first : Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
-            Text(
-              description,
-              style: TextStyle(
-                color: isSelected ? ModernColors.primaryGradient.first : Colors.white70,
-                fontSize: 12,
-              ),
-              textAlign: TextAlign.center,
-            ),
+            Text(description, style: TextStyle(color: isSelected ? ModernColors.primaryGradient.first : Colors.white70, fontSize: 12), textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -766,75 +594,33 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   Widget _buildSummaryCard() {
     final wellbeingScore = _calculateWellbeingScore();
-
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: ModernColors.primaryGradient.map((c) => c.withOpacity(0.2)).toList(),
-        ),
+        gradient: LinearGradient(colors: ModernColors.primaryGradient.map((c) => c.withOpacity(0.2)).toList()),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: ModernColors.primaryGradient.first.withOpacity(0.3),
-          width: 1,
-        ),
+        border: Border.all(color: ModernColors.primaryGradient.first.withOpacity(0.3), width: 1),
       ),
       child: Column(
         children: [
-          const Text(
-            'Resumen del Día',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-
+          const Text('Resumen del Día', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 16),
-
           Row(
             children: [
               Expanded(
                 child: Column(
                   children: [
-                    Text(
-                      wellbeingScore.toStringAsFixed(1),
-                      style: TextStyle(
-                        color: ModernColors.primaryGradient.first,
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Text(
-                      'Puntuación de\nBienestar',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+                    Text(wellbeingScore.toStringAsFixed(1), style: TextStyle(color: ModernColors.primaryGradient.first, fontSize: 32, fontWeight: FontWeight.bold)),
+                    const Text('Puntuación de\nBienestar', style: TextStyle(color: Colors.white70, fontSize: 12), textAlign: TextAlign.center),
                   ],
                 ),
               ),
-
               const SizedBox(width: 20),
-
               Expanded(
                 child: Column(
                   children: [
-                    Text(
-                      _getWellbeingEmoji(wellbeingScore),
-                      style: const TextStyle(fontSize: 32),
-                    ),
-                    Text(
-                      _getWellbeingLevel(wellbeingScore),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+                    Text(_getWellbeingEmoji(wellbeingScore), style: const TextStyle(fontSize: 32)),
+                    Text(_getWellbeingLevel(wellbeingScore), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
                   ],
                 ),
               ),
@@ -853,61 +639,22 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           if (_currentStep > 0)
             Expanded(
               child: ElevatedButton(
-                onPressed: () {
-                  _pageController.previousPage(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.1),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text(
-                  'Anterior',
-                  style: TextStyle(color: Colors.white),
-                ),
+                onPressed: () => _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.1), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                child: const Text('Anterior', style: TextStyle(color: Colors.white)),
               ),
             ),
-
           if (_currentStep > 0) const SizedBox(width: 16),
-
           Expanded(
-            flex: _currentStep == 0 ? 1 : 1,
+            flex: _currentStep == 0 ? 2 : 1,
             child: Consumer<OptimizedDailyEntriesProvider>(
               builder: (context, entriesProvider, child) {
                 return ElevatedButton(
-                  onPressed: _isLoading || entriesProvider.isLoading
-                      ? null
-                      : _currentStep < 3
-                      ? _nextStep
-                      : _saveEntry,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: ModernColors.primaryGradient.first,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
+                  onPressed: _isLoading || entriesProvider.isLoading ? null : (_currentStep < 3 ? _nextStep : _saveEntry),
+                  style: ElevatedButton.styleFrom(backgroundColor: ModernColors.primaryGradient.first, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                   child: _isLoading || entriesProvider.isLoading
-                      ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
-                      : Text(
-                    _currentStep < 3 ? 'Siguiente' : 'Guardar Reflexión',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text(_currentStep < 3 ? 'Siguiente' : 'Guardar Reflexión', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 );
               },
             ),
@@ -916,10 +663,6 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       ),
     );
   }
-
-  // ============================================================================
-  // LÓGICA DE NEGOCIO
-  // ============================================================================
 
   void _nextStep() {
     if (_currentStep < 3) {
@@ -935,19 +678,16 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       _showSnackBar('Por favor completa tu reflexión personal', isError: true);
       return;
     }
-
     setState(() => _isLoading = true);
-
     try {
       final authProvider = context.read<OptimizedAuthProvider>();
       final entriesProvider = context.read<OptimizedDailyEntriesProvider>();
-
       final user = authProvider.currentUser;
       if (user == null) {
         _showSnackBar('Error: Usuario no autenticado', isError: true);
+        setState(() => _isLoading = false);
         return;
       }
-
       final success = await entriesProvider.saveDailyEntry(
         userId: user.id,
         freeReflection: _reflectionController.text.trim(),
@@ -976,21 +716,14 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         focusLevel: _focusLevel,
         lifeSatisfaction: _lifeSatisfaction,
       );
-
+      if (!mounted) return;
       if (success) {
         _showSnackBar('¡Reflexión diaria guardada exitosamente!');
-
-        // Regresar a la pantalla anterior después de un breve delay
         Future.delayed(const Duration(seconds: 1), () {
-          if (mounted) {
-            Navigator.of(context).pop();
-          }
+          if (mounted) Navigator.of(context).pop();
         });
       } else {
-        _showSnackBar(
-          entriesProvider.errorMessage ?? 'Error al guardar la reflexión',
-          isError: true,
-        );
+        _showSnackBar(entriesProvider.errorMessage ?? 'Error al guardar la reflexión', isError: true);
       }
     } catch (e) {
       _showSnackBar('Error inesperado: $e', isError: true);
@@ -1003,31 +736,11 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   List<String> _parseTagsString(String tagsString) {
     if (tagsString.trim().isEmpty) return [];
-    return tagsString
-        .split(',')
-        .map((tag) => tag.trim())
-        .where((tag) => tag.isNotEmpty)
-        .toList();
+    return tagsString.split(',').map((tag) => tag.trim()).where((tag) => tag.isNotEmpty).toList();
   }
 
   double _calculateWellbeingScore() {
-    final scores = [
-      _moodScore,
-      _energyLevel,
-      (11 - _stressLevel), // Invertir estrés
-      _sleepQuality,
-      (11 - _anxietyLevel), // Invertir ansiedad
-      _motivationLevel,
-      _socialInteraction,
-      _physicalActivity,
-      _workProductivity,
-      _socialBattery,
-      _creativeEnergy,
-      _emotionalStability,
-      _focusLevel,
-      _lifeSatisfaction,
-    ];
-
+    final scores = [_moodScore, _energyLevel, (11 - _stressLevel), _sleepQuality, (11 - _anxietyLevel), _motivationLevel, _socialInteraction, _physicalActivity, _workProductivity, _socialBattery, _creativeEnergy, _emotionalStability, _focusLevel, _lifeSatisfaction];
     return scores.reduce((a, b) => a + b) / scores.length;
   }
 
@@ -1049,15 +762,12 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   void _showSnackBar(String message, {bool isError = false}) {
     if (!mounted) return;
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: isError ? Colors.red : Colors.green,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -1068,10 +778,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
   }
 
   String _getMonthName(int month) {
-    const months = [
-      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
-    ];
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
     return months[month - 1];
   }
 }
