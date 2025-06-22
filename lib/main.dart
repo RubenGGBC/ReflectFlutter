@@ -1,16 +1,17 @@
 // ============================================================================
-// main.dart - VERSIÓN FINAL Y CORREGIDA
+// main.dart - VERSIÓN FINAL Y CORREGIDA - IMPORTS FIXED
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get_it/get_it.dart'; // FIX: Import GetIt para el allReady
+import 'package:get_it/get_it.dart';
 import 'package:logger/logger.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'dart:io';
 
-import 'app_v2.dart';
-import 'injection_container.dart' as di;
+// FIX: Corregir imports - usar los archivos correctos
+import 'optimized_reflect_app.dart'; // En lugar de 'app_v2.dart'
+import 'injection_container_clean.dart' as clean_di; // En lugar de 'injection_container.dart'
 
 /// Punto de entrada principal de la aplicación
 void main() async {
@@ -26,7 +27,7 @@ void main() async {
   final logger = Logger();
 
   try {
-    logger.i('🚀 Iniciando ReflectApp v2...');
+    logger.i('🚀 Iniciando ReflectApp Optimizada...');
 
     // Configurar orientación (solo portrait)
     await SystemChrome.setPreferredOrientations([
@@ -44,18 +45,18 @@ void main() async {
       ),
     );
 
-    // Inicializar dependencias
-    await di.init();
+    // FIX: Usar el contenedor de dependencias limpio
+    await clean_di.initCleanDependencies();
 
     // >>>>> CORRECCIÓN CLAVE <<<<<
-    // Espera a que todos los singletons asíncronos (como DatabaseService)
+    // Espera a que todos los singletons asíncronos (como OptimizedDatabaseService)
     // estén completamente inicializados y listos para ser usados.
     await GetIt.instance.allReady();
 
-    logger.i('✅ ReflectApp v2 inicializado correctamente');
+    logger.i('✅ ReflectApp Optimizada inicializada correctamente');
 
-    // Ahora es seguro ejecutar la aplicación
-    runApp(const ReflectAppV2());
+    // FIX: Usar OptimizedReflectApp en lugar de ReflectAppV2
+    runApp(const OptimizedReflectApp());
 
   } catch (e, stackTrace) {
     logger.e('❌ Error crítico iniciando ReflectApp: $e',
@@ -144,5 +145,48 @@ class ErrorScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+// ============================================================================
+// FUNCIÓN PRINCIPAL ALTERNATIVA (para compatibilidad)
+// ============================================================================
+
+/// Ejecutar la aplicación optimizada directamente
+Future<void> runOptimizedApp() async {
+  await runOptimizedReflectApp();
+}
+
+/// Ejecutar la aplicación usando el método integrado
+Future<void> runIntegratedOptimizedApp() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Configuración de plataforma
+  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
+
+  // Configuración del sistema
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
+
+  try {
+    // Inicializar y ejecutar usando el método integrado
+    await runOptimizedReflectApp();
+  } catch (e) {
+    // Fallback en caso de error
+    runApp(_buildErrorApp('Error inicializando la aplicación: $e'));
   }
 }

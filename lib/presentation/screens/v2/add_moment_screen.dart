@@ -1,12 +1,12 @@
 // ============================================================================
-// screens/v2/add_moment_screen.dart - REDISEÑO AVANZADO Y DETALLADO
+// screens/v2/add_moment_screen.dart - REDISEÑO AVANZADO Y DETALLADO - FIXED
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../components/modern_design_system.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/interactive_moments_provider.dart';
+// FIX: Cambiar a providers optimizados
+import '../../providers/optimized_providers.dart';
 import 'dart:ui';
 
 class AddMomentScreen extends StatefulWidget {
@@ -58,8 +58,9 @@ class _AddMomentScreenState extends State<AddMomentScreen> {
   void _addMoment() async {
     if (_textController.text.trim().isEmpty) return;
 
-    final momentsProvider = context.read<InteractiveMomentsProvider>();
-    final userId = context.read<AuthProvider>().currentUser?.id;
+    // FIX: Cambiar a providers optimizados
+    final momentsProvider = context.read<OptimizedMomentsProvider>();
+    final userId = context.read<OptimizedAuthProvider>().currentUser?.id;
 
     if (userId == null) return;
 
@@ -70,7 +71,8 @@ class _AddMomentScreenState extends State<AddMomentScreen> {
       type: _momentType,
       intensity: _intensity.toInt(),
       category: _tags.isNotEmpty ? _tags.join(', ') : 'general',
-      timeStr: TimeOfDay.fromDateTime(_selectedDate).format(context),
+      // FIX: Para mantener compatibilidad con OptimizedMomentsProvider
+      // el parámetro timeStr no se necesita aquí ya que se genera automáticamente
     );
 
     if (mounted && success) {

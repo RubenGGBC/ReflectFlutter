@@ -1,6 +1,6 @@
 // ============================================================================
 // lib/presentation/screens/components/modern_design_system.dart
-// VERSIÓN COMPLETA CORREGIDA CON TODAS LAS PROPIEDADES FALTANTES
+// VERSIÓN COMPLETA CORREGIDA CON TODAS LAS PROPIEDADES FALTANTES - GRADIENT FIXED
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -364,9 +364,12 @@ class _ModernButtonState extends State<ModernButton>
             vertical: ModernSpacing.md,
           ),
           decoration: BoxDecoration(
+            // FIX: Arreglo completo - usar LinearGradient en lugar de List<Color>
             gradient: widget.isPrimary
                 ? LinearGradient(
               colors: widget.gradient ?? ModernColors.primaryGradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             )
                 : null,
             color: widget.isPrimary ? null : ModernColors.glassPrimary,
@@ -754,9 +757,6 @@ class ModernTheme {
           padding: const EdgeInsets.symmetric(
             horizontal: ModernSpacing.lg,
             vertical: ModernSpacing.md,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
           ),
         ),
       ),

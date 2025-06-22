@@ -1,25 +1,30 @@
 // ============================================================================
-// interactive_moments_screen_v2.dart - VERSIÓN MEJORADA CON FUNCIONALIDADES DEL V1
+// presentation/screens/v2/interactive_moments_screen_v2.dart - ACTUALIZADA PARA PROVIDERS OPTIMIZADOS
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'dart:math' as math;
 
-import '../../providers/auth_provider.dart';
-import '../../providers/interactive_moments_provider.dart';
+// Providers optimizados
+import '../../providers/optimized_providers.dart';
+
+// Componentes modernos
 import '../components/modern_design_system.dart';
-import '../../../data/models/interactive_moment_model.dart';
+
+// Modelos optimizados
+import '../../../data/models/optimized_models.dart';
 
 class InteractiveMomentsScreenV2 extends StatefulWidget {
   const InteractiveMomentsScreenV2({super.key});
 
   @override
-  State<InteractiveMomentsScreenV2> createState() =>
-      _InteractiveMomentsScreenV2State();
+  State<InteractiveMomentsScreenV2> createState() => _InteractiveMomentsScreenV2State();
 }
 
 class _InteractiveMomentsScreenV2State extends State<InteractiveMomentsScreenV2>
     with TickerProviderStateMixin {
+
   late TabController _tabController;
   late AnimationController _headerController;
   late AnimationController _categoriesController;
@@ -29,7 +34,12 @@ class _InteractiveMomentsScreenV2State extends State<InteractiveMomentsScreenV2>
   int _selectedIntensity = 5;
   final PageController _categoriesPageController = PageController();
 
-  // CATEGORÍAS ROBUSTAS DEL V1 CON DISEÑO MODERNO
+  // Controladores para añadir momento
+  final _textController = TextEditingController();
+  final _emojiController = TextEditingController(text: '✨');
+  String _momentType = 'positive';
+
+  // Categorías optimizadas con diseño moderno
   final Map<String, Map<String, dynamic>> _categories = {
     'all': {
       'icon': '🌟',
@@ -50,130 +60,65 @@ class _InteractiveMomentsScreenV2State extends State<InteractiveMomentsScreenV2>
       'name': 'Físico',
       'color': ModernColors.categories['fisico']!,
       'gradient': [ModernColors.categories['fisico']!, const Color(0xFF38ef7d)],
-      'description': 'Bienestar físico y salud',
+      'description': 'Actividad y salud física',
     },
     'social': {
       'icon': '👥',
       'name': 'Social',
       'color': ModernColors.categories['social']!,
-      'gradient': [ModernColors.categories['social']!, const Color(0xFFfeca57)],
+      'gradient': [ModernColors.categories['social']!, const Color(0xFF667eea)],
       'description': 'Conexiones y relaciones',
     },
-    'mental': {
-      'icon': '🧠',
-      'name': 'Mental',
-      'color': ModernColors.categories['mental']!,
-      'gradient': [ModernColors.categories['mental']!, const Color(0xFF4ecdc4)],
-      'description': 'Claridad y concentración',
+    'logros': {
+      'icon': '🏆',
+      'name': 'Logros',
+      'color': ModernColors.categories['logros']!,
+      'gradient': [ModernColors.categories['logros']!, const Color(0xFFf093fb)],
+      'description': 'Metas y objetivos cumplidos',
     },
-    'espiritual': {
-      'icon': '🕯️',
-      'name': 'Espiritual',
-      'color': ModernColors.categories['espiritual']!,
-      'gradient': [ModernColors.categories['espiritual']!, const Color(0xFF764ba2)],
-      'description': 'Paz interior y trascendencia',
+    'aprendizaje': {
+      'icon': '📚',
+      'name': 'Aprender',
+      'color': ModernColors.categories['aprendizaje']!,
+      'gradient': [ModernColors.categories['aprendizaje']!, const Color(0xFF4facfe)],
+      'description': 'Conocimiento y crecimiento',
     },
-  };
-
-  // PALETA DE EMOCIONES COMPLETA DEL V1
-  final Map<String, List<Map<String, dynamic>>> _emotionPalette = {
-    'Felicidad': [
-      {'emoji': '😊', 'text': 'Contento/a', 'type': 'positive', 'intensity': 6},
-      {'emoji': '😄', 'text': 'Feliz', 'type': 'positive', 'intensity': 7},
-      {'emoji': '🤩', 'text': 'Eufórico/a', 'type': 'positive', 'intensity': 9},
-      {'emoji': '😌', 'text': 'En paz', 'type': 'positive', 'intensity': 5},
-      {'emoji': '🥰', 'text': 'Lleno/a de amor', 'type': 'positive', 'intensity': 8},
-    ],
-    'Logros': [
-      {'emoji': '🎉', 'text': 'Celebrando', 'type': 'positive', 'intensity': 8},
-      {'emoji': '💪', 'text': 'Reto superado', 'type': 'positive', 'intensity': 7},
-      {'emoji': '🎯', 'text': 'Objetivo cumplido', 'type': 'positive', 'intensity': 7},
-      {'emoji': '🏆', 'text': 'Victoria', 'type': 'positive', 'intensity': 9},
-      {'emoji': '⚡', 'text': 'Energía pura', 'type': 'positive', 'intensity': 8},
-    ],
-    'Creatividad': [
-      {'emoji': '🎨', 'text': 'Inspirado/a', 'type': 'positive', 'intensity': 7},
-      {'emoji': '💡', 'text': 'Idea brillante', 'type': 'positive', 'intensity': 8},
-      {'emoji': '🚀', 'text': 'Productivo/a', 'type': 'positive', 'intensity': 7},
-      {'emoji': '✨', 'text': 'Momento mágico', 'type': 'positive', 'intensity': 8},
-      {'emoji': '🌟', 'text': 'Flujo creativo', 'type': 'positive', 'intensity': 7},
-    ],
-    'Estrés': [
-      {'emoji': '😰', 'text': 'Ansioso/a', 'type': 'negative', 'intensity': 6},
-      {'emoji': '😓', 'text': 'Presionado/a', 'type': 'negative', 'intensity': 7},
-      {'emoji': '🤯', 'text': 'Abrumado/a', 'type': 'negative', 'intensity': 8},
-      {'emoji': '😵‍💫', 'text': 'Confundido/a', 'type': 'negative', 'intensity': 5},
-      {'emoji': '😤', 'text': 'Frustrado/a', 'type': 'negative', 'intensity': 6},
-    ],
-    'Tristeza': [
-      {'emoji': '😔', 'text': 'Un poco triste', 'type': 'negative', 'intensity': 4},
-      {'emoji': '😞', 'text': 'Decepcionado/a', 'type': 'negative', 'intensity': 5},
-      {'emoji': '😢', 'text': 'Necesito un respiro', 'type': 'negative', 'intensity': 6},
-      {'emoji': '😴', 'text': 'Cansado/a', 'type': 'negative', 'intensity': 4},
-      {'emoji': '🥺', 'text': 'Vulnerable', 'type': 'negative', 'intensity': 5},
-    ],
-    'Gratitud': [
-      {'emoji': '🙏', 'text': 'Agradecido/a', 'type': 'positive', 'intensity': 6},
-      {'emoji': '💝', 'text': 'Lleno/a de amor', 'type': 'positive', 'intensity': 7},
-      {'emoji': '🌸', 'text': 'Apreciando el momento', 'type': 'positive', 'intensity': 6},
-      {'emoji': '🕊️', 'text': 'En armonía', 'type': 'positive', 'intensity': 5},
-      {'emoji': '🌅', 'text': 'Nuevo comienzo', 'type': 'positive', 'intensity': 6},
-    ],
-  };
-
-  // SUGERENCIAS INTELIGENTES BASADAS EN HORA DEL DÍA
-  final Map<String, List<Map<String, dynamic>>> _timeBasedSuggestions = {
-    'Mañana': [
-      {'emoji': '☕', 'text': 'Café perfecto', 'type': 'positive', 'intensity': 6},
-      {'emoji': '🌅', 'text': 'Buen despertar', 'type': 'positive', 'intensity': 5},
-      {'emoji': '🏃‍♂️', 'text': 'Ejercicio matutino', 'type': 'positive', 'intensity': 7},
-      {'emoji': '📋', 'text': 'Lista de tareas clara', 'type': 'positive', 'intensity': 6},
-      {'emoji': '😴', 'text': 'Cuesta levantarse', 'type': 'negative', 'intensity': 4},
-    ],
-    'Mediodía': [
-      {'emoji': '🍽️', 'text': 'Almuerzo delicioso', 'type': 'positive', 'intensity': 6},
-      {'emoji': '💼', 'text': 'Reunión productiva', 'type': 'positive', 'intensity': 7},
-      {'emoji': '📱', 'text': 'Pausa social', 'type': 'positive', 'intensity': 5},
-      {'emoji': '😓', 'text': 'Mucho trabajo', 'type': 'negative', 'intensity': 6},
-      {'emoji': '🤯', 'text': 'Sobrecarga mental', 'type': 'negative', 'intensity': 7},
-    ],
-    'Tarde': [
-      {'emoji': '🎯', 'text': 'Objetivo cumplido', 'type': 'positive', 'intensity': 8},
-      {'emoji': '☀️', 'text': 'Energía renovada', 'type': 'positive', 'intensity': 7},
-      {'emoji': '📚', 'text': 'Aprendizaje nuevo', 'type': 'positive', 'intensity': 6},
-      {'emoji': '😵‍💫', 'text': 'Bajón de energía', 'type': 'negative', 'intensity': 5},
-      {'emoji': '⏰', 'text': 'Presión de tiempo', 'type': 'negative', 'intensity': 6},
-    ],
-    'Noche': [
-      {'emoji': '🛀', 'text': 'Relajándome', 'type': 'positive', 'intensity': 6},
-      {'emoji': '📚', 'text': 'Lectura tranquila', 'type': 'positive', 'intensity': 5},
-      {'emoji': '🍷', 'text': 'Momento para mí', 'type': 'positive', 'intensity': 6},
-      {'emoji': '🙏', 'text': 'Reflexión del día', 'type': 'positive', 'intensity': 5},
-      {'emoji': '😔', 'text': 'Día pesado', 'type': 'negative', 'intensity': 5},
-    ],
   };
 
   @override
   void initState() {
     super.initState();
     _setupAnimations();
-    _tabController = TabController(length: 4, vsync: this);
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadTodayMoments();
-    });
+    _loadMoments();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _headerController.dispose();
+    _categoriesController.dispose();
+    _momentsController.dispose();
+    _textController.dispose();
+    _emojiController.dispose();
+    _categoriesPageController.dispose();
+    super.dispose();
   }
 
   void _setupAnimations() {
+    _tabController = TabController(length: 2, vsync: this);
+
     _headerController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
+
     _categoriesController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
+
     _momentsController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
@@ -186,38 +131,48 @@ class _InteractiveMomentsScreenV2State extends State<InteractiveMomentsScreenV2>
     });
   }
 
-  @override
-  void dispose() {
-    _tabController.dispose();
-    _headerController.dispose();
-    _categoriesController.dispose();
-    _momentsController.dispose();
-    _categoriesPageController.dispose();
-    super.dispose();
+  Future<void> _loadMoments() async {
+    final authProvider = context.read<OptimizedAuthProvider>();
+    final user = authProvider.currentUser;
+
+    if (user != null) {
+      await context.read<OptimizedMomentsProvider>().loadMoments(user.id);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ModernColors.darkPrimary,
-      body: Column(
-        children: [
-          _buildModernHeader(),
-          _buildCategoriesSection(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [
-                _buildQuickMomentsTab(),
-                _buildPaletteTab(),
-                _buildSuggestionsTab(),
-                _buildTimelineTab(),
-              ],
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF0F172A),
+              Color(0xFF1E293B),
+              Color(0xFF334155),
+            ],
           ),
-        ],
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildModernHeader(),
+              _buildTabBar(),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    _buildViewMomentsTab(),
+                    _buildAddMomentTab(),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
-      floatingActionButton: _buildFloatingActionButton(),
     );
   }
 
@@ -231,183 +186,240 @@ class _InteractiveMomentsScreenV2State extends State<InteractiveMomentsScreenV2>
         curve: Curves.easeOutBack,
       )),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(
-          ModernSpacing.lg,
-          ModernSpacing.xxl,
-          ModernSpacing.lg,
-          ModernSpacing.lg,
-        ),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: _categories[_selectedCategory]!['gradient'],
+            colors: ModernColors.primaryGradient,
+          ),
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(32),
+            bottomRight: Radius.circular(32),
           ),
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
                 IconButton(
-                  onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.arrow_back, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
                 ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: ModernSpacing.md,
-                    vertical: ModernSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
-                  ),
-                  child: Consumer<InteractiveMomentsProvider>(
-                    builder: (context, provider, child) {
-                      return Text(
-                        'Hoy: ${provider.positiveCount}+ / ${provider.negativeCount}-',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      );
-                    },
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    '✨ Momentos Interactivos',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
-              ],
-            ),
-            const SizedBox(height: ModernSpacing.lg),
-            Row(
-              children: [
-                Text(
-                  _categories[_selectedCategory]!['icon'],
-                  style: const TextStyle(fontSize: 32),
-                ),
-                const SizedBox(width: ModernSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Momentos ${_categories[_selectedCategory]!['name']}',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        _categories[_selectedCategory]!['description'],
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
+                Consumer<OptimizedMomentsProvider>(
+                  builder: (context, momentsProvider, child) {
+                    return IconButton(
+                      icon: const Icon(Icons.refresh, color: Colors.white),
+                      onPressed: momentsProvider.isLoading
+                          ? null
+                          : () => _loadMoments(),
+                    );
+                  },
                 ),
               ],
             ),
-            const SizedBox(height: ModernSpacing.lg),
-            _buildTabBar(),
+
+            const SizedBox(height: 16),
+
+            // Estadísticas rápidas
+            Consumer<OptimizedMomentsProvider>(
+              builder: (context, momentsProvider, child) {
+                final stats = momentsProvider.getMomentsStats();
+
+                return Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        'Total',
+                        '${stats['total'] ?? 0}',
+                        Icons.auto_awesome,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Hoy',
+                        '${stats['today'] ?? 0}',
+                        Icons.today,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildStatCard(
+                        'Positivos',
+                        '${((stats['positive_ratio'] as double? ?? 0) * 100).toInt()}%',
+                        Icons.sentiment_very_satisfied,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTabBar() {
+  Widget _buildStatCard(String label, String value, IconData icon) {
     return Container(
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
       ),
-      child: TabBar(
-        controller: _tabController,
-        indicator: BoxDecoration(
-          color: Colors.white.withOpacity(0.3),
-          borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
-        ),
-        dividerColor: Colors.transparent,
-        labelColor: Colors.white,
-        unselectedLabelColor: Colors.white.withOpacity(0.7),
-        labelStyle: TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-          color: Colors.white,
-        ),
-        tabs: const [
-          Tab(text: 'Rápido'),
-          Tab(text: 'Paleta'),
-          Tab(text: 'Ideas'),
-          Tab(text: 'Timeline'),
+      child: Column(
+        children: [
+          Icon(icon, color: Colors.white, size: 20),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildCategoriesSection() {
+  Widget _buildTabBar() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: TabBar(
+        controller: _tabController,
+        indicator: BoxDecoration(
+          gradient: LinearGradient(colors: ModernColors.primaryGradient),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        labelColor: Colors.white,
+        unselectedLabelColor: Colors.white60,
+        tabs: const [
+          Tab(
+            icon: Icon(Icons.list),
+            text: 'Ver Momentos',
+          ),
+          Tab(
+            icon: Icon(Icons.add_circle_outline),
+            text: 'Añadir Momento',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildViewMomentsTab() {
+    return Column(
+      children: [
+        _buildCategoriesSelector(),
+        Expanded(
+          child: _buildMomentsList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoriesSelector() {
     return SlideTransition(
       position: Tween<Offset>(
         begin: const Offset(-1, 0),
         end: Offset.zero,
       ).animate(CurvedAnimation(
         parent: _categoriesController,
-        curve: Curves.easeOutCubic,
+        curve: Curves.easeOutBack,
       )),
       child: Container(
-        height: 80,
-        margin: const EdgeInsets.symmetric(vertical: ModernSpacing.md),
-        child: ListView.builder(
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.symmetric(horizontal: ModernSpacing.lg),
-          itemCount: _categories.length,
-          itemBuilder: (context, index) {
-            final category = _categories.entries.elementAt(index);
-            final isSelected = _selectedCategory == category.key;
+        height: 100,
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        child: PageView.builder(
+          controller: _categoriesPageController,
+          itemCount: (_categories.length / 3).ceil(),
+          itemBuilder: (context, pageIndex) {
+            final startIndex = pageIndex * 3;
+            final endIndex = math.min(startIndex + 3, _categories.length);
+            final pageCategories = _categories.entries.toList().sublist(startIndex, endIndex);
 
-            return GestureDetector(
-              onTap: () => _selectCategory(category.key),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                margin: const EdgeInsets.only(right: ModernSpacing.md),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: ModernSpacing.md,
-                  vertical: ModernSpacing.sm,
-                ),
-                decoration: BoxDecoration(
-                  gradient: isSelected
-                      ? LinearGradient(colors: category.value['gradient'])
-                      : null,
-                  color: isSelected ? null : ModernColors.glassSurface,
-                  borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
-                  border: Border.all(
-                    color: isSelected
-                        ? Colors.transparent
-                        : category.value['color'].withOpacity(0.3),
-                  ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      category.value['icon'],
-                      style: const TextStyle(fontSize: 20),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      category.value['name'],
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : ModernColors.textPrimary,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        fontSize: 12,
+            return Row(
+              children: pageCategories.map((entry) {
+                final categoryId = entry.key;
+                final category = entry.value;
+                final isSelected = _selectedCategory == categoryId;
+
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedCategory = categoryId;
+                      });
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        gradient: isSelected
+                            ? LinearGradient(colors: category['gradient'])
+                            : null,
+                        color: isSelected
+                            ? null
+                            : Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: isSelected
+                              ? Colors.transparent
+                              : Colors.white.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            category['icon'],
+                            style: const TextStyle(fontSize: 24),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            category['name'],
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.white70,
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              }).toList(),
             );
           },
         ),
@@ -415,38 +427,443 @@ class _InteractiveMomentsScreenV2State extends State<InteractiveMomentsScreenV2>
     );
   }
 
-  Widget _buildQuickMomentsTab() {
-    return FadeTransition(
-      opacity: _momentsController,
-      child: ListView(
-        padding: const EdgeInsets.all(ModernSpacing.lg),
+  Widget _buildMomentsList() {
+    return Consumer<OptimizedMomentsProvider>(
+      builder: (context, momentsProvider, child) {
+        if (momentsProvider.isLoading) {
+          return const Center(
+            child: CircularProgressIndicator(color: Colors.white),
+          );
+        }
+
+        if (momentsProvider.errorMessage != null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                const SizedBox(height: 16),
+                Text(
+                  momentsProvider.errorMessage!,
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () => _loadMoments(),
+                  child: const Text('Reintentar'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        List<OptimizedInteractiveMomentModel> filteredMoments = momentsProvider.moments;
+
+        if (_selectedCategory != 'all') {
+          filteredMoments = momentsProvider.getMomentsByCategory(_selectedCategory);
+        }
+
+        if (filteredMoments.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _selectedCategory == 'all' ? '🌟' : _categories[_selectedCategory]?['icon'] ?? '✨',
+                  style: const TextStyle(fontSize: 64),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  _selectedCategory == 'all'
+                      ? 'No tienes momentos registrados aún'
+                      : 'No hay momentos en esta categoría',
+                  style: const TextStyle(
+                    color: Colors.white60,
+                    fontSize: 16,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  '¡Empieza a registrar tus momentos especiales!',
+                  style: TextStyle(
+                    color: Colors.white38,
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          );
+        }
+
+        return FadeTransition(
+          opacity: _momentsController,
+          child: ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: filteredMoments.length,
+            itemBuilder: (context, index) {
+              final moment = filteredMoments[index];
+              return _buildMomentCard(moment, index);
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMomentCard(OptimizedInteractiveMomentModel moment, int index) {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: Offset(1, 0),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _momentsController,
+        curve: Interval(
+          (index * 0.1).clamp(0.0, 1.0),
+          ((index * 0.1) + 0.3).clamp(0.0, 1.0),
+          curve: Curves.easeOutBack,
+        ),
+      )),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                // Emoji del momento
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Color(int.parse(moment.colorHex.substring(1), radix: 16) + 0xFF000000)
+                        .withOpacity(0.2),
+                  ),
+                  child: Center(
+                    child: Text(
+                      moment.emoji,
+                      style: const TextStyle(fontSize: 24),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(width: 12),
+
+                // Información del momento
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            moment.type.toUpperCase(),
+                            style: TextStyle(
+                              color: Color(int.parse(moment.colorHex.substring(1), radix: 16) + 0xFF000000),
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: _categories[moment.category]?['color']?.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              _categories[moment.category]?['name'] ?? moment.category,
+                              style: TextStyle(
+                                color: _categories[moment.category]?['color'],
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      Text(
+                        moment.text,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Hora y intensidad
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      moment.timeStr,
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: List.generate(5, (i) {
+                        return Icon(
+                          i < (moment.intensity / 2).round() ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                          size: 12,
+                        );
+                      }),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+
+            // Información adicional si está disponible
+            if (moment.hasContext || moment.hasEnergyData || moment.hasMoodData) ...[
+              const SizedBox(height: 12),
+              _buildMomentDetails(moment),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMomentDetails(OptimizedInteractiveMomentModel moment) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildIntensitySelector(),
-          const SizedBox(height: ModernSpacing.lg),
-          ..._emotionPalette.entries.take(3).map((entry) =>
-              _buildEmotionGroup(entry.key, entry.value)),
+          if (moment.hasEnergyData) ...[
+            Row(
+              children: [
+                const Icon(Icons.battery_charging_full, color: Colors.green, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  'Energía: ${moment.energyBefore} → ${moment.energyAfter}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                if (moment.energyChange != null) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    moment.energyChange! > 0 ? Icons.trending_up : Icons.trending_down,
+                    color: moment.energyChange! > 0 ? Colors.green : Colors.red,
+                    size: 16,
+                  ),
+                ],
+              ],
+            ),
+          ],
+
+          if (moment.hasMoodData) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.sentiment_satisfied, color: Colors.blue, size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  'Ánimo: ${moment.moodBefore} → ${moment.moodAfter}',
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+                if (moment.moodChange != null) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    moment.moodChange! > 0 ? Icons.trending_up : Icons.trending_down,
+                    color: moment.moodChange! > 0 ? Colors.green : Colors.red,
+                    size: 16,
+                  ),
+                ],
+              ],
+            ),
+          ],
+
+          if (moment.contextLocation != null || moment.contextWeather != null || moment.contextSocial != null) ...[
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(Icons.location_on, color: Colors.orange, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    [
+                      moment.contextLocation,
+                      moment.contextWeather,
+                      moment.contextSocial,
+                    ].where((c) => c != null).join(' • '),
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildIntensitySelector() {
-    return ModernCard(
+  Widget _buildAddMomentTab() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildAddMomentForm(),
+          const SizedBox(height: 20),
+          _buildSubmitButton(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAddMomentForm() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Intensidad del Momento', style: ModernTypography.heading3),
-          const SizedBox(height: ModernSpacing.md),
+          // Selector de tipo de momento
+          const Text(
+            'Tipo de Momento',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
           Row(
             children: [
-              Text('Leve', style: ModernTypography.bodySmall),
+              Expanded(
+                child: _buildTypeButton('positive', 'Positivo', '😊', Colors.green),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildTypeButton('negative', 'Desafío', '😔', Colors.red),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildTypeButton('neutral', 'Neutral', '😐', Colors.grey),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Campo de emoji
+          const Text(
+            'Emoji',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          TextField(
+            controller: _emojiController,
+            style: const TextStyle(color: Colors.white, fontSize: 24),
+            textAlign: TextAlign.center,
+            decoration: InputDecoration(
+              hintText: '✨',
+              hintStyle: const TextStyle(color: Colors.white38),
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.1),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Campo de texto
+          const Text(
+            '¿Qué ha pasado?',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          TextField(
+            controller: _textController,
+            maxLines: 3,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Describe tu momento...',
+              hintStyle: const TextStyle(color: Colors.white38),
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.1),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          // Selector de intensidad
+          const Text(
+            'Intensidad (1-10)',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          Row(
+            children: [
+              const Text('1', style: TextStyle(color: Colors.white70)),
               Expanded(
                 child: Slider(
                   value: _selectedIntensity.toDouble(),
                   min: 1,
                   max: 10,
                   divisions: 9,
-                  activeColor: _categories[_selectedCategory]!['color'],
+                  label: _selectedIntensity.toString(),
+                  activeColor: ModernColors.primaryGradient.first,
                   onChanged: (value) {
                     setState(() {
                       _selectedIntensity = value.round();
@@ -454,425 +871,163 @@ class _InteractiveMomentsScreenV2State extends State<InteractiveMomentsScreenV2>
                   },
                 ),
               ),
-              Text('Intenso', style: ModernTypography.bodySmall),
+              const Text('10', style: TextStyle(color: Colors.white70)),
             ],
-          ),
-          Text(
-            'Nivel: $_selectedIntensity/10 - ${_getIntensityDescription(_selectedIntensity)}',
-            style: TextStyle(
-              color: _categories[_selectedCategory]!['color'],
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildEmotionGroup(String groupName, List<Map<String, dynamic>> emotions) {
-    return Column(
-      children: [
-        ModernCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(groupName, style: ModernTypography.heading3),
-              const SizedBox(height: ModernSpacing.md),
-              Wrap(
-                spacing: ModernSpacing.sm,
-                runSpacing: ModernSpacing.sm,
-                children: emotions.map((emotion) {
-                  return GestureDetector(
-                    onTap: () => _addMoment(emotion),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: ModernSpacing.md,
-                        vertical: ModernSpacing.sm,
-                      ),
-                      decoration: BoxDecoration(
-                        color: emotion['type'] == 'positive'
-                            ? ModernColors.success.withOpacity(0.1)
-                            : ModernColors.warning.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
-                        border: Border.all(
-                          color: emotion['type'] == 'positive'
-                              ? ModernColors.success.withOpacity(0.3)
-                              : ModernColors.warning.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(emotion['emoji'], style: const TextStyle(fontSize: 18)),
-                          const SizedBox(width: ModernSpacing.sm),
-                          Text(emotion['text'], style: ModernTypography.bodyMedium),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
+  Widget _buildTypeButton(String type, String label, String emoji, Color color) {
+    final isSelected = _momentType == type;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _momentType = type;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.2) : Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color : Colors.white.withOpacity(0.2),
+            width: 2,
           ),
         ),
-        const SizedBox(height: ModernSpacing.lg),
-      ],
-    );
-  }
-
-  Widget _buildPaletteTab() {
-    return ListView(
-      padding: const EdgeInsets.all(ModernSpacing.lg),
-      children: [
-        _buildIntensitySelector(),
-        const SizedBox(height: ModernSpacing.lg),
-        ..._emotionPalette.entries.map((entry) =>
-            _buildEmotionGroup(entry.key, entry.value)),
-      ],
-    );
-  }
-
-  Widget _buildSuggestionsTab() {
-    final timeOfDay = _getTimeOfDay();
-    final suggestions = _timeBasedSuggestions[timeOfDay] ?? [];
-
-    return ListView(
-      padding: const EdgeInsets.all(ModernSpacing.lg),
-      children: [
-        ModernCard(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(_getTimeEmoji(), style: const TextStyle(fontSize: 24)),
-                  const SizedBox(width: ModernSpacing.sm),
-                  Text('Sugerencias de $timeOfDay', style: ModernTypography.heading3),
-                ],
+        child: Column(
+          children: [
+            Text(emoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: isSelected ? color : Colors.white70,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
-              const SizedBox(height: ModernSpacing.md),
-              Text(
-                'Momentos típicos para esta hora del día',
-                style: TextStyle(
-                  color: ModernColors.textSecondary,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: ModernSpacing.lg),
-              ...suggestions.map((suggestion) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: ModernSpacing.sm),
-                  child: ListTile(
-                    leading: Text(suggestion['emoji'], style: const TextStyle(fontSize: 24)),
-                    title: Text(suggestion['text'], style: ModernTypography.bodyLarge),
-                    subtitle: Text(
-                      'Intensidad sugerida: ${suggestion['intensity']}/10',
-                      style: ModernTypography.bodySmall,
-                    ),
-                    trailing: IconButton(
-                      onPressed: () => _addMoment(suggestion),
-                      icon: Icon(
-                        Icons.add_circle,
-                        color: suggestion['type'] == 'positive'
-                            ? ModernColors.success
-                            : ModernColors.warning,
-                      ),
-                    ),
-                    onTap: () => _addMoment(suggestion),
-                  ),
-                );
-              }).toList(),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimelineTab() {
-    return Consumer<InteractiveMomentsProvider>(
-      builder: (context, provider, child) {
-        final moments = provider.moments;
-
-        if (moments.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('📝', style: const TextStyle(fontSize: 64)),
-                const SizedBox(height: ModernSpacing.lg),
-                Text(
-                  '¡Tu timeline está esperando!',
-                  style: ModernTypography.heading3,
-                ),
-                const SizedBox(height: ModernSpacing.sm),
-                Text(
-                  'Agrega tu primer momento del día',
-                  style: ModernTypography.bodyMedium.copyWith(
-                    color: ModernColors.textSecondary,
-                  ),
-                ),
-              ],
             ),
-          );
-        }
+          ],
+        ),
+      ),
+    );
+  }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(ModernSpacing.lg),
-          itemCount: moments.length,
-          itemBuilder: (context, index) {
-            final moment = moments[index];
-            return _buildTimelineItem(moment, index);
-          },
+  Widget _buildSubmitButton() {
+    return Consumer<OptimizedMomentsProvider>(
+      builder: (context, momentsProvider, child) {
+        return Container(
+          height: 56,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: ModernColors.primaryGradient),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: ModernColors.primaryGradient.first.withOpacity(0.3),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(16),
+              onTap: momentsProvider.isLoading ? null : _addMoment,
+              child: Center(
+                child: momentsProvider.isLoading
+                    ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+                    : const Text(
+                  'Registrar Momento',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
         );
       },
     );
   }
 
-  Widget _buildTimelineItem(InteractiveMomentModel moment, int index) {
-    final isPositive = moment.type == 'positive';
+  // ============================================================================
+  // LÓGICA DE NEGOCIO
+  // ============================================================================
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: ModernSpacing.lg),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Timeline indicator
-          Column(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: isPositive ? ModernColors.success : ModernColors.warning,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    moment.emoji,
-                    style: const TextStyle(fontSize: 20),
-                  ),
-                ),
-              ),
-              if (index < Provider.of<InteractiveMomentsProvider>(context, listen: false).moments.length - 1)
-                Container(
-                  width: 2,
-                  height: 40,
-                  color: ModernColors.glassSecondary,
-                ),
-            ],
-          ),
-          const SizedBox(width: ModernSpacing.md),
+  Future<void> _addMoment() async {
+    if (_textController.text.trim().isEmpty) {
+      _showSnackBar('Por favor describe tu momento', isError: true);
+      return;
+    }
 
-          // Content
-          Expanded(
-            child: ModernCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          moment.text,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        moment.timeStr,
-                        style: TextStyle(
-                          color: ModernColors.textSecondary,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: ModernSpacing.sm),
-                  Row(
-                    children: [
-                      _buildInfoChip(
-                        'Intensidad ${moment.intensity}/10',
-                        isPositive ? ModernColors.success : ModernColors.warning,
-                      ),
-                      const SizedBox(width: ModernSpacing.sm),
-                      _buildInfoChip(
-                        moment.category.toUpperCase(),
-                        _getCategoryColor(moment.category),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    final authProvider = context.read<OptimizedAuthProvider>();
+    final momentsProvider = context.read<OptimizedMomentsProvider>();
 
-  Widget _buildInfoChip(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: ModernSpacing.sm,
-        vertical: 2,
-      ),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(ModernSpacing.radiusSmall),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-      ),
-    );
-  }
+    final user = authProvider.currentUser;
+    if (user == null) {
+      _showSnackBar('Error: Usuario no autenticado', isError: true);
+      return;
+    }
 
-  Widget _buildFloatingActionButton() {
-    return FloatingActionButton.extended(
-      onPressed: _showCustomMomentDialog,
-      backgroundColor: _categories[_selectedCategory]!['color'],
-      icon: const Icon(Icons.add, color: Colors.white),
-      label: Text(
-        'Momento Custom',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-        ),
-      ),
-    );
-  }
+    try {
+      final success = await momentsProvider.addMoment(
+        userId: user.id,
+        emoji: _emojiController.text.isNotEmpty ? _emojiController.text : '✨',
+        text: _textController.text.trim(),
+        type: _momentType,
+        intensity: _selectedIntensity,
+        category: _selectedCategory == 'all' ? 'general' : _selectedCategory,
+      );
 
-  // HELPER METHODS
-  void _selectCategory(String categoryKey) {
-    setState(() {
-      _selectedCategory = categoryKey;
-    });
-  }
+      if (success) {
+        _showSnackBar('¡Momento registrado exitosamente!');
 
-  Future<void> _addMoment(Map<String, dynamic> emotion) async {
-    final authProvider = context.read<AuthProvider>();
-    final momentsProvider = context.read<InteractiveMomentsProvider>();
+        // Limpiar formulario
+        _textController.clear();
+        _emojiController.text = '✨';
+        setState(() {
+          _momentType = 'positive';
+          _selectedIntensity = 5;
+        });
 
-    if (authProvider.currentUser == null) return;
-
-    final success = await momentsProvider.addMoment(
-      userId: authProvider.currentUser!.id!,
-      emoji: emotion['emoji'],
-      text: emotion['text'],
-      type: emotion['type'],
-      intensity: emotion['intensity'] ?? _selectedIntensity,
-      category: _selectedCategory,
-    );
-
-    if (success) {
-      _showSuccessAnimation(emotion);
+        // Cambiar a la pestaña de ver momentos
+        _tabController.animateTo(0);
+      } else {
+        _showSnackBar(
+            momentsProvider.errorMessage ?? 'Error al registrar momento',
+            isError: true
+        );
+      }
+    } catch (e) {
+      _showSnackBar('Error inesperado: $e', isError: true);
     }
   }
 
-  void _showSuccessAnimation(Map<String, dynamic> emotion) {
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            Text(emotion['emoji'], style: const TextStyle(fontSize: 20)),
-            const SizedBox(width: ModernSpacing.sm),
-            Expanded(
-              child: Text(
-                '${emotion['text']} añadido con intensidad $_selectedIntensity/10',
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: emotion['type'] == 'positive'
-            ? ModernColors.success
-            : ModernColors.warning,
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
     );
-  }
-
-  void _showCustomMomentDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: ModernCard(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('Momento Personalizado', style: ModernTypography.heading3),
-              const SizedBox(height: ModernSpacing.lg),
-              Text(
-                '¡Próximamente! Panel personalizado para crear momentos únicos.',
-                style: TextStyle(
-                  color: ModernColors.textSecondary,
-                  fontSize: 14,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: ModernSpacing.lg),
-              ModernButton(
-                text: 'Cerrar',
-                onPressed: () => Navigator.pop(context),
-                width: double.infinity,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Future<void> _loadTodayMoments() async {
-    final authProvider = context.read<AuthProvider>();
-    final momentsProvider = context.read<InteractiveMomentsProvider>();
-
-    if (authProvider.currentUser != null) {
-      await momentsProvider.loadTodayMoments(authProvider.currentUser!.id!);
-    }
-  }
-
-  String _getTimeOfDay() {
-    final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 12) return 'Mañana';
-    if (hour >= 12 && hour < 17) return 'Mediodía';
-    if (hour >= 17 && hour < 21) return 'Tarde';
-    return 'Noche';
-  }
-
-  String _getTimeEmoji() {
-    final hour = DateTime.now().hour;
-    if (hour >= 5 && hour < 12) return '🌅';
-    if (hour >= 12 && hour < 17) return '☀️';
-    if (hour >= 17 && hour < 21) return '🌆';
-    return '🌙';
-  }
-
-  String _getIntensityDescription(int intensity) {
-    if (intensity >= 9) return 'Muy intenso';
-    if (intensity >= 7) return 'Intenso';
-    if (intensity >= 5) return 'Moderado';
-    if (intensity >= 3) return 'Leve';
-    return 'Muy leve';
-  }
-
-  Color _getCategoryColor(String category) {
-    return _categories[category]?['color'] ??
-        ModernColors.categories[category] ??
-        ModernColors.info;
   }
 }
