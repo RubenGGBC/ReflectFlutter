@@ -1,8 +1,8 @@
-// lib/presentation/widgets/home/key_metrics_grid.dart
+// lib/presentation/widgets/key_metrics_grid.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/analytics_provider.dart';
+import '../providers/optimized_providers.dart'; // ✅ IMPORT ARREGLADO
 import '../../presentation/screens/components/modern_design_system.dart';
 
 class KeyMetricsGrid extends StatelessWidget {
@@ -10,10 +10,11 @@ class KeyMetricsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final analytics = context.watch<AnalyticsProvider>();
+    final analytics = context.watch<OptimizedAnalyticsProvider>(); // ✅ PROVIDER ARREGLADO
     final streakData = analytics.getStreakData();
     final moodInsights = analytics.getQuickStatsMoodInsights();
     final diversityInsights = analytics.getQuickStatsDiversityInsights();
+    final stressAlerts = analytics.getStressAlerts();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -49,8 +50,8 @@ class KeyMetricsGrid extends StatelessWidget {
             _buildMetricCard(
               icon: Icons.shield_outlined,
               label: 'Estrés',
-              value: analytics.getStressAlerts()['level']?.toString().toUpperCase() ?? 'BAJO',
-              color: ModernColors.success,
+              value: stressAlerts['level']?.toString().toUpperCase() ?? 'NORMAL',
+              color: _getStressColor(stressAlerts['level']?.toString() ?? 'bajo'),
             ),
           ],
         ),
@@ -58,23 +59,64 @@ class KeyMetricsGrid extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricCard({required IconData icon, required String label, required String value, required Color color}) {
-    return ModernCard(
+  Widget _buildMetricCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
       padding: const EdgeInsets.all(ModernSpacing.md),
+      decoration: BoxDecoration(
+        color: ModernColors.surfaceDark,
+        borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: color, size: 28),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(value, style: ModernTypography.heading3.copyWith(color: color, fontSize: 20)),
-              Text(label, style: ModernTypography.bodySmall),
-            ],
+          Icon(
+            icon,
+            color: color,
+            size: 28,
+          ),
+          const SizedBox(height: ModernSpacing.sm),
+          Text(
+            value,
+            style: ModernTypography.heading3.copyWith(
+              color: color,
+              fontSize: 18,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: ModernSpacing.xs),
+          Text(
+            label,
+            style: ModernTypography.bodySmall.copyWith(
+              color: ModernColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
     );
+  }
+
+  Color _getStressColor(String level) {
+    switch (level.toLowerCase()) {
+      case 'alto':
+        return Colors.red.shade400;
+      case 'moderado':
+        return Colors.orange.shade400;
+      case 'bajo':
+        return Colors.green.shade400;
+      default:
+        return Colors.blue.shade400;
+    }
   }
 }

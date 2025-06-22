@@ -705,7 +705,521 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
 
     return insights;
   }
+  // ============================================================================
+// MÉTODOS QUE TRABAJAN CON LOS DATOS QUE SÍ EXISTEN
+// ============================================================================
 
+// Añadir estos métodos al OptimizedAnalyticsProvider
+
+// Getter corregido para wellbeingScore
+
+
+  /// Obtener insights destacados (basado en datos reales)
+  List<Map<String, String>> getHighlightedInsights() {
+    final insights = <Map<String, String>>[];
+    if (_analytics.isEmpty) return insights;
+
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+    final streakData = _analytics['streak_data'] as Map<String, dynamic>?;
+
+    if (basicStats != null) {
+      final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
+      final totalEntries = basicStats['total_entries'] as int? ?? 0;
+      final avgEnergy = basicStats['avg_energy'] as double? ?? 5.0;
+      final avgStress = basicStats['avg_stress'] as double? ?? 5.0;
+
+      // Insight sobre mood
+      if (avgMood >= 7.0) {
+        insights.add({
+          'emoji': '😊',
+          'type': 'mood',
+          'title': 'Excelente Estado de Ánimo',
+          'description': 'Tu mood promedio es ${avgMood.toStringAsFixed(1)}/10'
+        });
+      } else if (avgMood < 4.0) {
+        insights.add({
+          'emoji': '💪',
+          'type': 'improvement',
+          'title': 'Espacio para Crecer',
+          'description': 'Tu mood puede mejorar con pequeños cambios'
+        });
+      }
+
+      // Insight sobre energía
+      if (avgEnergy >= 7.0) {
+        insights.add({
+          'emoji': '⚡',
+          'type': 'energy',
+          'title': 'Energía Alta',
+          'description': 'Mantienes buenos niveles de energía'
+        });
+      }
+
+      // Insight sobre estrés
+      if (avgStress <= 3.0) {
+        insights.add({
+          'emoji': '🧘',
+          'type': 'stress',
+          'title': 'Estrés Bajo',
+          'description': 'Manejas bien el estrés diario'
+        });
+      } else if (avgStress >= 7.0) {
+        insights.add({
+          'emoji': '⚠️',
+          'type': 'stress',
+          'title': 'Estrés Alto',
+          'description': 'Considera técnicas de relajación'
+        });
+      }
+
+      // Insight sobre actividad
+      if (totalEntries >= 20) {
+        insights.add({
+          'emoji': '📊',
+          'type': 'activity',
+          'title': 'Muy Activo',
+          'description': 'Has registrado $totalEntries entradas'
+        });
+      }
+    }
+
+    // Insight sobre racha
+    if (streakData != null) {
+      final currentStreak = streakData['current_streak'] as int? ?? 0;
+      if (currentStreak >= 7) {
+        insights.add({
+          'emoji': '🔥',
+          'type': 'streak',
+          'title': 'Racha Impresionante',
+          'description': '$currentStreak días consecutivos'
+        });
+      }
+    }
+
+    return insights;
+  }
+
+  /// Obtener siguiente logro (basado en datos reales)
+  Map<String, dynamic>? getNextAchievementToUnlock() {
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+    final streakData = _analytics['streak_data'] as Map<String, dynamic>?;
+
+    if (basicStats == null) return null;
+
+    final currentStreak = streakData?['current_streak'] as int? ?? 0;
+    final totalEntries = basicStats['total_entries'] as int? ?? 0;
+    final totalMeditation = basicStats['total_meditation'] as int? ?? 0;
+    final totalExercise = basicStats['total_exercise'] as int? ?? 0;
+
+    // Logros basados en rachas
+    if (currentStreak < 3) {
+      return {
+        'emoji': '🌱',
+        'title': 'Primer Paso',
+        'description': 'Mantén una racha de 3 días',
+        'progress': currentStreak / 3,
+        'target': 3,
+        'current': currentStreak,
+        'type': 'streak'
+      };
+    } else if (currentStreak < 7) {
+      return {
+        'emoji': '🔥',
+        'title': 'Una Semana',
+        'description': 'Alcanza 7 días consecutivos',
+        'progress': currentStreak / 7,
+        'target': 7,
+        'current': currentStreak,
+        'type': 'streak'
+      };
+    } else if (currentStreak < 30) {
+      return {
+        'emoji': '💎',
+        'title': 'Un Mes Completo',
+        'description': 'Logra 30 días consecutivos',
+        'progress': currentStreak / 30,
+        'target': 30,
+        'current': currentStreak,
+        'type': 'streak'
+      };
+    }
+
+    // Logros basados en entradas
+    if (totalEntries < 50) {
+      return {
+        'emoji': '📚',
+        'title': 'Medio Centenar',
+        'description': 'Completa 50 entradas totales',
+        'progress': totalEntries / 50,
+        'target': 50,
+        'current': totalEntries,
+        'type': 'entries'
+      };
+    }
+
+    // Logros basados en meditación
+    if (totalMeditation < 300) { // 5 horas = 300 minutos
+      return {
+        'emoji': '🧘',
+        'title': 'Meditador',
+        'description': 'Acumula 5 horas de meditación',
+        'progress': totalMeditation / 300,
+        'target': 300,
+        'current': totalMeditation,
+        'type': 'meditation'
+      };
+    }
+
+    return {
+      'emoji': '🏆',
+      'title': 'Maestro del Bienestar',
+      'description': '¡Has alcanzado todos los logros!',
+      'progress': 1.0,
+      'target': 1,
+      'current': 1,
+      'type': 'mastery'
+    };
+  }
+
+  /// Obtener estado de bienestar (basado en datos reales)
+  Map<String, dynamic> getWellbeingStatus() {
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+
+    if (basicStats == null) {
+      return {
+        'score': 0,
+        'level': 'Sin datos',
+        'emoji': '📊',
+        'message': 'Registra algunos días para ver tu estado',
+      };
+    }
+
+    final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
+    final avgEnergy = basicStats['avg_energy'] as double? ?? 5.0;
+    final avgStress = basicStats['avg_stress'] as double? ?? 5.0;
+
+    // Calcular score combinado (mood + energía - estrés)
+    final combinedScore = (avgMood + avgEnergy + (10 - avgStress)) / 3;
+    final score = combinedScore.round();
+
+    String level, emoji, message;
+
+    if (score >= 8) {
+      level = 'Excelente';
+      emoji = '🌟';
+      message = '¡Tu bienestar está en un nivel excepcional!';
+    } else if (score >= 6) {
+      level = 'Bueno';
+      emoji = '😊';
+      message = 'Mantienes un buen equilibrio general';
+    } else if (score >= 4) {
+      level = 'Regular';
+      emoji = '🌱';
+      message = 'Hay espacio para mejorar tu bienestar';
+    } else {
+      level = 'Necesita Atención';
+      emoji = '🔥';
+      message = 'Enfócate en cuidar tu bienestar';
+    }
+
+    return {
+      'score': score,
+      'level': level,
+      'emoji': emoji,
+      'message': message,
+      'mood': avgMood,
+      'energy': avgEnergy,
+      'stress': avgStress,
+    };
+  }
+
+  /// Obtener datos para gráfico de mood (basado en datos reales)
+  List<Map<String, dynamic>> getMoodChartData() {
+    final moodTrends = _analytics['mood_trends'] as List? ?? [];
+
+    return moodTrends.map((trend) {
+      return {
+        'date': trend['entry_date'] ?? DateTime.now().toIso8601String(),
+        'mood': trend['mood_score'] ?? 5.0,
+        'energy': trend['energy_level'] ?? 5.0,
+        'stress': trend['stress_level'] ?? 5.0,
+      };
+    }).toList();
+  }
+
+  /// Obtener datos de racha (basado en datos reales)
+  Map<String, dynamic> getStreakData() {
+    final streakData = _analytics['streak_data'] as Map<String, dynamic>?;
+
+    return {
+      'current': streakData?['current_streak'] ?? 0,
+      'longest': streakData?['longest_streak'] ?? 0,
+    };
+  }
+
+  /// Obtener insights rápidos de mood (basado en datos reales)
+  Map<String, dynamic> getQuickStatsMoodInsights() {
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+
+    if (basicStats == null) {
+      return {
+        'avg_mood': 0.0,
+        'trend_icon': '📊',
+        'trend_description': 'Sin datos',
+        'trend_color': Colors.grey,
+      };
+    }
+
+    final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
+
+    String trendIcon, trendDescription;
+    Color trendColor;
+
+    if (avgMood >= 7) {
+      trendIcon = '😊';
+      trendDescription = 'Excelente';
+      trendColor = Colors.green;
+    } else if (avgMood >= 5) {
+      trendIcon = '😐';
+      trendDescription = 'Estable';
+      trendColor = Colors.blue;
+    } else {
+      trendIcon = '😔';
+      trendDescription = 'Bajo';
+      trendColor = Colors.orange;
+    }
+
+    return {
+      'avg_mood': avgMood,
+      'trend_icon': trendIcon,
+      'trend_description': trendDescription,
+      'trend_color': trendColor,
+    };
+  }
+
+  /// Obtener alertas de estrés (basado en datos reales)
+  Map<String, dynamic> getStressAlerts() {
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+
+    if (basicStats == null) {
+      return {
+        'requires_attention': false,
+        'level': 'sin datos',
+        'alert_color': Colors.grey,
+        'alert_icon': '📊',
+        'alert_title': 'Sin datos',
+        'recommendations': ['Registra algunos días para ver alertas'],
+      };
+    }
+
+    final avgStress = basicStats['avg_stress'] as double? ?? 5.0;
+
+    if (avgStress >= 7) {
+      return {
+        'requires_attention': true,
+        'level': 'alto',
+        'alert_color': Colors.red,
+        'alert_icon': '🚨',
+        'alert_title': 'Nivel de estrés alto',
+        'recommendations': [
+          'Practica técnicas de respiración',
+          'Toma descansos regulares',
+          'Considera reducir la carga de trabajo'
+        ],
+      };
+    } else if (avgStress >= 5) {
+      return {
+        'requires_attention': true,
+        'level': 'moderado',
+        'alert_color': Colors.orange,
+        'alert_icon': '⚠️',
+        'alert_title': 'Estrés moderado',
+        'recommendations': [
+          'Organiza mejor tu tiempo',
+          'Practica mindfulness',
+          'Asegúrate de dormir bien'
+        ],
+      };
+    }
+
+    return {
+      'requires_attention': false,
+      'level': 'bajo',
+      'alert_color': Colors.green,
+      'alert_icon': '✅',
+      'alert_title': 'Estrés bajo',
+      'recommendations': ['Mantén tus hábitos actuales'],
+    };
+  }
+
+  /// Obtener resumen del dashboard (basado en datos reales)
+  Map<String, dynamic> getDashboardSummary() {
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+    final streakData = _analytics['streak_data'] as Map<String, dynamic>?;
+
+    if (basicStats == null) {
+      return {
+        'wellbeing_score': 0,
+        'current_streak': 0,
+        'total_entries': 0,
+        'avg_mood': 0.0,
+        'avg_energy': 0.0,
+        'avg_stress': 0.0,
+        'main_message': 'Comienza registrando tu primer día',
+      };
+    }
+
+    final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
+    final avgEnergy = basicStats['avg_energy'] as double? ?? 5.0;
+    final avgStress = basicStats['avg_stress'] as double? ?? 5.0;
+    final totalEntries = basicStats['total_entries'] as int? ?? 0;
+    final currentStreak = streakData?['current_streak'] as int? ?? 0;
+
+    // Calcular score de bienestar
+    final wellbeingScore = ((avgMood + avgEnergy + (10 - avgStress)) / 3).round();
+
+    String mainMessage;
+    if (wellbeingScore >= 8) {
+      mainMessage = '¡Excelente! Tu bienestar está en un nivel óptimo';
+    } else if (wellbeingScore >= 6) {
+      mainMessage = 'Buen progreso. Mantén el equilibrio';
+    } else if (wellbeingScore >= 4) {
+      mainMessage = 'Vas por buen camino. Sigue mejorando';
+    } else {
+      mainMessage = 'Enfócate en cuidar tu bienestar día a día';
+    }
+
+    return {
+      'wellbeing_score': wellbeingScore,
+      'current_streak': currentStreak,
+      'total_entries': totalEntries,
+      'avg_mood': avgMood,
+      'avg_energy': avgEnergy,
+      'avg_stress': avgStress,
+      'main_message': mainMessage,
+    };
+  }
+
+  /// Obtener insights de diversidad (simulado por ahora)
+  Map<String, dynamic> getQuickStatsDiversityInsights() {
+    // Por ahora simulamos, pero se podría calcular basado en moment_stats
+    return {
+      'categories_used': 3,
+      'max_categories': 5,
+      'diversity_score': 0.6,
+      'message': 'Explora más categorías',
+    };
+  }
+
+  /// Obtener recomendaciones prioritarias (basado en datos reales)
+  List<Map<String, dynamic>> getPriorityRecommendations() {
+    final recommendations = <Map<String, dynamic>>[];
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+
+    if (basicStats == null) {
+      recommendations.add({
+        'emoji': '📝',
+        'title': 'Comienza a Registrar',
+        'description': 'Crea tu primera entrada diaria',
+        'priority': 'high',
+      });
+      return recommendations;
+    }
+
+    final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
+    final avgEnergy = basicStats['avg_energy'] as double? ?? 5.0;
+    final avgStress = basicStats['avg_stress'] as double? ?? 5.0;
+    final avgSleep = basicStats['avg_sleep'] as double? ?? 8.0;
+    final totalMeditation = basicStats['total_meditation'] as int? ?? 0;
+
+    // Recomendación basada en mood bajo
+    if (avgMood < 5.0) {
+      recommendations.add({
+        'emoji': '😊',
+        'title': 'Mejora tu Estado de Ánimo',
+        'description': 'Dedica tiempo a actividades que disfrutes',
+        'priority': 'high',
+      });
+    }
+
+    // Recomendación basada en energía baja
+    if (avgEnergy < 5.0) {
+      recommendations.add({
+        'emoji': '⚡',
+        'title': 'Aumenta tu Energía',
+        'description': 'Revisa tu alimentación y ejercicio',
+        'priority': 'medium',
+      });
+    }
+
+    // Recomendación basada en estrés alto
+    if (avgStress >= 7.0) {
+      recommendations.add({
+        'emoji': '🧘',
+        'title': 'Reduce el Estrés',
+        'description': 'Practica técnicas de relajación',
+        'priority': 'high',
+      });
+    }
+
+    // Recomendación basada en sueño
+    if (avgSleep < 7.0) {
+      recommendations.add({
+        'emoji': '😴',
+        'title': 'Mejora tu Sueño',
+        'description': 'Apunta a 7-8 horas de sueño diario',
+        'priority': 'medium',
+      });
+    }
+
+    // Recomendación basada en meditación
+    if (totalMeditation < 60) {
+      recommendations.add({
+        'emoji': '🧘‍♀️',
+        'title': 'Inicia con Meditación',
+        'description': 'Comienza con 5 minutos diarios',
+        'priority': 'low',
+      });
+    }
+
+    // Si todo va bien
+    if (recommendations.isEmpty) {
+      recommendations.add({
+        'emoji': '🎯',
+        'title': 'Mantén el Equilibrio',
+        'description': 'Continúa con tus excelentes hábitos',
+        'priority': 'low',
+      });
+    }
+
+    return recommendations;
+  }
+
+  /// Obtener temas dominantes (simulado por ahora)
+  List<Map<String, dynamic>> getDominantThemes() {
+    // Por ahora retornamos datos simulados
+    // Se podría implementar analizando moment_stats cuando exista
+    return [
+      {'word': 'trabajo', 'count': 15, 'type': 'neutral', 'emoji': '💼'},
+      {'word': 'familia', 'count': 12, 'type': 'positive', 'emoji': '👨‍👩‍👧‍👦'},
+      {'word': 'ejercicio', 'count': 8, 'type': 'positive', 'emoji': '🏃‍♀️'},
+      {'word': 'estrés', 'count': 6, 'type': 'negative', 'emoji': '😰'},
+    ];
+  }
+
+  /// Obtener análisis del día actual (simulado)
+  Map<String, dynamic> getCurrentDayAnalysis() {
+    return {
+      'has_entry': false,
+      'message': 'Aún no has registrado hoy',
+      'recommendation': 'Toma un momento para reflexionar sobre tu día',
+    };
+  }
+
+  /// Obtener top recomendaciones
+  List<Map<String, dynamic>> getTopRecommendations() {
+    return getPriorityRecommendations().take(3).toList();
+  }
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();

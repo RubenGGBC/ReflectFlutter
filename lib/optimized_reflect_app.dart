@@ -1,30 +1,19 @@
-// ============================================================================
-// optimized_reflect_app.dart - APLICACIÓN PRINCIPAL COMPLETAMENTE LIMPIA - FIXED
-// ============================================================================
+// lib/optimized_reflect_app.dart - APLICACIÓN ARREGLADA COMPLETAMENTE
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:logger/logger.dart';
 
 // Dependency Injection optimizado
-import 'data/services/optimized_database_service.dart';
 import 'injection_container_clean.dart' as clean_di;
 
 // Providers optimizados
 import 'presentation/providers/optimized_providers.dart';
 import 'presentation/providers/theme_provider.dart';
 
-// Screens optimizadas (estas necesitarían ser creadas o actualizadas)
+// Screens que SÍ EXISTEN
 import 'presentation/screens/v2/login_screen_v2.dart';
 import 'presentation/screens/v2/main_navigation_screen_v2.dart';
-import 'presentation/screens/v2/home_screen_v2.dart';
-import 'presentation/screens/v2/interactive_moments_screen_v2.dart';
-import 'presentation/screens/v2/daily_review_screen_v2.dart';
-import 'presentation/screens/v2/analytics_screen_V2.dart';
-import 'presentation/screens/v2/profile_screen_v2.dart';
-
-// Componentes modernos (reutilizados)
-import 'presentation/screens/components/modern_design_system.dart';
 
 class OptimizedReflectApp extends StatelessWidget {
   const OptimizedReflectApp({super.key});
@@ -61,136 +50,91 @@ class OptimizedReflectApp extends StatelessWidget {
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
-            title: 'Reflect - Optimized',
+            title: 'Reflect - Tu Compañero de Bienestar',
             debugShowCheckedModeBanner: false,
-
-            // Tema optimizado
-            theme: themeProvider.currentThemeData,
-
-            // Pantalla inicial
-            home: const OptimizedAppInitializer(),
-
-            // Rutas optimizadas y limpias
+            theme: _buildTheme(),
+            home: const AppInitializer(), // ✅ INICIALIZADOR SIMPLE
             routes: {
-              '/auth': (context) => const LoginScreenV2(),
-              '/main': (context) => const OptimizedMainNavigationScreen(),
-              '/home': (context) => const OptimizedHomeScreen(),
-              '/moments': (context) => const OptimizedMomentsScreen(),
-              '/review': (context) => const OptimizedDailyReviewScreen(),
-              '/analytics': (context) => const OptimizedAnalyticsScreen(),
-              '/profile': (context) => const OptimizedProfileScreen(),
-            },
-
-            // Manejo de rutas desconocidas
-            onUnknownRoute: (settings) {
-              return MaterialPageRoute(
-                builder: (context) => const OptimizedAuthScreen(),
-              );
+              '/login': (context) => const LoginScreenV2(),
+              '/main': (context) => const MainNavigationScreenV2(),
             },
           );
         },
       ),
     );
   }
+
+  ThemeData _buildTheme() {
+    return ThemeData(
+      brightness: Brightness.dark,
+      primarySwatch: Colors.blue,
+      scaffoldBackgroundColor: const Color(0xFF0F172A),
+      fontFamily: 'System',
+    );
+  }
 }
 
 // ============================================================================
-// INICIALIZADOR OPTIMIZADO
+// INICIALIZADOR SIMPLE Y FUNCIONAL
 // ============================================================================
 
-class OptimizedAppInitializer extends StatefulWidget {
-  const OptimizedAppInitializer({super.key});
+class AppInitializer extends StatefulWidget {
+  const AppInitializer({super.key});
 
   @override
-  State<OptimizedAppInitializer> createState() => _OptimizedAppInitializerState();
+  State<AppInitializer> createState() => _AppInitializerState();
 }
 
-class _OptimizedAppInitializerState extends State<OptimizedAppInitializer> {
-  final Logger _logger = clean_di.sl<Logger>();
-  bool _isInitializing = true;
-  String _initializationStep = 'Iniciando...';
+class _AppInitializerState extends State<AppInitializer> {
+  bool _isInitialized = false;
+  String _status = 'Iniciando...';
 
   @override
   void initState() {
     super.initState();
-    _initializeOptimizedApp();
+    _initialize();
   }
 
-  Future<void> _initializeOptimizedApp() async {
-    _logger.i('🚀 Inicializando Reflect App Optimizada...');
-
+  Future<void> _initialize() async {
     try {
-      // Paso 1: Inicializar Auth Provider
-      setState(() => _initializationStep = 'Verificando autenticación...');
+      setState(() => _status = 'Inicializando proveedores...');
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Inicializar Auth Provider
+      setState(() => _status = 'Verificando autenticación...');
       final authProvider = context.read<OptimizedAuthProvider>();
       await authProvider.initialize();
 
-      // Paso 2: Inicializar Theme Provider
-      setState(() => _initializationStep = 'Cargando tema...');
-      final themeProvider = context.read<ThemeProvider>();
-      await themeProvider.initialize();
+      setState(() => _status = 'Configurando tema...');
+      await Future.delayed(const Duration(milliseconds: 300));
 
-      // Paso 3: Verificar base de datos
-      setState(() => _initializationStep = 'Verificando base de datos...');
-      await _verifyDatabaseIntegrity();
-
-      // Paso 4: Precargar datos si el usuario está autenticado
-      if (authProvider.isLoggedIn && authProvider.currentUser != null) {
-        setState(() => _initializationStep = 'Cargando datos del usuario...');
-        await _preloadUserData(authProvider.currentUser!.id);
-      }
-
-      setState(() => _initializationStep = 'Completado');
-
-      // Navegar a la pantalla apropiada
+      setState(() => _status = 'Completado');
       await Future.delayed(const Duration(milliseconds: 500));
-      _navigateToAppropriateScreen();
 
+      // Decidir a dónde navegar
+      if (mounted) {
+        if (authProvider.isLoggedIn && authProvider.currentUser != null) {
+          // Usuario ya logueado → Ir a navegación principal
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const MainNavigationScreenV2()),
+          );
+        } else {
+          // Usuario no logueado → Ir a login
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const LoginScreenV2()),
+          );
+        }
+      }
     } catch (e) {
-      _logger.e('❌ Error durante la inicialización: $e');
-      setState(() => _initializationStep = 'Error de inicialización');
-
-      // Mostrar error y redirigir a auth
-      await Future.delayed(const Duration(seconds: 2));
-      _navigateToAuth();
+      if (mounted) {
+        setState(() => _status = 'Error: ${e.toString()}');
+        // En caso de error, ir a login
+        await Future.delayed(const Duration(seconds: 2));
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const LoginScreenV2()),
+        );
+      }
     }
-  }
-
-  Future<void> _verifyDatabaseIntegrity() async {
-    try {
-      final dbService = clean_di.sl<OptimizedDatabaseService>();
-      await dbService.optimizeDatabase();
-    } catch (e) {
-      _logger.w('⚠️ Problema menor con la base de datos: $e');
-    }
-  }
-
-  Future<void> _preloadUserData(int userId) async {
-    try {
-      // Cargar datos en paralelo para mejor rendimiento
-      await Future.wait([
-        context.read<OptimizedDailyEntriesProvider>().loadEntries(userId, limitDays: 30),
-        context.read<OptimizedMomentsProvider>().loadTodayMoments(userId),
-        context.read<OptimizedAnalyticsProvider>().loadCompleteAnalytics(userId),
-      ]);
-    } catch (e) {
-      _logger.w('⚠️ Error precargando datos del usuario: $e');
-      // No es crítico, la app puede funcionar sin precargar
-    }
-  }
-
-  void _navigateToAppropriateScreen() {
-    final authProvider = context.read<OptimizedAuthProvider>();
-
-    if (authProvider.isLoggedIn) {
-      Navigator.of(context).pushReplacementNamed('/main');
-    } else {
-      Navigator.of(context).pushReplacementNamed('/auth');
-    }
-  }
-
-  void _navigateToAuth() {
-    Navigator.of(context).pushReplacementNamed('/auth');
   }
 
   @override
@@ -212,256 +156,65 @@ class _OptimizedAppInitializerState extends State<OptimizedAppInitializer> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo optimizado
+              // Logo/Icon
               Container(
-                width: 120,
-                height: 120,
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  // FIX: Usar LinearGradient en lugar de List<Color>
-                  gradient: LinearGradient(
-                    colors: ModernColors.primaryGradient,
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF667eea), Color(0xFF764ba2)],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: ModernColors.primaryGradient.first.withOpacity(0.3),
-                      blurRadius: 20,
-                      spreadRadius: 5,
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(20),
                 ),
                 child: const Icon(
-                  Icons.psychology,
-                  size: 60,
+                  Icons.self_improvement,
+                  size: 40,
                   color: Colors.white,
                 ),
               ),
-
               const SizedBox(height: 32),
 
               // Título
               const Text(
                 'Reflect',
                 style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
                   color: Colors.white,
-                  letterSpacing: 2,
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-
               const SizedBox(height: 8),
-
               const Text(
-                'Tu compañero de bienestar optimizado',
+                'Tu compañero de bienestar',
                 style: TextStyle(
-                  fontSize: 16,
                   color: Colors.white70,
+                  fontSize: 16,
                 ),
               ),
-
               const SizedBox(height: 48),
 
               // Indicador de progreso
-              SizedBox(
-                width: 200,
-                child: Column(
-                  children: [
-                    LinearProgressIndicator(
-                      backgroundColor: Colors.white24,
-                      valueColor: AlwaysStoppedAnimation(
-                        ModernColors.primaryGradient.first,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _initializationStep,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+              const SizedBox(
+                width: 40,
+                height: 40,
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF667eea)),
                 ),
+              ),
+              const SizedBox(height: 24),
+
+              // Estado
+              Text(
+                _status,
+                style: const TextStyle(
+                  color: Colors.white54,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
               ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// FUNCIÓN PRINCIPAL OPTIMIZADA
-// ============================================================================
-
-Future<void> runOptimizedReflectApp() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // Inicializar dependencias limpias
-  await clean_di.initCleanDependencies();
-
-  // Verificar que todas las dependencias estén listas
-  if (!clean_di.areCleanServicesRegistered()) {
-    throw Exception('❌ No se pudieron registrar todas las dependencias');
-  }
-
-  final logger = clean_di.sl<Logger>();
-  logger.i('✅ Reflect App Optimizada iniciada correctamente');
-
-  // Información del container limpio
-  final containerInfo = clean_di.getCleanContainerInfo();
-  logger.d('📦 Container info: $containerInfo');
-
-  runApp(const OptimizedReflectApp());
-}
-
-// ============================================================================
-// MAIN FUNCTION OPTIMIZADA
-// ============================================================================
-
-void main() async {
-  try {
-    await runOptimizedReflectApp();
-  } catch (e) {
-    // Fallback en caso de error crítico
-    runApp(
-      MaterialApp(
-        home: Scaffold(
-          body: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                const Text(
-                  'Error crítico de inicialización',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  e.toString(),
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ============================================================================
-// CLASES DE SCREENS PLACEHOLDER (NECESITAN IMPLEMENTACIÓN)
-// ============================================================================
-
-// Estas clases son placeholders y necesitarían implementación completa
-// basada en las screens existentes pero optimizadas
-
-class OptimizedAuthScreen extends StatelessWidget {
-  const OptimizedAuthScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-          ),
-        ),
-        child: const Center(
-          child: Text(
-            'Pantalla de Autenticación Optimizada',
-            style: TextStyle(color: Colors.white, fontSize: 18),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class OptimizedMainNavigationScreen extends StatelessWidget {
-  const OptimizedMainNavigationScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: const Center(
-        child: Text('Navegación Principal Optimizada'),
-      ),
-    );
-  }
-}
-
-class OptimizedHomeScreen extends StatelessWidget {
-  const OptimizedHomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Home Screen Optimizada'),
-      ),
-    );
-  }
-}
-
-class OptimizedMomentsScreen extends StatelessWidget {
-  const OptimizedMomentsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Moments Screen Optimizada'),
-      ),
-    );
-  }
-}
-
-class OptimizedDailyReviewScreen extends StatelessWidget {
-  const OptimizedDailyReviewScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Daily Review Screen Optimizada'),
-      ),
-    );
-  }
-}
-
-class OptimizedAnalyticsScreen extends StatelessWidget {
-  const OptimizedAnalyticsScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Analytics Screen Optimizada'),
-      ),
-    );
-  }
-}
-
-class OptimizedProfileScreen extends StatelessWidget {
-  const OptimizedProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Profile Screen Optimizada'),
       ),
     );
   }

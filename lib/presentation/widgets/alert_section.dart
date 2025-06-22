@@ -1,8 +1,8 @@
-// lib/presentation/widgets/home/alerts_section.dart
+// lib/presentation/widgets/alert_section.dart
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/analytics_provider.dart';
+import '../providers/optimized_providers.dart'; // ✅ IMPORT ARREGLADO
 import '../../presentation/screens/components/modern_design_system.dart';
 
 class AlertsSection extends StatelessWidget {
@@ -10,7 +10,7 @@ class AlertsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final analytics = context.watch<AnalyticsProvider>();
+    final analytics = context.watch<OptimizedAnalyticsProvider>(); // ✅ PROVIDER ARREGLADO
     final stressAlerts = analytics.getStressAlerts();
 
     if (stressAlerts['requires_attention'] != true) {
@@ -40,7 +40,10 @@ class AlertsSection extends StatelessWidget {
               Expanded(
                 child: Text(
                   alertTitle,
-                  style: ModernTypography.heading3.copyWith(color: alertColor, fontSize: 18),
+                  style: ModernTypography.heading3.copyWith(
+                    color: alertColor,
+                    fontSize: 18,
+                  ),
                 ),
               ),
             ],
@@ -49,7 +52,9 @@ class AlertsSection extends StatelessWidget {
             const SizedBox(height: ModernSpacing.md),
             Text(
               "Recomendación: ${recommendations.first}",
-              style: ModernTypography.bodyMedium.copyWith(color: alertColor.withOpacity(0.8)),
+              style: ModernTypography.bodyMedium.copyWith(
+                color: alertColor.withOpacity(0.8),
+              ),
             ),
           ],
         ],
