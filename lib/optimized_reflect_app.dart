@@ -1,4 +1,4 @@
-// lib/optimized_reflect_app.dart - APLICACIÓN ARREGLADA COMPLETAMENTE
+// lib/optimized_reflect_app.dart - VERSIÓN CON TODAS LAS RUTAS CORREGIDAS
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -11,9 +11,14 @@ import 'injection_container_clean.dart' as clean_di;
 import 'presentation/providers/optimized_providers.dart';
 import 'presentation/providers/theme_provider.dart';
 
-// Screens que SÍ EXISTEN
+// Screens para las rutas
 import 'presentation/screens/v2/login_screen_v2.dart';
 import 'presentation/screens/v2/main_navigation_screen_v2.dart';
+import 'presentation/screens/v2/interactive_moments_screen_v2.dart';
+import 'presentation/screens/v2/daily_review_screen_v2.dart';
+import 'presentation/screens/v2/analytics_screen_V2.dart';
+import 'presentation/screens/v2/profile_screen_v2.dart';
+
 
 class OptimizedReflectApp extends StatelessWidget {
   const OptimizedReflectApp({super.key});
@@ -53,10 +58,15 @@ class OptimizedReflectApp extends StatelessWidget {
             title: 'Reflect - Tu Compañero de Bienestar',
             debugShowCheckedModeBanner: false,
             theme: _buildTheme(),
-            home: const AppInitializer(), // ✅ INICIALIZADOR SIMPLE
+            home: const AppInitializer(),
+            // ✅ RUTAS CORREGIDAS Y COMPLETADAS
             routes: {
               '/login': (context) => const LoginScreenV2(),
               '/main': (context) => const MainNavigationScreenV2(),
+              '/moments': (context) => const InteractiveMomentsScreenV2(),
+              '/review': (context) => const DailyReviewScreenV2(),
+              '/analytics': (context) => const AnalyticsScreenV2(),
+              '/profile': (context) => const ProfileScreenV2(),
             },
           );
         },
@@ -75,7 +85,7 @@ class OptimizedReflectApp extends StatelessWidget {
 }
 
 // ============================================================================
-// INICIALIZADOR SIMPLE Y FUNCIONAL
+// INICIALIZADOR SIMPLE Y FUNCIONAL (SIN CAMBIOS)
 // ============================================================================
 
 class AppInitializer extends StatefulWidget {
@@ -86,7 +96,6 @@ class AppInitializer extends StatefulWidget {
 }
 
 class _AppInitializerState extends State<AppInitializer> {
-  bool _isInitialized = false;
   String _status = 'Iniciando...';
 
   @override
@@ -100,7 +109,6 @@ class _AppInitializerState extends State<AppInitializer> {
       setState(() => _status = 'Inicializando proveedores...');
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Inicializar Auth Provider
       setState(() => _status = 'Verificando autenticación...');
       final authProvider = context.read<OptimizedAuthProvider>();
       await authProvider.initialize();
@@ -111,28 +119,18 @@ class _AppInitializerState extends State<AppInitializer> {
       setState(() => _status = 'Completado');
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Decidir a dónde navegar
       if (mounted) {
         if (authProvider.isLoggedIn && authProvider.currentUser != null) {
-          // Usuario ya logueado → Ir a navegación principal
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const MainNavigationScreenV2()),
-          );
+          Navigator.of(context).pushReplacementNamed('/main');
         } else {
-          // Usuario no logueado → Ir a login
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const LoginScreenV2()),
-          );
+          Navigator.of(context).pushReplacementNamed('/login');
         }
       }
     } catch (e) {
       if (mounted) {
         setState(() => _status = 'Error: ${e.toString()}');
-        // En caso de error, ir a login
         await Future.delayed(const Duration(seconds: 2));
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const LoginScreenV2()),
-        );
+        Navigator.of(context).pushReplacementNamed('/login');
       }
     }
   }
@@ -156,7 +154,6 @@ class _AppInitializerState extends State<AppInitializer> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Logo/Icon
               Container(
                 width: 80,
                 height: 80,
@@ -173,8 +170,6 @@ class _AppInitializerState extends State<AppInitializer> {
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Título
               const Text(
                 'Reflect',
                 style: TextStyle(
@@ -192,8 +187,6 @@ class _AppInitializerState extends State<AppInitializer> {
                 ),
               ),
               const SizedBox(height: 48),
-
-              // Indicador de progreso
               const SizedBox(
                 width: 40,
                 height: 40,
@@ -202,8 +195,6 @@ class _AppInitializerState extends State<AppInitializer> {
                 ),
               ),
               const SizedBox(height: 24),
-
-              // Estado
               Text(
                 _status,
                 style: const TextStyle(

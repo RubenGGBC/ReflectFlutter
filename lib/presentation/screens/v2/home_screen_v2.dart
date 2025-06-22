@@ -1,5 +1,5 @@
 // ============================================================================
-// presentation/screens/v2/home_screen_v2.dart - ACTUALIZADA Y CORREGIDA
+// presentation/screens/v2/home_screen_v2.dart - VERSIÓN CORREGIDA Y REACTIVA
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -35,14 +35,11 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
 
-  bool _isLoadingData = true;
-  Map<String, dynamic> _dashboardData = {};
-
   @override
   void initState() {
     super.initState();
     _setupAnimations();
-    // Use addPostFrameCallback to ensure context is available
+    // Usamos addPostFrameCallback para asegurar que el `context` esté disponible.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadUserData();
     });
@@ -80,37 +77,25 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   }
 
   Future<void> _loadUserData() async {
-    // Ensure the widget is still in the tree
     if (!mounted) return;
-
-    setState(() {
-      _isLoadingData = true;
-    });
 
     final authProvider = context.read<OptimizedAuthProvider>();
     final user = authProvider.currentUser;
 
     if (user == null) {
-      // Handle user not logged in case
-      if (mounted) {
-        setState(() {
-          _isLoadingData = false;
-        });
-      }
+      // Manejar el caso de que el usuario no esté logueado
       return;
     };
 
     try {
-      // Cargar datos en paralelo para mejor rendimiento
+      // La carga de datos inicial se dispara aquí
       await Future.wait([
         context.read<OptimizedDailyEntriesProvider>().loadEntries(user.id, limitDays: 30),
         context.read<OptimizedMomentsProvider>().loadTodayMoments(user.id),
         context.read<OptimizedAnalyticsProvider>().loadCompleteAnalytics(user.id),
       ]);
 
-      // Procesar datos para el dashboard solo si el widget sigue montado
       if (mounted) {
-        await _processDashboardData();
         _fadeController.forward();
         Future.delayed(const Duration(milliseconds: 200), () {
           if (mounted) _slideController.forward();
@@ -119,45 +104,24 @@ class _HomeScreenV2State extends State<HomeScreenV2>
 
     } catch (e) {
       debugPrint('Error cargando datos del usuario: $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoadingData = false;
-        });
+      if(mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error al cargar datos: $e'), backgroundColor: Colors.red)
+        );
       }
     }
   }
 
-  Future<void> _processDashboardData() async {
-    final authProvider = context.read<OptimizedAuthProvider>();
-    final entriesProvider = context.read<OptimizedDailyEntriesProvider>();
-    final momentsProvider = context.read<OptimizedMomentsProvider>();
-    final analyticsProvider = context.read<OptimizedAnalyticsProvider>();
-
-    final user = authProvider.currentUser!;
-
-    // Procesar estadísticas del período
-    final periodStats = entriesProvider.getPeriodStats();
-    final momentsStats = momentsProvider.getMomentsStats();
-    final analytics = analyticsProvider.analytics;
-
-    setState(() {
-      _dashboardData = {
-        'user': user,
-        'today_entry': entriesProvider.todayEntry,
-        'today_moments': momentsProvider.todayMoments,
-        'period_stats': periodStats,
-        'moments_stats': momentsStats,
-        'analytics': analytics,
-        'wellbeing_score': analyticsProvider.wellbeingScore,
-        'wellbeing_level': analyticsProvider.wellbeingLevel,
-        'insights': analyticsProvider.getInsights(),
-      };
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    // Observamos los providers para que la UI se reconstruya con los cambios
+    final authProvider = context.watch<OptimizedAuthProvider>();
+    final entriesProvider = context.watch<OptimizedDailyEntriesProvider>();
+    final momentsProvider = context.watch<OptimizedMomentsProvider>();
+    final analyticsProvider = context.watch<OptimizedAnalyticsProvider>();
+
+    final user = authProvider.currentUser;
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -171,13 +135,17 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           ),
         ),
         child: SafeArea(
-          child: _isLoadingData
+          // Usamos el `isLoading` del provider para mostrar el estado de carga
+          child: analyticsProvider.isLoading
               ? _buildLoadingState()
+              : user == null
+              ? _buildErrorState('Usuario no encontrado. Por favor, inicia sesión de nuevo.')
               : FadeTransition(
             opacity: _fadeAnimation,
             child: SlideTransition(
               position: _slideAnimation,
-              child: _buildContent(),
+              // Pasamos los providers a los widgets que los necesiten
+              child: _buildContent(user, entriesProvider, momentsProvider, analyticsProvider),
             ),
           ),
         ),
@@ -203,24 +171,38 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  Widget _buildContent() {
+  Widget _buildErrorState(String message) {
+    return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Text(message, style: ModernTypography.bodyLarge.copyWith(color: Colors.red)),
+        )
+    );
+  }
+
+  Widget _buildContent(
+      OptimizedUserModel user,
+      OptimizedDailyEntriesProvider entriesProvider,
+      OptimizedMomentsProvider momentsProvider,
+      OptimizedAnalyticsProvider analyticsProvider
+      ) {
     return CustomScrollView(
       slivers: [
-        _buildAppBar(),
+        _buildAppBar(user),
         SliverPadding(
           padding: const EdgeInsets.all(ModernSpacing.md),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
               const SizedBox(height: ModernSpacing.md),
-              _buildWellbeingCard(),
+              _buildWellbeingCard(analyticsProvider),
               const SizedBox(height: ModernSpacing.md),
-              _buildTodaySection(),
+              _buildTodaySection(entriesProvider, momentsProvider),
               const SizedBox(height: ModernSpacing.md),
-              _buildMomentsPreview(),
+              _buildMomentsPreview(momentsProvider),
               const SizedBox(height: ModernSpacing.md),
-              _buildAnalyticsPreview(),
+              _buildAnalyticsPreview(entriesProvider),
               const SizedBox(height: ModernSpacing.md),
-              _buildInsightsCard(),
+              _buildInsightsCard(analyticsProvider),
               const SizedBox(height: ModernSpacing.lg),
               _buildQuickActions(),
               const SizedBox(height: ModernSpacing.lg),
@@ -231,11 +213,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  SliverAppBar _buildAppBar() {
-    // FIX: Cast the user to the correct type for type safety
-    final user = _dashboardData['user'] as OptimizedUserModel?;
-    if (user == null) return const SliverAppBar(backgroundColor: Colors.transparent);
-
+  SliverAppBar _buildAppBar(OptimizedUserModel user) {
     return SliverAppBar(
       surfaceTintColor: Colors.transparent,
       expandedHeight: 120,
@@ -281,9 +259,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   }
 
 
-  Widget _buildWellbeingCard() {
-    final wellbeingScore = _dashboardData['wellbeing_score'] as int? ?? 0;
-    final wellbeingLevel = _dashboardData['wellbeing_level'] as String? ?? 'Evaluando';
+  Widget _buildWellbeingCard(OptimizedAnalyticsProvider analyticsProvider) {
+    final wellbeingScore = analyticsProvider.wellbeingScore;
+    final wellbeingLevel = analyticsProvider.wellbeingLevel;
 
     return ModernCard(
       gradient: ModernColors.primaryGradient,
@@ -345,9 +323,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  Widget _buildTodaySection() {
-    final todayEntry = _dashboardData['today_entry'] as OptimizedDailyEntryModel?;
-    final todayMoments = _dashboardData['today_moments'] as List<OptimizedInteractiveMomentModel>? ?? [];
+  Widget _buildTodaySection(OptimizedDailyEntriesProvider entriesProvider, OptimizedMomentsProvider momentsProvider) {
+    final todayEntry = entriesProvider.todayEntry;
+    final todayMoments = momentsProvider.todayMoments;
 
     return ModernCard(
       child: Column(
@@ -395,10 +373,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  Widget _buildMomentsPreview() {
-    // FIX: Cast to the correct types
-    final todayMoments = _dashboardData['today_moments'] as List<OptimizedInteractiveMomentModel>? ?? [];
-    final momentsStats = _dashboardData['moments_stats'] as Map<String, dynamic>? ?? {};
+  Widget _buildMomentsPreview(OptimizedMomentsProvider momentsProvider) {
+    final todayMoments = momentsProvider.todayMoments;
+    final momentsStats = momentsProvider.getMomentsStats();
 
     return ModernCard(
       child: Column(
@@ -409,7 +386,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
             children: [
               const Text('Momentos de Hoy', style: ModernTypography.heading4),
               TextButton(
-                onPressed: () => Navigator.of(context).pushNamed('/moments'),
+                onPressed: () {}, // Navegar a pantalla de momentos
                 child: const Text('Ver todos'),
               ),
             ],
@@ -443,7 +420,6 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               const SizedBox(width: ModernSpacing.sm),
               _buildStatChip(
                 'Positivos',
-                // FIX: Corrected parenthesis for percentage calculation
                 '${((momentsStats['positive_ratio'] as double? ?? 0.0) * 100).toInt()}%',
                 ModernColors.success,
               ),
@@ -454,7 +430,6 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  // FIX: Use the correct type for the 'moment' parameter
   Widget _buildMomentItem(OptimizedInteractiveMomentModel moment) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: ModernSpacing.xs),
@@ -487,8 +462,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  Widget _buildAnalyticsPreview() {
-    final periodStats = _dashboardData['period_stats'] as Map<String, dynamic>? ?? {};
+  Widget _buildAnalyticsPreview(OptimizedDailyEntriesProvider entriesProvider) {
+    final periodStats = entriesProvider.getPeriodStats();
 
     return ModernCard(
       child: Column(
@@ -499,7 +474,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
             children: [
               const Text('Analytics del Período', style: ModernTypography.heading4),
               TextButton(
-                onPressed: () => Navigator.of(context).pushNamed('/analytics'),
+                onPressed: () {}, // Navegar a pantalla de analytics
                 child: const Text('Ver detalles'),
               ),
             ],
@@ -549,9 +524,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  Widget _buildInsightsCard() {
-    // FIX: Cast to the correct type
-    final insights = _dashboardData['insights'] as List<Map<String, String>>? ?? [];
+  Widget _buildInsightsCard(OptimizedAnalyticsProvider analyticsProvider) {
+    final insights = analyticsProvider.getInsights();
     if (insights.isEmpty) return const SizedBox.shrink();
 
     return ModernCard(
@@ -605,25 +579,25 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               text: 'Nuevo Momento',
               icon: Icons.add_circle_outline,
               gradient: ModernColors.positiveGradient,
-              onPressed: () => Navigator.of(context).pushNamed('/moments'),
+              onPressed: () {},
             ),
             ModernButton(
               text: 'Reflexión',
               icon: Icons.edit_note,
               gradient: ModernColors.warningGradient,
-              onPressed: () => Navigator.of(context).pushNamed('/review'),
+              onPressed: () {},
             ),
             ModernButton(
               text: 'Analytics',
               icon: Icons.analytics,
               gradient: ModernColors.neutralGradient,
-              onPressed: () => Navigator.of(context).pushNamed('/analytics'),
+              onPressed: () {},
             ),
             ModernButton(
               text: 'Mi Perfil',
               icon: Icons.person_outline,
               isPrimary: false,
-              onPressed: () => Navigator.of(context).pushNamed('/profile'),
+              onPressed: () {},
             ),
           ],
         )

@@ -1,5 +1,5 @@
 // ============================================================================
-// presentation/screens/v2/main_navigation_screen_v2.dart - NAVEGACIÓN PRINCIPAL
+// presentation/screens/v2/main_navigation_screen_v2.dart - NAVEGACIÓN CORREGIDA
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -29,11 +29,15 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
     with TickerProviderStateMixin {
 
   int _currentIndex = 0;
-  late PageController _pageController;
+  PageController? _pageController; // ✅ ARREGLADO: Nullable para inicialización segura
   late AnimationController _navAnimationController;
   late Animation<double> _navAnimation;
 
-  // Lista de pantallas
+  // ✅ ARREGLADO: Estado de inicialización
+  bool _isInitialized = false;
+  bool _isInitializing = false;
+
+  // Lista de pantallas con lazy loading
   late final List<Widget> _screens;
 
   // Configuración de navegación
@@ -73,21 +77,75 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
   @override
   void initState() {
     super.initState();
-    _setupNavigation();
     _setupAnimations();
-    _initializeUserData();
+
+    // ✅ ARREGLADO: Inicialización diferida y segura
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initializeNavigation();
+    });
   }
 
   @override
   void dispose() {
-    _pageController.dispose();
+    _pageController?.dispose();
     _navAnimationController.dispose();
     super.dispose();
   }
 
-  void _setupNavigation() {
-    _pageController = PageController(initialPage: _currentIndex);
+  Future<void> _initializeNavigation() async {
+    if (_isInitializing) return;
 
+    setState(() {
+      _isInitializing = true;
+    });
+
+    try {
+      // ✅ ARREGLADO: Verificar autenticación primero
+      final authProvider = context.read<OptimizedAuthProvider>();
+      if (!authProvider.isLoggedIn || authProvider.currentUser == null) {
+        if (mounted) {
+          Navigator.of(context).pushReplacementNamed('/auth');
+        }
+        return;
+      }
+
+      // ✅ ARREGLADO: Configurar navegación después de verificar auth
+      _setupNavigation();
+      _setupAnimations();
+
+      // ✅ ARREGLADO: Precargar datos esenciales con timeout
+      await _initializeUserData();
+
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+
+        _navAnimationController.forward();
+      }
+
+    } catch (e) {
+      debugPrint('❌ Error inicializando navegación: $e');
+      if (mounted) {
+        // En caso de error, redirigir a login
+        Navigator.of(context).pushReplacementNamed('/auth');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isInitializing = false;
+        });
+      }
+    }
+  }
+
+  void _setupNavigation() {
+    // ✅ ARREGLADO: Crear PageController solo una vez
+    if (_pageController == null) {
+      _pageController = PageController(initialPage: _currentIndex);
+    }
+
+    // ✅ ARREGLADO: Instancias frescas de las pantallas
     _screens = [
       const HomeScreenV2(),
       const InteractiveMomentsScreenV2(),
@@ -110,29 +168,58 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
       parent: _navAnimationController,
       curve: Curves.easeOutBack,
     ));
-
-    _navAnimationController.forward();
   }
 
   Future<void> _initializeUserData() async {
     final authProvider = context.read<OptimizedAuthProvider>();
     final user = authProvider.currentUser;
 
-    if (user != null) {
-      // Precargar datos esenciales en paralelo
-      try {
-        await Future.wait([
-          context.read<OptimizedDailyEntriesProvider>()
-              .loadEntries(user.id, limitDays: 7),
-          context.read<OptimizedMomentsProvider>()
-              .loadTodayMoments(user.id),
-          context.read<OptimizedAnalyticsProvider>()
-              .loadCompleteAnalytics(user.id, days: 30),
-        ]);
-      } catch (e) {
-        debugPrint('Error precargando datos: $e');
-      }
+    if (user == null) return;
+
+    try {
+      // ✅ ARREGLADO: Precargar datos con timeout y manejo de errores
+      await Future.wait([
+        context.read<OptimizedDailyEntriesProvider>()
+            .loadEntries(user.id, limitDays: 7),
+        context.read<OptimizedMomentsProvider>()
+            .loadTodayMoments(user.id),
+        context.read<OptimizedAnalyticsProvider>()
+            .loadCompleteAnalytics(user.id, days: 30),
+      ]).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () => throw 'Timeout cargando datos iniciales',
+      );
+    } catch (e) {
+      debugPrint('⚠️ Error precargando datos (continuando): $e');
+      // No lanzar excepción, solo log - la app puede funcionar sin datos precargados
     }
+  }
+
+  // ✅ ARREGLADO: Navegación segura y sincronizada
+  void _onNavItemTapped(int index) {
+    if (!_isInitialized || _pageController == null) return;
+
+    if (index == _currentIndex) return; // Ya estamos en esa pantalla
+
+    setState(() {
+      _currentIndex = index;
+    });
+
+    // ✅ ARREGLADO: Animación suave entre páginas
+    _pageController!.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  // ✅ ARREGLADO: Sincronización bidireccional
+  void _onPageChanged(int index) {
+    if (!mounted) return;
+
+    setState(() {
+      _currentIndex = index;
+    });
   }
 
   @override
@@ -140,43 +227,93 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
     return Scaffold(
       body: Consumer<OptimizedAuthProvider>(
         builder: (context, authProvider, child) {
-          // Verificar autenticación
-          if (!authProvider.isLoggedIn) {
+          // ✅ ARREGLADO: Verificación de autenticación mejorada
+          if (!authProvider.isLoggedIn || authProvider.currentUser == null) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              Navigator.of(context).pushReplacementNamed('/auth');
+              if (mounted) {
+                Navigator.of(context).pushReplacementNamed('/auth');
+              }
             });
-            return const SizedBox.shrink();
+            return const _AuthRedirectScreen();
           }
 
-          return Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFF0F172A),
-                  Color(0xFF1E293B),
-                  Color(0xFF334155),
-                ],
+          // ✅ ARREGLADO: Estados de carga y error
+          if (!_isInitialized) {
+            return _buildInitializingScreen();
+          }
+
+          return _buildMainContent();
+        },
+      ),
+    );
+  }
+
+  Widget _buildInitializingScreen() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0F172A),
+            Color(0xFF1E293B),
+            Color(0xFF334155),
+          ],
+        ),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              color: Colors.white,
+            ),
+            SizedBox(height: 24),
+            Text(
+              'Preparando tu espacio...',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
               ),
             ),
-            child: Column(
-              children: [
-                // Contenido principal
-                Expanded(
-                  child: PageView(
-                    controller: _pageController,
-                    onPageChanged: _onPageChanged,
-                    children: _screens,
-                  ),
-                ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                // Barra de navegación
-                _buildModernBottomNav(),
-              ],
+  Widget _buildMainContent() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0F172A),
+            Color(0xFF1E293B),
+            Color(0xFF334155),
+          ],
+        ),
+      ),
+      child: Column(
+        children: [
+          // ✅ ARREGLADO: Contenido principal con verificación
+          Expanded(
+            child: _pageController != null
+                ? PageView(
+              controller: _pageController!,
+              onPageChanged: _onPageChanged,
+              physics: const ClampingScrollPhysics(), // ✅ ARREGLADO: Física de scroll mejorada
+              children: _screens,
+            )
+                : const Center(
+              child: CircularProgressIndicator(color: Colors.white),
             ),
-          );
-        },
+          ),
+
+          // Barra de navegación
+          _buildModernBottomNav(),
+        ],
       ),
     );
   }
@@ -266,7 +403,7 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
               style: TextStyle(
                 color: isSelected ? item.color : Colors.white38,
                 fontSize: isSelected ? 12 : 10,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               ),
               child: Text(item.label),
             ),
@@ -276,140 +413,30 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
     );
   }
 
-  // ============================================================================
-  // LÓGICA DE NAVEGACIÓN
-  // ============================================================================
-
-  void _onNavItemTapped(int index) {
-    if (_currentIndex == index) {
-      // Si ya estamos en la pantalla, scroll al top o refresh
-      _handleSameScreenTap(index);
-      return;
-    }
-
-    setState(() {
-      _currentIndex = index;
-    });
-
-    _pageController.animateToPage(
-      index,
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-    );
-
-    // Haptic feedback
-    _provideFeedback();
-  }
-
-  void _onPageChanged(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-  }
-
-  void _handleSameScreenTap(int index) {
-    // Implementar scroll to top o refresh según la pantalla
-    switch (index) {
-      case 0: // Home
-        _refreshHomeData();
-        break;
-      case 1: // Momentos
-      // Scroll to top o mostrar quick add
-        break;
-      case 2: // Reflexión
-      // No action needed
-        break;
-      case 3: // Analytics
-        _refreshAnalytics();
-        break;
-      case 4: // Perfil
-      // No action needed
-        break;
-    }
-  }
-
-  Future<void> _refreshHomeData() async {
-    final authProvider = context.read<OptimizedAuthProvider>();
-    final user = authProvider.currentUser;
-
-    if (user != null) {
-      try {
-        await Future.wait([
-          context.read<OptimizedDailyEntriesProvider>()
-              .loadEntries(user.id, limitDays: 7),
-          context.read<OptimizedMomentsProvider>()
-              .loadTodayMoments(user.id),
-        ]);
-
-        _showSnackBar('Datos actualizados');
-      } catch (e) {
-        _showSnackBar('Error actualizando datos', isError: true);
-      }
-    }
-  }
-
-  Future<void> _refreshAnalytics() async {
-    final authProvider = context.read<OptimizedAuthProvider>();
-    final user = authProvider.currentUser;
-
-    if (user != null) {
-      try {
-        await context.read<OptimizedAnalyticsProvider>()
-            .loadCompleteAnalytics(user.id, days: 30);
-
-        _showSnackBar('Analytics actualizados');
-      } catch (e) {
-        _showSnackBar('Error actualizando analytics', isError: true);
-      }
-    }
-  }
-
-  void _provideFeedback() {
-    // Implementar haptic feedback si está disponible
-    try {
-      // HapticFeedback.selectionClick();
-    } catch (e) {
-      // Haptic feedback no disponible
-    }
-  }
-
-  void _showSnackBar(String message, {bool isError = false}) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? Colors.red : Colors.green,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        margin: const EdgeInsets.only(
-          bottom: 100, // Espacio para la bottom nav
-          left: 16,
-          right: 16,
-        ),
-        duration: const Duration(seconds: 2),
-      ),
-    );
-  }
-
-  // ============================================================================
-  // MÉTODOS DE CONVENIENCIA
-  // ============================================================================
-
-  // Método público para navegar programáticamente
+  // ✅ NUEVO: Métodos de conveniencia públicos
   void navigateToScreen(int index) {
-    if (index >= 0 && index < _screens.length) {
+    if (index >= 0 && index < _screens.length && _isInitialized) {
       _onNavItemTapped(index);
     }
   }
 
-  // Método para obtener la pantalla actual
-  Widget get currentScreen => _screens[_currentIndex];
+  Widget get currentScreen => _isInitialized && _currentIndex < _screens.length
+      ? _screens[_currentIndex]
+      : const SizedBox.shrink();
 
-  // Método para verificar si una pantalla específica está activa
-  bool isScreenActive(int index) => _currentIndex == index;
+  bool isScreenActive(int index) => _currentIndex == index && _isInitialized;
+
+  // ✅ NUEVO: Método para refrescar datos
+  Future<void> refreshData() async {
+    if (!_isInitialized) return;
+
+    final authProvider = context.read<OptimizedAuthProvider>();
+    final user = authProvider.currentUser;
+
+    if (user != null) {
+      await _initializeUserData();
+    }
+  }
 }
 
 // ============================================================================
@@ -428,6 +455,48 @@ class NavigationItem {
     required this.label,
     required this.color,
   });
+}
+
+// ✅ NUEVO: Screen de redirección a auth
+class _AuthRedirectScreen extends StatelessWidget {
+  const _AuthRedirectScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF0F172A),
+            Color(0xFF1E293B),
+            Color(0xFF334155),
+          ],
+        ),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.logout,
+              color: Colors.white54,
+              size: 64,
+            ),
+            SizedBox(height: 24),
+            Text(
+              'Redirigiendo al login...',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 // ============================================================================
