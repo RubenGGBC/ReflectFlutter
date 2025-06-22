@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import '../../data/models/daily_entry_model.dart';
+import '../../data/models/tag_model.dart';
 import '../../data/services/database_service.dart';
 
 class AnalyticsProvider with ChangeNotifier {
@@ -39,6 +41,82 @@ class AnalyticsProvider with ChangeNotifier {
   Map<String, dynamic> get stressPattern => _stressPattern;
   // NUEVO: Getter para diversidad, requerido por el dashboard
   Map<String, dynamic> get diversityAnalysis => _diversityAnalysis;
+
+
+  /// ✅ CORREGIDO: Guarda una nueva entrada diaria usando el nuevo DatabaseService.
+  Future<void> addDailyEntry({
+    required int userId,
+    required String freeReflection,
+    List<TagModel> positiveTags = const [],
+    List<TagModel> negativeTags = const [],
+    bool? worthIt,
+    DateTime? entryDate,
+    // Nuevos campos de analíticas
+    int? energyLevel,
+    int? stressLevel,
+    int? sleepQuality,
+    int? anxietyLevel,
+    int? motivationLevel,
+    int? socialInteraction,
+    int? physicalActivity,
+    int? workProductivity,
+    double? sleepHours,
+    int? waterIntake,
+    int? meditationMinutes,
+    int? exerciseMinutes,
+    double? screenTimeHours,
+    String? gratitudeItems,
+    int? weatherMoodImpact,
+    int? socialBattery,
+    int? creativeEnergy,
+    int? emotionalStability,
+    int? focusLevel,
+    int? lifeSatisfaction,
+  }) async {
+    _logger.i('➕ Intentando guardar nueva entrada para usuario: $userId');
+    try {
+      final newEntry = DailyEntryModel.create(
+        userId: userId, // <<< 🐞 FIX 1: userId se pasa correctamente.
+        freeReflection: freeReflection,
+        positiveTags: positiveTags,
+        negativeTags: negativeTags,
+        worthIt: worthIt,
+        entryDate: entryDate, // <<< 🐞 FIX 2: entryDate se pasa correctamente.
+        // Pasar todos los nuevos valores
+        energyLevel: energyLevel,
+        stressLevel: stressLevel,
+        sleepQuality: sleepQuality,
+        anxietyLevel: anxietyLevel,
+        motivationLevel: motivationLevel,
+        socialInteraction: socialInteraction,
+        physicalActivity: physicalActivity,
+        workProductivity: workProductivity,
+        sleepHours: sleepHours,
+        waterIntake: waterIntake,
+        meditationMinutes: meditationMinutes,
+        exerciseMinutes: exerciseMinutes,
+        screenTimeHours: screenTimeHours,
+        gratitudeItems: gratitudeItems,
+        weatherMoodImpact: weatherMoodImpact,
+        socialBattery: socialBattery,
+        creativeEnergy: creativeEnergy,
+        emotionalStability: emotionalStability,
+        focusLevel: focusLevel,
+        lifeSatisfaction: lifeSatisfaction,
+      );
+
+      // <<< 🐞 FIX 3: Se usa el método correcto 'saveDailyEntry' del nuevo DatabaseService.
+      await _databaseService.saveDailyEntry(newEntry);
+
+      _logger.i('✅ Entrada diaria guardada exitosamente para usuario: $userId.');
+      // Después de guardar, la UI puede decidir recargar los análisis llamando a loadCompleteAnalytics.
+      notifyListeners();
+    } catch (e) {
+      _logger.e('❌ Error guardando entrada diaria: $e');
+      _setError('No se pudo guardar la reflexión.');
+      rethrow;
+    }
+  }
 
 
   /// 🚀 Cargar análisis completo MEJORADO

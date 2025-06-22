@@ -4,7 +4,6 @@
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:math';
 import 'dart:math' as math;
 
 import 'package:path/path.dart';
@@ -59,13 +58,11 @@ class DatabaseService {
     try {
       _logger.i('🔧 Verificando columnas de analytics avanzados...');
 
-      // Verificar qué columnas existen
       final tableInfo = await db.rawQuery("PRAGMA table_info(daily_entries)");
       final existingColumns = tableInfo.map((row) => row['name'] as String).toSet();
 
       _logger.d('📋 Columnas existentes: $existingColumns');
 
-      // Columnas necesarias para analytics avanzados
       final requiredColumns = {
         'energy_level': 'INTEGER DEFAULT 5',
         'sleep_quality': 'INTEGER DEFAULT 5',
@@ -89,7 +86,6 @@ class DatabaseService {
         'life_satisfaction': 'INTEGER DEFAULT 5',
       };
 
-      // Agregar columnas faltantes
       for (final entry in requiredColumns.entries) {
         final columnName = entry.key;
         final columnDefinition = entry.value;
@@ -103,7 +99,6 @@ class DatabaseService {
         }
       }
 
-      // Verificar columnas para interactive_moments si no existen
       final momentsTableExists = await _tableExists(db, 'interactive_moments');
       if (!momentsTableExists) {
         _logger.i('📝 Creando tabla interactive_moments...');
@@ -116,11 +111,9 @@ class DatabaseService {
 
     } catch (e) {
       _logger.e('❌ Error agregando columnas: $e');
-      // No relanzar el error para evitar que falle la inicialización
     }
   }
 
-// ✅ AGREGAR métodos auxiliares:
   Future<bool> _tableExists(Database db, String tableName) async {
     final result = await db.rawQuery('''
     SELECT name FROM sqlite_master 
@@ -150,6 +143,7 @@ class DatabaseService {
       timestamp TEXT NOT NULL DEFAULT (datetime('now')),
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      entry_date TEXT DEFAULT (date('now')),
       FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
     )
   ''');
@@ -176,6 +170,7 @@ class DatabaseService {
         'energy_after': 'INTEGER DEFAULT 5',
         'mood_before': 'INTEGER DEFAULT 5',
         'mood_after': 'INTEGER DEFAULT 5',
+        'entry_date': 'TEXT DEFAULT (date(\'now\'))',
       };
 
       for (final entry in requiredMomentsColumns.entries) {
@@ -230,51 +225,45 @@ class DatabaseService {
           FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )
       ''');
-      // ... inside _onCreate method
-      // Replace both CREATE TABLE statements for interactive_moments with this one:
-      await db.execute('''
-  CREATE TABLE interactive_moments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    emoji TEXT NOT NULL,
-    text TEXT NOT NULL,
-    type TEXT NOT NULL CHECK (type IN ('positive', 'negative', 'neutral')),
-    intensity INTEGER DEFAULT 5 CHECK (intensity >= 1 AND intensity <= 10),
-    category TEXT DEFAULT 'general',
-    context TEXT,
-    location TEXT,
-    weather TEXT,
-    social_context TEXT,
-    energy_before INTEGER DEFAULT 5,
-    entry_date TEXT DEFAULT (date('now')),
-    energy_after INTEGER DEFAULT 5,
-    mood_before INTEGER DEFAULT 5,
-    mood_after INTEGER DEFAULT 5,
-    timestamp TEXT NOT NULL DEFAULT (datetime('now')),
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-  )
-''');
-// ...
-      // En lib/data/services/database_service.dart, dentro de _onCreate
-
-// ... después de la tabla interactive_moments
       await txn.execute('''
-  CREATE TABLE user_goals (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    title TEXT NOT NULL,
-    description TEXT NOT NULL,
-    type TEXT NOT NULL,
-    status TEXT NOT NULL,
-    target_value REAL NOT NULL,
-    current_value REAL NOT NULL DEFAULT 0.0,
-    created_at TEXT DEFAULT (datetime('now')),
-    completed_at TEXT,
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-  )
-''');
+        CREATE TABLE interactive_moments (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          emoji TEXT NOT NULL,
+          text TEXT NOT NULL,
+          type TEXT NOT NULL CHECK (type IN ('positive', 'negative', 'neutral')),
+          intensity INTEGER DEFAULT 5 CHECK (intensity >= 1 AND intensity <= 10),
+          category TEXT DEFAULT 'general',
+          context TEXT,
+          location TEXT,
+          weather TEXT,
+          social_context TEXT,
+          energy_before INTEGER DEFAULT 5,
+          entry_date TEXT DEFAULT (date('now')),
+          energy_after INTEGER DEFAULT 5,
+          mood_before INTEGER DEFAULT 5,
+          mood_after INTEGER DEFAULT 5,
+          timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+      ''');
+      await txn.execute('''
+        CREATE TABLE user_goals (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT NOT NULL,
+          type TEXT NOT NULL,
+          status TEXT NOT NULL,
+          target_value REAL NOT NULL,
+          current_value REAL NOT NULL DEFAULT 0.0,
+          created_at TEXT DEFAULT (datetime('now')),
+          completed_at TEXT,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+      ''');
       await txn.execute('CREATE INDEX idx_user_goals_user_status ON user_goals(user_id, status)');
       await txn.execute('CREATE INDEX idx_daily_entries_user_date ON daily_entries(user_id, entry_date)');
       await txn.execute('CREATE INDEX idx_interactive_moments_user_date ON interactive_moments(user_id, entry_date)');
@@ -290,7 +279,6 @@ class DatabaseService {
     _logger.d('🔓 Base de datos zen abierta');
     await db.execute('PRAGMA foreign_keys = ON');
     await _addMissingColumns(db);
-
   }
 
   Future<void> close() async {
@@ -377,7 +365,7 @@ class DatabaseService {
     try {
       final db = await database;
       final today = DateTime.now().toIso8601String().split('T')[0];
-      final List<Map<String, dynamic>> results = await db.query('interactive_moments', where: 'user_id = ? AND entry_date = ?', whereArgs: [userId, today], orderBy: 'time_str, created_at');
+      final List<Map<String, dynamic>> results = await db.query('interactive_moments', where: 'user_id = ? AND entry_date = ?', whereArgs: [userId, today], orderBy: 'timestamp, created_at');
       final moments = results.map((row) => InteractiveMomentModel.fromDatabase(row)).toList();
       _logger.d('📚 Cargados ${moments.length} momentos interactivos de hoy');
       return moments;
@@ -404,8 +392,9 @@ class DatabaseService {
     try {
       final db = await database;
       _logger.d('💾 Guardando entrada para usuario ${entry.userId}');
-      final today = DateTime.now().toIso8601String().split('T')[0];
-      final List<Map<String, dynamic>> existing = await db.query('daily_entries', where: 'user_id = ? AND entry_date = ?', whereArgs: [entry.userId, today], limit: 1);
+      final entryDateStr = entry.entryDate.toIso8601String().split('T')[0];
+      final List<Map<String, dynamic>> existing = await db.query('daily_entries', where: 'user_id = ? AND entry_date = ?', whereArgs: [entry.userId, entryDateStr], limit: 1);
+
       if (existing.isNotEmpty) {
         final existingId = existing.first['id'] as int;
         _logger.d('🔄 Actualizando entrada existente $existingId');
@@ -542,7 +531,6 @@ class DatabaseService {
     try {
       final db = await database;
       final List<Map<String, dynamic>> results = await db.rawQuery('SELECT COUNT(*) as count FROM daily_entries WHERE user_id = ?', [userId]);
-      // FIX: Safely cast the count, providing 0 as a fallback if null.
       return (results.first['count'] as int?) ?? 0;
     } catch (e) {
       _logger.e('❌ Error obteniendo contador zen: $e');
@@ -606,12 +594,12 @@ class DatabaseService {
       final dateStr = date.toIso8601String().split('T')[0];
       final entry = await getDayEntry(userId, date);
       if (entry == null) return null;
-      final List<Map<String, dynamic>> momentsResults = await db.query('interactive_moments', where: 'user_id = ? AND entry_date = ?', whereArgs: [userId, dateStr], orderBy: 'time_str ASC, created_at ASC');
+      final List<Map<String, dynamic>> momentsResults = await db.query('interactive_moments', where: 'user_id = ? AND entry_date = ?', whereArgs: [userId, dateStr], orderBy: 'timestamp ASC, created_at ASC');
       final timeline = momentsResults.map((row) => {
-        'time': row['time_str'] as String,
+        'time': (row['timestamp'] as String).substring(11, 16),
         'emoji': row['emoji'] as String,
         'text': row['text'] as String,
-        'type': row['moment_type'] as String,
+        'type': row['type'] as String,
         'intensity': row['intensity'] as int,
         'category': row['category'] as String,
         'created_at': row['created_at'] as String,
@@ -633,22 +621,23 @@ class DatabaseService {
       final db = await database;
       final dateStr = date.toIso8601String().split('T')[0];
       final List<Map<String, dynamic>> results = await db.rawQuery('''
-        SELECT time_str, moment_type, COUNT(*) as count, intensity
+        SELECT strftime('%H:00', timestamp) as hour, type, COUNT(*) as count, AVG(intensity) as avg_intensity
         FROM interactive_moments 
         WHERE user_id = ? AND entry_date = ?
-        GROUP BY time_str, moment_type
-        ORDER BY time_str ASC
+        GROUP BY hour, type
+        ORDER BY hour ASC
       ''', [userId, dateStr]);
       final Map<String, Map<String, dynamic>> hourlyStats = {};
       for (final row in results) {
-        final hour = row['time_str'] as String;
+        final hour = row['hour'] as String;
         if (!hourlyStats.containsKey(hour)) {
-          hourlyStats[hour] = {'positive': 0, 'negative': 0, 'total': 0};
+          hourlyStats[hour] = {'positive': 0, 'negative': 0, 'neutral': 0, 'total': 0};
         }
-        final type = row['moment_type'] as String;
-        // FIX: Safely cast the count, providing 0 as a fallback if null.
+        final type = row['type'] as String;
         final count = (row['count'] as int?) ?? 0;
-        hourlyStats[hour]![type] = count;
+        if (hourlyStats[hour]!.containsKey(type)) {
+          hourlyStats[hour]![type] = count;
+        }
         hourlyStats[hour]!['total'] = hourlyStats[hour]!['total']! + count;
       }
       return {'hourly_stats': hourlyStats, 'peak_hour': _findPeakHour(hourlyStats), 'total_hours_active': hourlyStats.length};
@@ -663,7 +652,6 @@ class DatabaseService {
     String? peakHour;
     int maxTotal = 0;
     hourlyStats.forEach((hour, stats) {
-      // FIX: Safely cast the total, providing 0 as a fallback.
       final total = (stats['total'] as int?) ?? 0;
       if (total > maxTotal) {
         maxTotal = total;
@@ -783,35 +771,29 @@ class DatabaseService {
       return null;
     }
   }
-  // ============================================================================
-// MÉTODOS AVANZADOS DE ANÁLISIS PARA REFUERZO POSITIVO Y INSIGHTS PROFUNDOS
-// ============================================================================
 
-// Agregar estos métodos al DatabaseService existente
-
-  /// 🕐 Análisis de patrones de humor por hora del día
   Future<Map<String, dynamic>> getMoodPatternsByHour(int userId) async {
     try {
       final db = await database;
       final results = await db.rawQuery('''
       SELECT 
-        CAST(substr(time_str, 1, 2) AS INTEGER) as hour,
-        moment_type,
+        CAST(strftime('%H', timestamp) AS INTEGER) as hour,
+        type,
         AVG(intensity) as avg_intensity,
         COUNT(*) as count
       FROM interactive_moments 
       WHERE user_id = ? AND entry_date >= date('now', '-30 days')
-      GROUP BY hour, moment_type
+      GROUP BY hour, type
       ORDER BY hour ASC
     ''', [userId]);
 
       final Map<int, Map<String, dynamic>> hourlyData = {};
       String? bestHour, worstHour;
-      double bestScore = 0, worstScore = 10;
+      double bestScore = -11, worstScore = 11;
 
       for (final row in results) {
         final hour = row['hour'] as int;
-        final type = row['moment_type'] as String;
+        final type = row['type'] as String;
         final avgIntensity = (row['avg_intensity'] as num).toDouble();
         final count = row['count'] as int;
 
@@ -819,12 +801,12 @@ class DatabaseService {
           hourlyData[hour] = {'positive': 0.0, 'negative': 0.0, 'total': 0};
         }
 
-        hourlyData[hour]![type] = avgIntensity;
+        if(type == 'positive' || type == 'negative') {
+          hourlyData[hour]![type] = avgIntensity;
+        }
         hourlyData[hour]!['total'] = hourlyData[hour]!['total']! + count;
 
-        // Calcular score general (positivos - negativos)
-        final score = (hourlyData[hour]!['positive'] as double) -
-            (hourlyData[hour]!['negative'] as double);
+        final score = (hourlyData[hour]!['positive'] as double) - (hourlyData[hour]!['negative'] as double);
 
         if (score > bestScore) {
           bestScore = score;
@@ -849,7 +831,6 @@ class DatabaseService {
     }
   }
 
-  /// 📈 Evolución del mood a lo largo del tiempo (últimos 30 días)
   Future<Map<String, dynamic>> getMoodEvolution(int userId) async {
     try {
       final db = await database;
@@ -889,7 +870,6 @@ class DatabaseService {
           worstDay = date;
         }
 
-        // Calcular tendencia
         if (i > 0) {
           final prevMood = (results[i-1]['avg_mood'] as num).toDouble();
           totalImprovement += mood - prevMood;
@@ -915,23 +895,14 @@ class DatabaseService {
     }
   }
 
-  /// 🏆 Sistema de logros y hitos personalizados
   Future<Map<String, dynamic>> getUserAchievements(int userId) async {
     try {
       final db = await database;
 
-      // Consultas para diferentes logros
       final basicStats = await getUserComprehensiveStatistics(userId);
       final streakDays = basicStats['streak_days'] ?? 0;
       final totalEntries = basicStats['total_entries'] ?? 0;
       final totalMoments = basicStats['total_moments'] ?? 0;
-
-      // Logros específicos
-      final consistencyResult = await db.rawQuery('''
-      SELECT COUNT(DISTINCT entry_date) as consistent_days
-      FROM daily_entries 
-      WHERE user_id = ? AND entry_date >= date('now', '-7 days')
-    ''', [userId]);
 
       final moodImprovementResult = await db.rawQuery('''
       SELECT 
@@ -949,18 +920,15 @@ class DatabaseService {
 
       final achievements = <Map<String, dynamic>>[];
 
-      // 🔥 Logros de Consistencia
       if (streakDays >= 1) achievements.add(_createAchievement('🌱', 'Primer Paso', 'Comenzaste tu viaje de reflexión', true, 'bronze'));
       if (streakDays >= 3) achievements.add(_createAchievement('🔥', 'En Racha', 'Mantuviste consistencia por 3 días', true, 'bronze'));
       if (streakDays >= 7) achievements.add(_createAchievement('💪', 'Semana Completa', 'Una semana de reflexión diaria', true, 'silver'));
       if (streakDays >= 30) achievements.add(_createAchievement('💎', 'Dedicación Diamond', '30 días consecutivos', streakDays >= 30, 'gold'));
 
-      // ✨ Logros de Volumen
       if (totalMoments >= 10) achievements.add(_createAchievement('📝', 'Capturador', '10 momentos registrados', true, 'bronze'));
       if (totalMoments >= 50) achievements.add(_createAchievement('🌟', 'Observador', '50 momentos capturados', true, 'silver'));
       if (totalMoments >= 100) achievements.add(_createAchievement('🚀', 'Experto en Momentos', '100 momentos registrados', totalMoments >= 100, 'gold'));
 
-      // 📊 Logros de Mejora
       final recentMood = (moodImprovementResult.first['recent_mood'] as num?)?.toDouble() ?? 5.0;
       final prevMood = (moodImprovementResult.first['prev_mood'] as num?)?.toDouble() ?? 5.0;
       final moodImprovement = recentMood - prevMood;
@@ -968,7 +936,6 @@ class DatabaseService {
       if (moodImprovement > 1) achievements.add(_createAchievement('📈', 'En Ascenso', 'Tu mood mejoró esta semana', true, 'silver'));
       if (recentMood >= 8) achievements.add(_createAchievement('😊', 'Estado Zen', 'Mood promedio excelente', true, 'gold'));
 
-      // 🎨 Logros de Diversidad
       final categoriesUsed = (diversityResult.first['categories_used'] as int?) ?? 0;
       if (categoriesUsed >= 3) achievements.add(_createAchievement('🎨', 'Explorador', 'Usaste múltiples categorías', true, 'bronze'));
       if (categoriesUsed >= 5) achievements.add(_createAchievement('🌈', 'Diversidad Total', 'Exploraste todas las categorías', categoriesUsed >= 5, 'gold'));
@@ -986,7 +953,6 @@ class DatabaseService {
     }
   }
 
-  /// 📊 Análisis de palabras y sentimientos más frecuentes
   Future<Map<String, dynamic>> getSentimentAnalysis(int userId) async {
     try {
       final db = await database;
@@ -1005,14 +971,12 @@ class DatabaseService {
         final moodScore = (row['mood_score'] as num).toDouble();
         moodHistory.add(moodScore);
 
-        // Analizar palabras positivas comunes
         for (final word in _getPositiveKeywords()) {
           if (reflection.contains(word)) {
             positiveWords[word] = (positiveWords[word] ?? 0) + 1;
           }
         }
 
-        // Analizar desafíos/áreas de mejora
         for (final word in _getChallengeKeywords()) {
           if (reflection.contains(word)) {
             challengeWords[word] = (challengeWords[word] ?? 0) + 1;
@@ -1020,7 +984,6 @@ class DatabaseService {
         }
       }
 
-      // Ordenar por frecuencia
       final topPositive = positiveWords.entries.toList()
         ..sort((a, b) => b.value.compareTo(a.value));
       final topChallenges = challengeWords.entries.toList()
@@ -1039,7 +1002,6 @@ class DatabaseService {
     }
   }
 
-  /// 🗓️ Análisis de patrones por día de la semana
   Future<Map<String, dynamic>> getWeeklyPatterns(int userId) async {
     try {
       final db = await database;
@@ -1101,7 +1063,6 @@ class DatabaseService {
     }
   }
 
-  /// 🎯 Predicciones y recomendaciones personalizadas
   Future<Map<String, dynamic>> getPersonalizedInsights(int userId) async {
     try {
       final basicStats = await getUserComprehensiveStatistics(userId);
@@ -1114,12 +1075,10 @@ class DatabaseService {
       final predictions = <Map<String, dynamic>>[];
       final recommendations = <Map<String, String>>[];
 
-      // Generar insights basados en datos reales
       final streak = basicStats['streak_days'] ?? 0;
       final avgMood = basicStats['avg_mood_score'] ?? 5.0;
       final trend = moodEvolution['overall_trend'] ?? 'stable';
 
-      // 🔮 Predicciones
       if (streak >= 7) {
         predictions.add({
           'type': 'streak_continuation',
@@ -1138,7 +1097,6 @@ class DatabaseService {
         });
       }
 
-      // 💡 Recomendaciones personalizadas
       final bestHour = hourlyPatterns['best_hour'];
       if (bestHour != null) {
         recommendations.add({
@@ -1159,7 +1117,6 @@ class DatabaseService {
         });
       }
 
-      // Recomendación basada en consistencia
       if (streak < 3) {
         recommendations.add({
           'type': 'consistency',
@@ -1169,7 +1126,6 @@ class DatabaseService {
         });
       }
 
-      // 🌟 Insights motivacionales
       insights.add({
         'emoji': '📈',
         'text': 'Has mostrado ${_getProgressDescription(trend)} en tu bienestar emocional.',
@@ -1203,38 +1159,28 @@ class DatabaseService {
     }
   }
 
-  /// 📊 Score general de bienestar (0-100)
   int _calculateWellbeingScore(Map<String, dynamic> basicStats, Map<String, dynamic> moodEvolution, Map<String, dynamic> achievements) {
     double score = 0;
 
-    // Consistencia (30 puntos)
     final streak = basicStats['streak_days'] ?? 0;
     score += (streak / 30 * 30).clamp(0, 30);
 
-    // Mood promedio (25 puntos)
     final avgMood = basicStats['avg_mood_score'] ?? 5.0;
     score += (avgMood / 10 * 25).clamp(0, 25);
 
-    // Tendencia (20 puntos)
     final trend = moodEvolution['overall_trend'] ?? 'stable';
     if (trend == 'improving') score += 20;
     else if (trend == 'stable') score += 15;
     else score += 5;
 
-    // Logros (15 puntos)
     final achievementPercentage = achievements['completion_percentage'] ?? 0;
     score += (achievementPercentage / 100 * 15).clamp(0, 15);
 
-    // Actividad (10 puntos)
     final entriesThisMonth = basicStats['entries_this_month'] ?? 0;
     score += (entriesThisMonth / 20 * 10).clamp(0, 10);
 
     return score.round().clamp(0, 100);
   }
-
-// ============================================================================
-// HELPER METHODS
-// ============================================================================
 
   Map<String, dynamic> _createAchievement(String emoji, String title, String description, bool unlocked, String tier) {
     return {
@@ -1242,7 +1188,7 @@ class DatabaseService {
       'title': title,
       'description': description,
       'unlocked': unlocked,
-      'tier': tier, // bronze, silver, gold
+      'tier': tier,
     };
   }
 
@@ -1279,13 +1225,6 @@ class DatabaseService {
     });
 
     return '${bestHour.toString().padLeft(2, '0')}:00';
-  }
-
-  String _getHourlyRecommendation(String? bestHour, String? worstHour) {
-    if (bestHour != null && worstHour != null) {
-      return 'Tu energía pico es a las $bestHour. Evita tareas demandantes cerca de las $worstHour.';
-    }
-    return 'Registra más momentos para obtener recomendaciones personalizadas.';
   }
 
   String _getTrendMessage(String trend, double improvement) {
@@ -1409,7 +1348,6 @@ class DatabaseService {
   }
 
   Map<String, dynamic>? _getNextAchievement(List<Map<String, dynamic>> achievements, int streak, int totalMoments) {
-    // Encontrar el próximo logro no desbloqueado
     final locked = achievements.where((a) => !a['unlocked']).toList();
     if (locked.isEmpty) return null;
 
@@ -1440,17 +1378,12 @@ class DatabaseService {
 
     return null;
   }
-// ============================================================================
-// AGREGAR AL FINAL de lib/data/services/database_service.dart
-// Solo copiar y pegar estos métodos al final de la clase DatabaseService
-// ============================================================================
 
-  /// 🔥 Análisis de racha más preciso
   Future<Map<String, dynamic>> getAdvancedStreakAnalysis(int userId) async {
     try {
       final db = await database;
 
-      // Obtener todas las rachas históricas
+      // ✅ FIX: Corrected date arithmetic for streak calculation
       final streakData = await db.rawQuery('''
         WITH daily_activity AS (
           SELECT DISTINCT entry_date
@@ -1461,7 +1394,7 @@ class DatabaseService {
         streak_groups AS (
           SELECT 
             entry_date,
-            entry_date - ROW_NUMBER() OVER (ORDER BY entry_date) as streak_group
+            date(entry_date, '-' || ROW_NUMBER() OVER (ORDER BY entry_date) || ' days') as streak_group
           FROM daily_activity
         ),
         streaks AS (
@@ -1487,7 +1420,6 @@ class DatabaseService {
       final longestStreak = streakData.isNotEmpty ?
       streakData.map((s) => s['streak_length'] as int).reduce((a, b) => a > b ? a : b) : 0;
 
-      // Calcular consistencia semanal
       final weeklyConsistency = await db.rawQuery('''
         SELECT 
           strftime('%Y-W%W', entry_date) as week,
@@ -1500,16 +1432,16 @@ class DatabaseService {
       ''', [userId]);
 
       final avgDaysPerWeek = weeklyConsistency.isNotEmpty ?
-      weeklyConsistency.map((w) => w['days_active'] as int).reduce((a, b) => a + b) / weeklyConsistency.length : 0;
+      weeklyConsistency.map((w) => w['days_active'] as int).reduce((a, b) => a + b) / weeklyConsistency.length : 0.0;
 
       return {
         'current_streak': currentStreak,
         'longest_streak': longestStreak,
         'total_streaks': streakData.length,
         'avg_streak_length': streakData.isNotEmpty ?
-        streakData.map((s) => s['streak_length'] as int).reduce((a, b) => a + b) / streakData.length : 0,
+        streakData.map((s) => s['streak_length'] as int).reduce((a, b) => a + b) / streakData.length : 0.0,
         'weekly_consistency': avgDaysPerWeek,
-        'streak_stability': longestStreak > 0 ? currentStreak / longestStreak : 0,
+        'streak_stability': longestStreak > 0 ? currentStreak / longestStreak : 0.0,
         'all_streaks': streakData,
       };
     } catch (e) {
@@ -1518,56 +1450,48 @@ class DatabaseService {
     }
   }
 
-  /// 📊 Score de bienestar mejorado con más factores
   Future<Map<String, dynamic>> getEnhancedWellbeingScore(int userId) async {
     try {
       final basicStats = await getUserComprehensiveStatistics(userId);
       final streakAnalysis = await getAdvancedStreakAnalysis(userId);
       final moodAnalysis = await getDetailedMoodAnalysis(userId);
-      final consistencyAnalysis = await getConsistencyAnalysis(userId);
 
-      // 1. FACTOR CONSISTENCIA (30 puntos)
-      final currentStreak = streakAnalysis['current_streak'] ?? 0;
-      final weeklyConsistency = streakAnalysis['weekly_consistency'] ?? 0;
+      final currentStreak = (streakAnalysis['current_streak'] as num?)?.toInt() ?? 0;
+      final weeklyConsistency = (streakAnalysis['weekly_consistency'] as num?)?.toDouble() ?? 0.0;
       final consistencyScore = (
-          (currentStreak / 30).clamp(0, 1) * 0.6 +  // Racha actual (60%)
-              (weeklyConsistency / 7).clamp(0, 1) * 0.4   // Consistencia semanal (40%)
+          (currentStreak / 30).clamp(0, 1) * 0.6 +
+              (weeklyConsistency / 7).clamp(0, 1) * 0.4
       ) * 30;
 
-      // 2. FACTOR BIENESTAR EMOCIONAL (25 puntos)
-      final avgMood = basicStats['avg_mood_score'] ?? 5.0;
-      final moodStability = moodAnalysis['stability_score'] ?? 0.5;
-      final positiveRatio = moodAnalysis['positive_days_ratio'] ?? 0.5;
+      final avgMood = (basicStats['avg_mood_score'] as num?)?.toDouble() ?? 5.0;
+      final moodStability = (moodAnalysis['stability_score'] as num?)?.toDouble() ?? 0.5;
+      final positiveRatio = (moodAnalysis['positive_days_ratio'] as num?)?.toDouble() ?? 0.5;
       final emotionalScore = (
-          (avgMood / 10) * 0.5 +           // Mood promedio (50%)
-              moodStability * 0.3 +            // Estabilidad (30%)
-              positiveRatio * 0.2              // Días positivos (20%)
+          (avgMood / 10) * 0.5 +
+              moodStability * 0.3 +
+              positiveRatio * 0.2
       ) * 25;
 
-      // 3. FACTOR PROGRESO (20 puntos)
-      final recentTrend = moodAnalysis['recent_trend'] ?? 0;
-      final improvementRate = moodAnalysis['improvement_rate'] ?? 0;
+      final recentTrend = (moodAnalysis['recent_trend'] as num?)?.toDouble() ?? 0.0;
+      final improvementRate = (moodAnalysis['improvement_rate'] as num?)?.toDouble() ?? 0.0;
       final progressScore = (
-          (recentTrend + 1) / 2 * 0.6 +    // Tendencia (-1 a 1, normalizada)
-              improvementRate * 0.4            // Rate de mejora
+          (recentTrend + 1) / 2 * 0.6 +
+              improvementRate * 0.4
       ) * 20;
 
-      // 4. FACTOR ACTIVIDAD (15 puntos)
-      final entriesThisMonth = basicStats['entries_this_month'] ?? 0;
-      final totalMoments = basicStats['total_moments'] ?? 0;
+      final entriesThisMonth = (basicStats['entries_this_month'] as num?)?.toInt() ?? 0;
+      final totalMoments = (basicStats['total_moments'] as num?)?.toInt() ?? 0;
       final activityScore = (
-          (entriesThisMonth / 25).clamp(0, 1) * 0.7 +  // Entradas este mes
-              (totalMoments / 100).clamp(0, 1) * 0.3       // Total de momentos
+          (entriesThisMonth / 25).clamp(0, 1) * 0.7 +
+              (totalMoments / 100).clamp(0, 1) * 0.3
       ) * 15;
 
-      // 5. FACTOR DIVERSIDAD (10 puntos)
       final diversityAnalysis = await getDiversityAnalysis(userId);
-      final diversityScore = diversityAnalysis['diversity_score'] * 10;
+      final diversityScore = (diversityAnalysis['diversity_score'] as num?)?.toDouble() ?? 0.3 * 10;
 
       final totalScore = (consistencyScore + emotionalScore + progressScore +
           activityScore + diversityScore).round().clamp(0, 100);
 
-      // Determinar nivel
       String level;
       String emoji;
       if (totalScore >= 85) {
@@ -1621,7 +1545,7 @@ class DatabaseService {
     }
   }
 
-  /// 😊 Análisis detallado del mood
+  // ✅ METHOD WITH FIX FOR TYPE ERROR
   Future<Map<String, dynamic>> getDetailedMoodAnalysis(int userId) async {
     try {
       final db = await database;
@@ -1643,44 +1567,52 @@ class DatabaseService {
           'positive_days_ratio': 0.5,
           'recent_trend': 0,
           'improvement_rate': 0,
+          'avg_mood': 5.0,
+          'mood_variance': 0.0,
+          'total_days_analyzed': 0,
         };
       }
 
-      final moods = moodData.map((row) => (row['mood_score'] as num).toDouble()).toList();
+      // Safely map mood scores, providing a default value for nulls to prevent type errors.
+      final moods = moodData.map((row) => (row['mood_score'] as num? ?? 5.0).toDouble()).toList();
 
-      // 1. Calcular estabilidad (menor varianza = mayor estabilidad)
+      // Guard against empty list for reduce operations, even though guarded above, it's safer.
+      if (moods.isEmpty) {
+        // This case should not be reached due to the moodData.isEmpty check, but it's a good safeguard.
+        return {'stability_score': 0.5, 'positive_days_ratio': 0.5, 'recent_trend': 0, 'improvement_rate': 0.0};
+      }
+
       final avgMood = moods.reduce((a, b) => a + b) / moods.length;
-      final variance = moods.map((mood) => (mood - avgMood) * (mood - avgMood))
-          .reduce((a, b) => a + b) / moods.length;
-      final stabilityScore = (1 - (variance / 9)).clamp(0, 1); // Normalizado
+      final variance = moods.length > 1 ? moods.map((mood) => (mood - avgMood) * (mood - avgMood))
+          .reduce((a, b) => a + b) / moods.length : 0.0;
+      final stabilityScore = (1 - (variance / 9)).clamp(0, 1);
 
-      // 2. Ratio de días positivos
       final positiveDays = moods.where((mood) => mood >= 6).length;
       final positiveRatio = positiveDays / moods.length;
 
-      // 3. Tendencia reciente (últimos 14 días vs anteriores)
       final recentMoods = moods.length > 14 ? moods.sublist(moods.length - 14) : moods;
       final olderMoods = moods.length > 14 ? moods.sublist(0, moods.length - 14) : [];
 
       double recentTrend = 0;
-      if (olderMoods.isNotEmpty) {
+      if (olderMoods.isNotEmpty && recentMoods.isNotEmpty) {
         final recentAvg = recentMoods.reduce((a, b) => a + b) / recentMoods.length;
         final olderAvg = olderMoods.reduce((a, b) => a + b) / olderMoods.length;
-        recentTrend = (recentAvg - olderAvg) / 5; // Normalizado entre -1 y 1
+        recentTrend = (recentAvg - olderAvg) / 5;
       }
 
-      // 4. Rate de mejora (tendencia lineal)
       double improvementRate = 0;
       if (moods.length >= 7) {
-        // Regresión lineal simple
         final n = moods.length.toDouble();
-        final sumX = (n * (n - 1)) / 2; // 0 + 1 + 2 + ... + (n-1)
+        final sumX = (n * (n - 1)) / 2;
         final sumY = moods.reduce((a, b) => a + b);
         final sumXY = moods.asMap().entries.map((e) => e.key * e.value).reduce((a, b) => a + b);
-        final sumX2 = ((n - 1) * n * (2 * n - 1)) / 6; // 0² + 1² + 2² + ... + (n-1)²
+        final sumX2 = ((n - 1) * n * (2 * n - 1)) / 6;
 
-        final slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-        improvementRate = (slope / 0.1).clamp(-1, 1); // Normalizar
+        final denominator = (n * sumX2 - sumX * sumX);
+        if (denominator.abs() > 0.001) {
+          final slope = (n * sumXY - sumX * sumY) / denominator;
+          improvementRate = (slope / 0.1).clamp(-1, 1);
+        }
       }
 
       return {
@@ -1703,7 +1635,6 @@ class DatabaseService {
     }
   }
 
-  /// ⏰ Análisis de consistencia avanzado
   Future<Map<String, dynamic>> getConsistencyAnalysis(int userId) async {
     try {
       final db = await database;
@@ -1724,18 +1655,15 @@ class DatabaseService {
         return {'consistency_score': 0, 'time_regularity': 0, 'weekly_balance': 0};
       }
 
-      // 1. Consistencia general (días activos / días totales)
       final activeDays = consistencyData.length;
-      final totalDays = 30; // Últimos 30 días
+      final totalDays = 30;
       final generalConsistency = activeDays / totalDays;
 
-      // 2. Regularidad temporal (consistencia en horarios)
       final hours = consistencyData.map((row) => int.parse(row['hour'] as String)).toList();
       final hourVariance = hours.isNotEmpty ?
       _calculateVariance(hours.map((h) => h.toDouble()).toList()) : 24;
       final timeRegularity = (1 - (hourVariance / 24)).clamp(0, 1);
 
-      // 3. Balance semanal (distribución entre días de la semana)
       final weekdayCounts = <int, int>{};
       for (final row in consistencyData) {
         final weekday = int.parse(row['weekday'] as String);
@@ -1769,41 +1697,39 @@ class DatabaseService {
     }
   }
 
-  /// 🌈 Análisis de diversidad de experiencias
   Future<Map<String, dynamic>> getDiversityAnalysis(int userId) async {
     try {
       final db = await database;
-
       final diversityData = await db.rawQuery('''
         SELECT 
           category,
-          moment_type,
+          type,
           COUNT(*) as frequency
         FROM interactive_moments 
         WHERE user_id = ? AND entry_date >= date('now', '-30 days')
-        GROUP BY category, moment_type
+        GROUP BY category, type
       ''', [userId]);
 
       if (diversityData.isEmpty) {
-        return {'diversity_score': 0.3, 'categories_used': 0, 'variety_index': 0};
+        return {'diversity_score': 0.3, 'categories_used': 0, 'variety_index': 0, 'total_moments': 0};
       }
 
-      // 1. Número de categorías únicas
       final uniqueCategories = diversityData.map((row) => row['category']).toSet().length;
-      final maxCategories = 6; // Asumiendo 6 categorías máximo
+      final maxCategories = 6;
       final categoryDiversity = (uniqueCategories / maxCategories).clamp(0, 1);
 
-      // 2. Índice de variedad (distribución uniforme es mejor)
       final frequencies = diversityData.map((row) => (row['frequency'] as int).toDouble()).toList();
+      if(frequencies.isEmpty) {
+        return {'diversity_score': 0.3, 'categories_used': 0, 'variety_index': 0, 'total_moments': 0};
+      }
+
       final totalMoments = frequencies.reduce((a, b) => a + b);
       final proportions = frequencies.map((f) => f / totalMoments).toList();
 
-      // Calcular índice de Shannon (diversidad)
       final shannonIndex = proportions.map((p) => p > 0 ? -p * (math.log(p) / math.log(2)) : 0).reduce((a, b) => a + b);
-      final maxShannon = math.log(proportions.length) / math.log(2);
+      final maxShannon = proportions.length > 1 ? math.log(proportions.length) / math.log(2) : 1;
       final varietyIndex = maxShannon > 0 ? shannonIndex / maxShannon : 0;
 
-      // 3. Score general de diversidad
       final diversityScore = (categoryDiversity * 0.6 + varietyIndex * 0.4);
 
       return {
@@ -1820,7 +1746,6 @@ class DatabaseService {
     }
   }
 
-  /// 🚨 Detector simple de estrés elevado
   Future<Map<String, dynamic>> detectStressPattern(int userId) async {
     try {
       final db = await database;
@@ -1836,7 +1761,7 @@ class DatabaseService {
       ''', [userId]);
 
       if (stressData.isEmpty) {
-        return {'stress_level': 'unknown', 'requires_attention': false};
+        return {'stress_level': 'unknown', 'requires_attention': false, 'recommendations': []};
       }
 
       final stressKeywords = [
@@ -1856,7 +1781,7 @@ class DatabaseService {
         for (final keyword in stressKeywords) {
           if (reflection.contains(keyword)) {
             stressIndicators++;
-            break; // Solo contar una vez por día
+            break;
           }
         }
       }
@@ -1903,22 +1828,19 @@ class DatabaseService {
       };
     } catch (e) {
       _logger.e('Error detectando patrón de estrés: $e');
-      return {'stress_level': 'unknown', 'requires_attention': false};
+      return {'stress_level': 'unknown', 'requires_attention': false, 'recommendations': []};
     }
   }
 
-  // ============================================================================
-  // MÉTODOS AUXILIARES
-  // ============================================================================
-
   double _calculateVariance(List<double> values) {
-    if (values.isEmpty) return 0;
+    if (values.length < 2) return 0;
     final mean = values.reduce((a, b) => a + b) / values.length;
     final squaredDiffs = values.map((value) => (value - mean) * (value - mean));
     return squaredDiffs.reduce((a, b) => a + b) / values.length;
   }
 
   int _getMostCommonHour(List<int> hours) {
+    if (hours.isEmpty) return 12; // Default hour if list is empty
     final hourCounts = <int, int>{};
     for (final hour in hours) {
       hourCounts[hour] = (hourCounts[hour] ?? 0) + 1;
@@ -1937,21 +1859,19 @@ class DatabaseService {
   }
 
   List<String> _generateScoreInsights(int totalScore, Map<String, double> components) {
+    if (components.isEmpty) return ["Analizando tus datos..."];
     final insights = <String>[];
 
-    // Encontrar la componente más fuerte
     final strongest = components.entries.reduce((a, b) => a.value > b.value ? a : b);
     final strongestName = _getComponentName(strongest.key);
     insights.add('Tu mayor fortaleza es $strongestName con ${strongest.value.round()} puntos');
 
-    // Encontrar área de mejora
     final weakest = components.entries.reduce((a, b) => a.value < b.value ? a : b);
     if (weakest.value < 15) {
       final weakestName = _getComponentName(weakest.key);
       insights.add('$weakestName es tu área de mayor oportunidad (${weakest.value.round()} puntos)');
     }
 
-    // Insight general
     if (totalScore >= 80) {
       insights.add('¡Excelente! Estás en el rango superior de bienestar');
     } else if (totalScore >= 60) {
@@ -1991,12 +1911,7 @@ class DatabaseService {
       return {'target_score': 100, 'target_level': 'Perfección', 'points_needed': 100 - currentScore};
     }
   }
-  // En lib/data/services/database_service.dart
 
-  /// Obtiene las correlaciones más frecuentes entre tags positivos y negativos.
-  ///
-  /// Devuelve un mapa donde la clave es una combinación de tags (ej: "trabajo|estrés")
-  /// y el valor es la frecuencia con la que aparecen juntos.
   Future<Map<String, int>> getTagCorrelations(int userId, {int limit = 10}) async {
     _logger.i('🔍 Analizando correlaciones de tags para el usuario $userId');
     try {
@@ -2015,7 +1930,6 @@ class DatabaseService {
 
       final Map<String, int> correlations = {};
 
-      // Función para decodificar tags de forma segura
       List<TagModel> _parseTags(String? jsonString) {
         if (jsonString == null || jsonString.isEmpty) return [];
         try {
@@ -2035,20 +1949,16 @@ class DatabaseService {
           continue;
         }
 
-        // Crear todas las combinaciones posibles para esta entrada
         for (final pTag in positiveTags) {
           for (final nTag in negativeTags) {
-            // Crear una clave única y ordenada para la correlación
             final keyItems = [pTag.name, nTag.name]..sort();
-            final key = keyItems.join('|'); // Ej: "agradecido|trabajo"
+            final key = keyItems.join('|');
 
-            // Incrementar el contador para esta correlación
             correlations[key] = (correlations[key] ?? 0) + 1;
           }
         }
       }
 
-      // Ordenar por frecuencia y limitar los resultados
       final sortedCorrelations = correlations.entries.toList()
         ..sort((a, b) => b.value.compareTo(a.value));
 
@@ -2062,23 +1972,15 @@ class DatabaseService {
       return {};
     }
   }
-  // Agregar este método:
   Future<Map<String, dynamic>> getUserStatistics(int userId) async {
     return getUserComprehensiveStatistics(userId);
   }
-  // ============================================================================
-// 🧪 MÉTODOS DE DESARROLLADOR PARA TESTING Y DEMO
-// ============================================================================
 
-  // En lib/data/services/database_service.dart
-
-  /// 👨‍💻 Crear cuenta de desarrollador con datos completos
   Future<int> createDeveloperAccount() async {
     try {
       final db = await database;
       _logger.i('🧪 Creando cuenta de desarrollador...');
 
-      // Verificar si ya existe
       final existing = await db.query(
         'users',
         where: 'email = ?',
@@ -2090,24 +1992,19 @@ class DatabaseService {
         userId = existing.first['id'] as int;
         _logger.i('🔄 Usando cuenta existente: $userId');
       } else {
-        // ✅ INICIO DE LA CORRECCIÓN
-        // Se añade una contraseña por defecto y se hashea
         final defaultPassword = 'devpassword123';
         final passwordHash = sha256.convert(utf8.encode(defaultPassword)).toString();
 
-        // Crear nueva cuenta de desarrollador
         userId = await db.insert('users', {
           'name': 'Alex Developer',
           'email': 'dev@reflect.com',
-          'password_hash': passwordHash, // <-- ¡Este es el campo que faltaba!
+          'password_hash': passwordHash,
           'avatar_emoji': '👨‍💻',
           'created_at': DateTime.now().toIso8601String(),
         });
-        // ✅ FIN DE LA CORRECCIÓN
         _logger.i('✅ Cuenta de desarrollador creada: $userId');
       }
 
-      // Generar datos completos de demostración
       await generateComprehensiveTestData(userId);
 
       return userId;
@@ -2117,16 +2014,13 @@ class DatabaseService {
     }
   }
 
-  /// 📊 Generar datos comprehensivos para mostrar todas las funcionalidades
   Future<void> generateComprehensiveTestData(int userId) async {
     try {
       final db = await database;
       _logger.i('📊 Generando datos comprehensivos para usuario: $userId');
 
-      // Limpiar datos existentes
       await _clearUserData(userId);
 
-      // Generar datos de diferentes períodos y patrones
       await _generateHistoricalData(userId, db);
       await _generateInteractiveMoments(userId, db);
       await _generateMilestoneEvents(userId, db);
@@ -2138,7 +2032,6 @@ class DatabaseService {
     }
   }
 
-  /// 🗑️ Limpiar datos existentes del usuario
   Future<void> _clearUserData(int userId) async {
     final db = await database;
     await db.delete('daily_entries', where: 'user_id = ?', whereArgs: [userId]);
@@ -2146,26 +2039,23 @@ class DatabaseService {
     _logger.i('🗑️ Datos previos limpiados');
   }
 
-  /// 📈 Generar datos históricos con patrones realistas
   Future<void> _generateHistoricalData(int userId, Database db) async {
     _logger.i('📈 Generando datos históricos con patrones...');
 
     final now = DateTime.now();
     final scenarios = [
-      _PersonalityPhase('Período Difícil', -90, -61, 3.5, 2.0, 7.5), // 30 días difíciles
-      _PersonalityPhase('Recuperación', -60, -31, 5.0, 4.0, 6.0),    // 30 días mejorando
-      _PersonalityPhase('Crecimiento', -30, -1, 7.5, 7.0, 4.0),     // 30 días buenos
+      _PersonalityPhase('Período Difícil', -90, -61, 3.5, 2.0, 7.5),
+      _PersonalityPhase('Recuperación', -60, -31, 5.0, 4.0, 6.0),
+      _PersonalityPhase('Crecimiento', -30, -1, 7.5, 7.0, 4.0),
     ];
 
     for (final phase in scenarios) {
       await _generatePhaseData(userId, db, now, phase);
     }
 
-    // Agregar datos de hoy con alta calidad
     await _generateTodayData(userId, db, now);
   }
 
-  /// 📅 Generar datos para una fase específica
   Future<void> _generatePhaseData(int userId, Database db, DateTime now, _PersonalityPhase phase) async {
     _logger.i('📅 Generando fase: ${phase.name}');
 
@@ -2173,8 +2063,7 @@ class DatabaseService {
       final date = now.add(Duration(days: dayOffset));
       final dateStr = date.toIso8601String().split('T')[0];
 
-      // Añadir variación diaria realista
-      final dailyVariation = (Random().nextDouble() - 0.5) * 2;
+      final dailyVariation = (math.Random().nextDouble() - 0.5) * 2;
       final weekendBoost = date.weekday >= 6 ? 0.5 : 0.0;
       final mondayDip = date.weekday == 1 ? -0.8 : 0.0;
 
@@ -2182,7 +2071,6 @@ class DatabaseService {
       final energy = (phase.baseEnergy + dailyVariation + weekendBoost + mondayDip).clamp(1.0, 10.0);
       final stress = (phase.baseStress - dailyVariation + mondayDip).clamp(1.0, 10.0);
 
-      // Crear entrada completa
       await db.insert('daily_entries', {
         'user_id': userId,
         'entry_date': dateStr,
@@ -2213,7 +2101,6 @@ class DatabaseService {
     }
   }
 
-  /// 🎯 Generar datos específicos de hoy (alta calidad)
   Future<void> _generateTodayData(int userId, Database db, DateTime now) async {
     final dateStr = now.toIso8601String().split('T')[0];
 
@@ -2246,24 +2133,20 @@ class DatabaseService {
     }, conflictAlgorithm: ConflictAlgorithm.replace);
   }
 
-  /// 🎭 Generar momentos interactivos variados
   Future<void> _generateInteractiveMoments(int userId, Database db) async {
     _logger.i('🎭 Generando momentos interactivos...');
 
     final moments = [
-      // Momentos positivos recientes
       _MomentData('😄', 'Completé una funcionalidad compleja sin bugs', 'positive', 8, 'profesional'),
       _MomentData('🎉', 'El cliente quedó encantado con la demo', 'positive', 9, 'profesional'),
       _MomentData('☕', 'Perfecto café de la mañana mientras programo', 'positive', 6, 'personal'),
       _MomentData('🧘', 'Meditación de 20 minutos me centró completamente', 'positive', 7, 'bienestar'),
       _MomentData('📚', 'Aprendí un nuevo patrón de diseño muy útil', 'positive', 7, 'crecimiento'),
 
-      // Momentos negativos para mostrar detección
       _MomentData('😰', 'Bug crítico justo antes del release', 'negative', 8, 'profesional'),
       _MomentData('🥱', 'Muy poco sueño, me siento agotado', 'negative', 6, 'bienestar'),
       _MomentData('😤', 'Reunión improductiva de 2 horas', 'negative', 7, 'profesional'),
 
-      // Momentos neutrales
       _MomentData('🚶', 'Caminata corta durante el almuerzo', 'positive', 5, 'bienestar'),
       _MomentData('📱', 'Scroll sin propósito en redes sociales', 'neutral', 3, 'personal'),
     ];
@@ -2283,11 +2166,11 @@ class DatabaseService {
         'location': _generateLocation(),
         'weather': 'Soleado',
         'social_context': moment.category == 'profesional' ? 'Trabajo' : 'Solo',
-        'energy_before': (moment.intensity + Random().nextInt(3) - 1).clamp(1, 10),
+        'energy_before': (moment.intensity + math.Random().nextInt(3) - 1).clamp(1, 10),
         'energy_after': moment.type == 'positive'
             ? (moment.intensity + 1).clamp(1, 10)
             : (moment.intensity - 1).clamp(1, 10),
-        'mood_before': (moment.intensity + Random().nextInt(2) - 1).clamp(1, 10),
+        'mood_before': (moment.intensity + math.Random().nextInt(2) - 1).clamp(1, 10),
         'mood_after': moment.type == 'positive'
             ? (moment.intensity + 1).clamp(1, 10)
             : (moment.intensity - 1).clamp(1, 10),
@@ -2298,7 +2181,6 @@ class DatabaseService {
     }
   }
 
-  /// 🏆 Generar eventos de milestone
   Future<void> _generateMilestoneEvents(int userId, Database db) async {
     _logger.i('🏆 Generando eventos de milestone...');
 
@@ -2334,70 +2216,65 @@ class DatabaseService {
     }
   }
 
-// ============================================================================
-// 🎲 GENERADORES DE DATOS ESPECÍFICOS
-// ============================================================================
-
   int _generateSleepQuality(double energy, double stress) {
     final base = energy - (stress * 0.3);
-    return (base + (Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
+    return (base + (math.Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
   }
 
   int _generateAnxietyLevel(double stress, double mood) {
     final base = stress - (mood * 0.2);
-    return (base + (Random().nextDouble() - 0.5) * 1.5).clamp(1, 10).round();
+    return (base + (math.Random().nextDouble() - 0.5) * 1.5).clamp(1, 10).round();
   }
 
   int _generateMotivationLevel(double mood, double energy) {
     final base = (mood + energy) / 2;
-    return (base + (Random().nextDouble() - 0.5) * 1.5).clamp(1, 10).round();
+    return (base + (math.Random().nextDouble() - 0.5) * 1.5).clamp(1, 10).round();
   }
 
   int _generateSocialLevel(double mood, int weekday) {
     final weekendBoost = weekday >= 6 ? 2 : 0;
     final base = mood * 0.7 + weekendBoost;
-    return (base + (Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
+    return (base + (math.Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
   }
 
   int _generatePhysicalActivity(double energy, int weekday) {
     final weekendBoost = weekday >= 6 ? 1 : 0;
     final base = energy * 0.8 + weekendBoost;
-    return (base + (Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
+    return (base + (math.Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
   }
 
   int _generateWorkProductivity(double energy, double stress, int weekday) {
-    if (weekday >= 6) return Random().nextInt(3) + 1; // Fin de semana bajo
+    if (weekday >= 6) return math.Random().nextInt(3) + 1;
     final base = energy - (stress * 0.4);
-    return (base + (Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
+    return (base + (math.Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
   }
 
   double _generateSleepHours(double stress, double energy) {
     final base = 7.5 - (stress * 0.3) + (energy * 0.1);
-    return (base + (Random().nextDouble() - 0.5) * 1.5).clamp(4.0, 10.0);
+    return (base + (math.Random().nextDouble() - 0.5) * 1.5).clamp(4.0, 10.0);
   }
 
   int _generateWaterIntake(double energy) {
     final base = 6 + (energy * 0.3);
-    return (base + (Random().nextDouble() - 0.5) * 2).clamp(3, 12).round();
+    return (base + (math.Random().nextDouble() - 0.5) * 2).clamp(3, 12).round();
   }
 
   int _generateMeditationMinutes(double stress, double mood) {
     if (stress > 7 || mood < 4) {
-      return (10 + Random().nextDouble() * 20).round(); // Más meditación cuando es necesario
+      return (10 + math.Random().nextDouble() * 20).round();
     }
-    return (Random().nextDouble() * 15).round();
+    return (math.Random().nextDouble() * 15).round();
   }
 
   int _generateExerciseMinutes(double energy, int weekday) {
-    if (weekday >= 6) return (Random().nextDouble() * 90).round(); // Más tiempo en fin de semana
+    if (weekday >= 6) return (math.Random().nextDouble() * 90).round();
     final base = energy * 5;
-    return (base + (Random().nextDouble() - 0.5) * 20).clamp(0, 120).round();
+    return (base + (math.Random().nextDouble() - 0.5) * 20).clamp(0, 120).round();
   }
 
   double _generateScreenTime(double mood, double energy) {
-    // Más pantalla cuando mood bajo o energía baja (procrastinación)
     final base = 6 - (mood * 0.2) - (energy * 0.1);
-    return (base + (Random().nextDouble() - 0.5) * 2).clamp(2.0, 12.0);
+    return (base + (math.Random().nextDouble() - 0.5) * 2).clamp(2.0, 12.0);
   }
 
   String _generateGratitudeItems(double mood) {
@@ -2409,7 +2286,7 @@ class DatabaseService {
       ['la creatividad', 'los desafíos', 'el crecimiento'],
     ];
 
-    final items = gratitudeOptions[Random().nextInt(gratitudeOptions.length)];
+    final items = gratitudeOptions[math.Random().nextInt(gratitudeOptions.length)];
     if (mood > 7) {
       return items.join(', ');
     } else if (mood > 4) {
@@ -2420,38 +2297,37 @@ class DatabaseService {
   }
 
   int _generateWeatherImpact(DateTime date) {
-    // Simular impacto del clima según estación
     final month = date.month;
-    if (month >= 3 && month <= 5) return 7; // Primavera
-    if (month >= 6 && month <= 8) return 8; // Verano
-    if (month >= 9 && month <= 11) return 6; // Otoño
-    return 5; // Invierno
+    if (month >= 3 && month <= 5) return 7;
+    if (month >= 6 && month <= 8) return 8;
+    if (month >= 9 && month <= 11) return 6;
+    return 5;
   }
 
   int _generateSocialBattery(double mood, int weekday) {
-    if (weekday == 1) return 4; // Lunes agotado socialmente
+    if (weekday == 1) return 4;
     final base = mood * 0.8;
-    return (base + (Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
+    return (base + (math.Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
   }
 
   int _generateCreativeEnergy(double mood, double energy) {
     final base = (mood + energy) / 2.2;
-    return (base + (Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
+    return (base + (math.Random().nextDouble() - 0.5) * 2).clamp(1, 10).round();
   }
 
   int _generateEmotionalStability(double mood, double stress) {
     final base = mood - (stress * 0.3);
-    return (base + (Random().nextDouble() - 0.5) * 1.5).clamp(1, 10).round();
+    return (base + (math.Random().nextDouble() - 0.5) * 1.5).clamp(1, 10).round();
   }
 
   int _generateFocusLevel(double energy, double stress) {
     final base = energy - (stress * 0.4);
-    return (base + (Random().nextDouble() - 0.5) * 1.5).clamp(1, 10).round();
+    return (base + (math.Random().nextDouble() - 0.5) * 1.5).clamp(1, 10).round();
   }
 
   int _generateLifeSatisfaction(double mood, double stress) {
     final base = mood - (stress * 0.2);
-    return (base + (Random().nextDouble() - 0.5) * 1.0).clamp(1, 10).round();
+    return (base + (math.Random().nextDouble() - 0.5) * 1.0).clamp(1, 10).round();
   }
 
   String _generateReflection(double mood, double energy, double stress, String phase) {
@@ -2474,7 +2350,7 @@ class DatabaseService {
     };
 
     final options = reflections[phase] ?? ['Día normal, sin grandes altibajos.'];
-    return options[Random().nextInt(options.length)];
+    return options[math.Random().nextInt(options.length)];
   }
 
   String _generateMomentContext(String category) {
@@ -2486,19 +2362,14 @@ class DatabaseService {
     };
 
     final options = contexts[category] ?? ['Momento general'];
-    return options[Random().nextInt(options.length)];
+    return options[math.Random().nextInt(options.length)];
   }
 
   String _generateLocation() {
     final locations = ['Casa', 'Oficina', 'Cafetería', 'Parque', 'Gym', 'Transporte'];
-    return locations[Random().nextInt(locations.length)];
+    return locations[math.Random().nextInt(locations.length)];
   }
 
-// ============================================================================
-// 🗃️ MÉTODOS ADICIONALES PARA DESARROLLADOR
-// ============================================================================
-
-  /// 🔄 Regenerar solo datos del último mes
   Future<void> regenerateLastMonthData(int userId) async {
     try {
       final db = await database;
@@ -2517,7 +2388,6 @@ class DatabaseService {
     }
   }
 
-  /// 📊 Obtener estadísticas de los datos generados
   Future<Map<String, dynamic>> getDeveloperDataStats(int userId) async {
     try {
       final db = await database;
@@ -2554,9 +2424,6 @@ class DatabaseService {
 
 
 }
-// ============================================================================
-// 📋 CLASES AUXILIARES PARA GENERACIÓN DE DATOS
-// ============================================================================
 
 class _PersonalityPhase {
   final String name;
@@ -2587,4 +2454,10 @@ class _MilestoneData {
   final int intensity;
 
   _MilestoneData(this.daysAgo, this.emoji, this.description, this.type, this.intensity);
+}
+String _getHourlyRecommendation(String? bestHour, String? worstHour) {
+  if (bestHour != null && worstHour != null && bestHour != worstHour) {
+    return 'Tu energía pico es a las $bestHour. Evita tareas demandantes cerca de las $worstHour.';
+  }
+  return 'Registra más momentos para obtener recomendaciones horarias.';
 }
