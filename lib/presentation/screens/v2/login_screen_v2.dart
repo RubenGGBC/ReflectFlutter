@@ -121,6 +121,11 @@ class _LoginScreenV2State extends State<LoginScreenV2>
                       _buildSubmitButton(),
                       const SizedBox(height: ModernSpacing.md),
                       _buildToggleButton(),
+                      const SizedBox(height: ModernSpacing.sm),
+
+                      // ✅ NUEVO BOTÓN PARA DESARROLLADOR
+                      _buildDeveloperLoginButton(),
+
                       if (_errorMessage != null) ...[
                         const SizedBox(height: ModernSpacing.md),
                         _buildErrorMessage(),
@@ -296,6 +301,31 @@ class _LoginScreenV2State extends State<LoginScreenV2>
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  // ✅ MÉTODO PARA EL NUEVO BOTÓN
+  Widget _buildDeveloperLoginButton() {
+    final authProvider = context.watch<OptimizedAuthProvider>();
+
+    return TextButton(
+      onPressed: authProvider.isLoading ? null : () async {
+        final success = await authProvider.loginAsDeveloper();
+        if (success && mounted) {
+          Navigator.of(context).pushReplacementNamed('/main');
+        } else if (mounted) {
+          setState(() {
+            _errorMessage = authProvider.errorMessage ?? 'Error en el login de desarrollador.';
+          });
+        }
+      },
+      child: Text(
+        '🚀 Iniciar como Desarrollador',
+        style: ModernTypography.bodyMedium.copyWith(
+          color: ModernColors.accentGreen,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );

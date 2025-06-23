@@ -1,6 +1,5 @@
-// ============================================================================
-// main_navigation_screen_v2_fixed.dart - NAVEGACIÓN COMPLETAMENTE ARREGLADA
-// ============================================================================
+// lib/presentation/screens/v2/main_navigation_screen_v2.dart
+// ✅ ACTUALIZADO CON COACH DE IA
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -14,6 +13,7 @@ import 'interactive_moments_screen_v2.dart';
 import 'daily_review_screen_v2.dart';
 import 'analytics_screen_v2.dart';
 import 'profile_screen_v2.dart';
+import 'ai_coach_screen.dart'; // ✅ NUEVA PANTALLA
 
 // Componentes modernos
 import '../components/modern_design_system.dart';
@@ -41,7 +41,7 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
   // ✅ ARREGLADO: Lista de pantallas con verificación de estado
   late final List<Widget> _screens;
 
-  // Configuración de navegación
+  // ✅ ACTUALIZADO: Configuración de navegación con Coach de IA
   final List<NavigationItem> _navigationItems = [
     NavigationItem(
       icon: Icons.home_outlined,
@@ -66,6 +66,12 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
       activeIcon: Icons.analytics,
       label: 'Analytics',
       color: const Color(0xFFF59E0B),
+    ),
+    NavigationItem(
+      icon: Icons.psychology_outlined, // ✅ NUEVO: Coach IA
+      activeIcon: Icons.psychology,
+      label: 'Coach IA',
+      color: const Color(0xFF9333EA),
     ),
     NavigationItem(
       icon: Icons.person_outline,
@@ -115,13 +121,14 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
     ));
   }
 
-  // ✅ ARREGLADO: Inicialización de pantallas con widgets seguros
+  // ✅ ACTUALIZADO: Inicialización de pantallas con Coach IA
   void _initializeScreens() {
     _screens = [
       _SafeScreenWrapper(child: const HomeScreenV2()),
       _SafeScreenWrapper(child: const InteractiveMomentsScreenV2()),
       _SafeScreenWrapper(child: const DailyReviewScreenV2()),
       _SafeScreenWrapper(child: const AnalyticsScreenV2()),
+      _SafeScreenWrapper(child: const AICoachScreenV2()), // ✅ NUEVA PANTALLA
       _SafeScreenWrapper(child: const ProfileScreenV2()),
     ];
   }
@@ -316,16 +323,16 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
                 : _screens[_currentIndex], // Fallback seguro
           ),
 
-          // ✅ ARREGLADO: Navegación inferior animada
+          // ✅ ACTUALIZADO: Navegación inferior con 6 elementos
           AnimatedBuilder(
             animation: _navAnimation,
             builder: (context, child) {
               return Transform.translate(
                 offset: Offset(0, 100 * (1 - _navAnimation.value)),
                 child: Container(
-                  margin: const EdgeInsets.all(16),
+                  margin: const EdgeInsets.all(12), // Reducido para 6 elementos
                   decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.8),
+                    color: Colors.black.withOpacity(0.85),
                     borderRadius: BorderRadius.circular(24),
                     border: Border.all(
                       color: Colors.white.withOpacity(0.1),
@@ -344,7 +351,7 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
 
   Widget _buildBottomNavigation() {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4), // Ajustado para 6 elementos
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: List.generate(
@@ -362,10 +369,10 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
     return GestureDetector(
       onTap: () => _onNavItemTapped(index),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8), // Reducido para 6 elementos
         decoration: BoxDecoration(
           color: isActive ? item.color.withOpacity(0.2) : Colors.transparent,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -373,14 +380,14 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
             Icon(
               isActive ? item.activeIcon : item.icon,
               color: isActive ? item.color : Colors.white60,
-              size: 24,
+              size: 22, // Ligeramente más pequeño para 6 elementos
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: 2),
             Text(
               item.label,
               style: TextStyle(
                 color: isActive ? item.color : Colors.white60,
-                fontSize: 12,
+                fontSize: 10, // Texto más pequeño para 6 elementos
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
               ),
             ),

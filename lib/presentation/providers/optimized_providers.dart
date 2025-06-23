@@ -50,6 +50,33 @@ class OptimizedAuthProvider with ChangeNotifier {
     } finally {
       _setLoading(false);
     }
+  }// ... dentro de la clase OptimizedAuthProvider
+
+  /// ✅ NUEVO: Iniciar sesión como desarrollador
+  Future<bool> loginAsDeveloper() async {
+    _logger.i('🚀 Iniciando sesión como desarrollador...');
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final devUser = await _databaseService.createDeveloperAccount();
+
+      if (devUser != null) {
+        _currentUser = devUser;
+        _logger.i('✅ Sesión iniciada como desarrollador: ${devUser.name}');
+        notifyListeners();
+        return true;
+      } else {
+        _setError('No se pudo crear o iniciar sesión como desarrollador');
+        return false;
+      }
+    } catch (e) {
+      _logger.e('❌ Error en login de desarrollador: $e');
+      _setError('Error fatal en el modo desarrollador');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
   }
 
   /// Registrar nuevo usuario
