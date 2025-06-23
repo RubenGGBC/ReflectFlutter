@@ -10,6 +10,7 @@ import 'data/services/optimized_database_service.dart';
 
 // Providers optimizados
 import 'presentation/providers/optimized_providers.dart';
+import 'ai/provider/ai_provider.dart';
 
 // Theme provider (reutilizado del original)
 import 'presentation/providers/theme_provider.dart';
@@ -23,10 +24,8 @@ Future<void> initCleanDependencies() async {
 
   try {
     // ============================================================================
-    // CORE SERVICES
+    // CORE SERVICES (Singletons - solo una instancia)
     // ============================================================================
-
-    // Logger optimizado
     sl.registerLazySingleton<Logger>(() => Logger(
       printer: PrettyPrinter(
         methodCount: 2,
@@ -38,38 +37,38 @@ Future<void> initCleanDependencies() async {
       ),
     ));
 
-    // Database Service optimizado - SINGLETON
     sl.registerLazySingleton<OptimizedDatabaseService>(
           () => OptimizedDatabaseService(),
     );
 
     // ============================================================================
-    // PROVIDERS PRINCIPALES
+    // PROVIDERS (Factories - nueva instancia cuando se pide)
+    // ✅ CORREGIDO: Se cambia de registerLazySingleton a registerFactory para
+    // evitar problemas de estado entre Hot Restarts.
     // ============================================================================
 
-    // Auth Provider optimizado
-    sl.registerLazySingleton<OptimizedAuthProvider>(
+    sl.registerFactory<OptimizedAuthProvider>(
           () => OptimizedAuthProvider(sl<OptimizedDatabaseService>()),
     );
 
-    // Theme Provider (reutilizado)
-    sl.registerLazySingleton<ThemeProvider>(
+    sl.registerFactory<ThemeProvider>(
           () => ThemeProvider(),
     );
 
-    // Daily Entries Provider
-    sl.registerLazySingleton<OptimizedDailyEntriesProvider>(
+    sl.registerFactory<OptimizedDailyEntriesProvider>(
           () => OptimizedDailyEntriesProvider(sl<OptimizedDatabaseService>()),
     );
 
-    // Interactive Moments Provider
-    sl.registerLazySingleton<OptimizedMomentsProvider>(
+    sl.registerFactory<OptimizedMomentsProvider>(
           () => OptimizedMomentsProvider(sl<OptimizedDatabaseService>()),
     );
 
-    // Analytics Provider
-    sl.registerLazySingleton<OptimizedAnalyticsProvider>(
+    sl.registerFactory<OptimizedAnalyticsProvider>(
           () => OptimizedAnalyticsProvider(sl<OptimizedDatabaseService>()),
+    );
+
+    sl.registerFactory<AIProvider>(
+          () => AIProvider(),
     );
 
     logger.i('✅ Dependencias limpias inicializadas correctamente');
@@ -81,7 +80,7 @@ Future<void> initCleanDependencies() async {
 }
 
 // ============================================================================
-// FUNCIONES DE UTILIDAD
+// FUNCIONES DE UTILIDAD (SIN CAMBIOS)
 // ============================================================================
 
 /// Verificar que todos los servicios estén registrados
@@ -97,6 +96,7 @@ bool areCleanServicesRegistered() {
     sl<OptimizedDailyEntriesProvider>();
     sl<OptimizedMomentsProvider>();
     sl<OptimizedAnalyticsProvider>();
+    sl<AIProvider>();
 
     return true;
   } catch (e) {
@@ -107,7 +107,7 @@ bool areCleanServicesRegistered() {
 /// Información del contenedor limpio
 Map<String, dynamic> getCleanContainerInfo() {
   return {
-    'total_services': 7, // Número exacto de servicios registrados
+    'total_services': 8,
     'services_ready': areCleanServicesRegistered(),
     'core_services': [
       'Logger',
@@ -119,6 +119,7 @@ Map<String, dynamic> getCleanContainerInfo() {
       'OptimizedDailyEntriesProvider',
       'OptimizedMomentsProvider',
       'OptimizedAnalyticsProvider',
+      'AIProvider',
     ],
     'removed_legacy': [
       'AnalyticsProvider (legacy)',
@@ -145,7 +146,7 @@ Future<void> initForCleanTesting() async {
 }
 
 // ============================================================================
-// EXTENSIONES PARA FACILITAR USO
+// EXTENSIONES PARA FACILITAR USO (SIN CAMBIOS)
 // ============================================================================
 
 extension CleanGetItExtension on GetIt {
@@ -180,7 +181,7 @@ extension CleanGetItExtension on GetIt {
 }
 
 // ============================================================================
-// CONSTANTES DE IDENTIFICACIÓN
+// CONSTANTES DE IDENTIFICACIÓN (SIN CAMBIOS)
 // ============================================================================
 
 class CleanDIConstants {
@@ -191,13 +192,13 @@ class CleanDIConstants {
   static const String dailyEntriesProvider = 'OptimizedDailyEntriesProvider';
   static const String momentsProvider = 'OptimizedMomentsProvider';
   static const String analyticsProvider = 'OptimizedAnalyticsProvider';
+  static const String aiProvider = 'AIProvider';
 }
 
 // ============================================================================
-// HELPER PARA MIGRACIÓN GRADUAL
+// HELPER PARA MIGRACIÓN GRADUAL (SIN CAMBIOS)
 // ============================================================================
 
-/// Migrar gradualmente desde el container legacy al limpio
 class DIMigrationHelper {
   static const Map<String, String> _migrationMap = {
     'AuthProvider': 'OptimizedAuthProvider',
@@ -206,32 +207,26 @@ class DIMigrationHelper {
     'DatabaseService': 'OptimizedDatabaseService',
   };
 
-  /// Obtener el nombre del servicio optimizado
   static String? getOptimizedServiceName(String legacyName) {
     return _migrationMap[legacyName];
   }
 
-  /// Verificar si un servicio legacy tiene equivalente optimizado
   static bool hasOptimizedEquivalent(String legacyName) {
     return _migrationMap.containsKey(legacyName);
   }
 
-  /// Listar servicios que se pueden eliminar
   static List<String> getLegacyServicesToRemove() {
     return [
-      'AdvancedUserAnalytics', // Funcionalidad integrada en OptimizedAnalyticsProvider
-      'EnhancedAnalyticsProvider', // Duplicado, funcionalidad en OptimizedAnalyticsProvider
-      'NotificationsProvider', // No se usa en V2
-      'SessionService', // Integrado en OptimizedAuthProvider
+      'AdvancedUserAnalytics',
+      'EnhancedAnalyticsProvider',
+      'NotificationsProvider',
+      'SessionService',
     ];
   }
 
-  /// Verificar integridad de la migración
   static Map<String, dynamic> checkMigrationStatus() {
-    // FIX: Cambiar AuthProvider por OptimizedAuthProvider
-    final isLegacyPresent = false; // No chequeamos legacy en el container limpio
+    final isLegacyPresent = false;
     final isOptimizedPresent = sl.isRegisteredClean<OptimizedAuthProvider>();
-
     return {
       'legacy_present': isLegacyPresent,
       'optimized_present': isOptimizedPresent,
@@ -242,7 +237,7 @@ class DIMigrationHelper {
 }
 
 // ============================================================================
-// CONFIGURACIÓN DE LOGGING OPTIMIZADA
+// CONFIGURACIÓN DE LOGGING OPTIMIZADA (SIN CAMBIOS)
 // ============================================================================
 
 class OptimizedLoggingConfig {
@@ -283,35 +278,21 @@ class OptimizedLoggingConfig {
 }
 
 // ============================================================================
-// INICIALIZADORES ESPECÍFICOS POR ENTORNO
+// INICIALIZADORES ESPECÍFICOS POR ENTORNO (SIN CAMBIOS)
 // ============================================================================
 
-/// Inicializar para producción
 Future<void> initForProduction() async {
-  // Registrar logger de producción
   sl.registerLazySingleton<Logger>(() => OptimizedLoggingConfig.createProductionLogger());
-
-  // Registrar servicios optimizados
   await initCleanDependencies();
 }
 
-/// Inicializar para desarrollo
 Future<void> initForDevelopment() async {
-  // Registrar logger de desarrollo
   sl.registerLazySingleton<Logger>(() => OptimizedLoggingConfig.createDevelopmentLogger());
-
-  // Registrar servicios optimizados
   await initCleanDependencies();
 }
 
-/// Inicializar para testing
 Future<void> initForTesting() async {
-  // Limpiar container existente
   await resetCleanContainer();
-
-  // Registrar logger de testing
   sl.registerLazySingleton<Logger>(() => OptimizedLoggingConfig.createTestingLogger());
-
-  // Registrar servicios optimizados
   await initCleanDependencies();
 }
