@@ -1,5 +1,5 @@
 // android/app/build.gradle.kts
-// COMPLETE WORKING VERSION WITH ONNX
+// FIXED VERSION WITH PROPER CORE LIBRARY DESUGARING
 
 plugins {
     id("com.android.application")
@@ -8,10 +8,11 @@ plugins {
 }
 
 android {
-    namespace = "io.flutter.kotlin.com.example.temp_clean_project"
+    namespace = "com.example.temp_clean_project"
     compileSdk = flutter.compileSdkVersion
 
     compileOptions {
+        // CRITICAL: Enable core library desugaring for flutter_local_notifications
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
@@ -22,16 +23,11 @@ android {
     }
 
     defaultConfig {
-        applicationId = "io.flutter.kotlin.com.example.temp_clean_project"
-        minSdk = flutter.minSdkVersion
+        applicationId = "com.example.temp_clean_project"
+        minSdk = 21  // Minimum for desugaring
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
-
-        // Native library support for ONNX
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
     }
 
     buildTypes {
@@ -48,16 +44,6 @@ android {
             isDebuggable = false
         }
     }
-
-    // Packaging options for ONNX native libraries
-    packaging {
-        resources {
-            pickFirsts += listOf(
-                "**/libc++_shared.so",
-                "**/libonnxruntime.so"
-            )
-        }
-    }
 }
 
 flutter {
@@ -65,12 +51,10 @@ flutter {
 }
 
 dependencies {
-    // Core library desugaring
+    // CRITICAL: Core library desugaring dependency MUST be first
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
-    // Kotlin coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
-    // ONNX Runtime
-    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.15.1")
+    // Keep any other dependencies you need
+     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.15.1")
 }

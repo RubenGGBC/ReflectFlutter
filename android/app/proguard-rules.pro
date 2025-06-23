@@ -1,11 +1,11 @@
 # android/app/proguard-rules.pro
-# CREATE THIS FILE IF YOU WANT TO ENABLE MINIFICATION
+# UPDATE TO USE CORRECT PACKAGE NAME
 
 # Keep all classes in our package
--keep class io.flutter.kotlin.com.example.temp_clean_project.** { *; }
+-keep class com.example.temp_clean_project.** { *; }
 
 # Keep AI Plugin classes
--keep class io.flutter.kotlin.com.example.temp_clean_project.GenAIPlugin { *; }
+-keep class com.example.temp_clean_project.GenAIPlugin { *; }
 
 # Keep ONNX Runtime classes
 -keep class com.microsoft.onnxruntime.** { *; }
