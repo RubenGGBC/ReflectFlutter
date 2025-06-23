@@ -3,8 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:logger/logger.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'dart:io';
 
 // Imports corregidos
 import 'optimized_reflect_app.dart';
@@ -14,10 +12,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Configurar FFI para sqflite en desktop
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
+
 
   // Configurar orientación
   await SystemChrome.setPreferredOrientations([

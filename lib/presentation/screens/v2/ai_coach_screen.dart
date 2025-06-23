@@ -1,5 +1,5 @@
-// lib/presentation/screens/v2/ai_coach_screen_v2.dart
-// ✅ ESTRUCTURA CORREGIDA PARA TU PROYECTO
+// lib/presentation/screens/v2/ai_coach_screen.dart
+// ✅ VERSIÓN CON ANÁLISIS CERCANO Y ESQUEMATIZADO
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -54,7 +54,6 @@ class _AICoachScreenV2State extends State<AICoachScreenV2>
   }
 
   void _loadLastSummary() {
-    // Por ahora, simular que no hay resumen previo
     setState(() {
       _lastSummary = null;
     });
@@ -146,7 +145,7 @@ class _AICoachScreenV2State extends State<AICoachScreenV2>
             _buildGenerateSummaryCard(),
             if (_lastSummary != null) ...[
               const SizedBox(height: 16),
-              _buildSummaryCard(_lastSummary!),
+              _buildSchematizedSummaryCard(_lastSummary!),
             ],
             const SizedBox(height: 16),
             _buildFeaturesCard(),
@@ -178,39 +177,34 @@ class _AICoachScreenV2State extends State<AICoachScreenV2>
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Text(
-                user.avatarEmoji,
-                style: const TextStyle(fontSize: 32),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '¡Hola, ${user.name}!',
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const Text(
-                      'Tu coach personal está listo para ayudarte',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
+          Text(
+            user.avatarEmoji,
+            style: const TextStyle(fontSize: 32),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '¡Hola, ${user.name}!',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
                 ),
-              ),
-            ],
+                const Text(
+                  'Tu coach personal está listo para ayudarte',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -338,7 +332,7 @@ class _AICoachScreenV2State extends State<AICoachScreenV2>
               )
                   : const Icon(Icons.psychology),
               label: Text(
-                _isGenerating ? 'Analizando...' : 'Generar Resumen de Esta Semana',
+                _isGenerating ? 'Analizando tu semana...' : 'Generar Resumen de Esta Semana',
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: ModernColors.accentPurple,
@@ -355,7 +349,38 @@ class _AICoachScreenV2State extends State<AICoachScreenV2>
     );
   }
 
-  Widget _buildSummaryCard(Map<String, dynamic> summary) {
+  // ✅ NUEVA UI ESQUEMATIZADA Y AMIGABLE
+  Widget _buildSchematizedSummaryCard(Map<String, dynamic> summary) {
+    final data = summary['data'] as Map<String, dynamic>? ?? {};
+
+    return Column(
+      children: [
+        // Resumen principal con tono cercano
+        _buildMainSummarySection(summary),
+        const SizedBox(height: 16),
+
+        // Datos de la semana de forma visual
+        _buildWeekDataSection(data),
+        const SizedBox(height: 16),
+
+        // Lo que me llamó la atención (insights)
+        if (summary['insights'] != null && (summary['insights'] as List).isNotEmpty)
+          _buildInsightsSection(summary['insights'] as List<String>),
+        const SizedBox(height: 16),
+
+        // Cosas que celebramos juntos
+        if (summary['momentos_destacados'] != null && (summary['momentos_destacados'] as List).isNotEmpty)
+          _buildCelebrationSection(summary['momentos_destacados'] as List<String>),
+        const SizedBox(height: 16),
+
+        // Te sugiero que pruebes...
+        if (summary['suggestions'] != null && (summary['suggestions'] as List).isNotEmpty)
+          _buildSuggestionsSection(summary['suggestions'] as List<String>),
+      ],
+    );
+  }
+
+  Widget _buildMainSummarySection(Map<String, dynamic> summary) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -379,14 +404,14 @@ class _AICoachScreenV2State extends State<AICoachScreenV2>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
-                  Icons.insights,
+                  Icons.psychology,
                   color: Colors.green,
                   size: 24,
                 ),
               ),
               const SizedBox(width: 12),
               const Text(
-                'Tu Resumen Semanal',
+                'Mi Análisis de Tu Semana',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -401,75 +426,16 @@ class _AICoachScreenV2State extends State<AICoachScreenV2>
             style: const TextStyle(
               fontSize: 16,
               color: Colors.white,
-              height: 1.5,
+              height: 1.6,
             ),
           ),
-          if (summary['insights'] != null && summary['insights'].isNotEmpty) ...[
-            const SizedBox(height: 16),
-            const Text(
-              'Insights Clave:',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...List<String>.from(summary['insights']).map((insight) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '• ',
-                    style: TextStyle(color: ModernColors.accentBlue),
-                  ),
-                  Expanded(
-                    child: Text(
-                      insight,
-                      style: TextStyle(color: Colors.grey.shade300),
-                    ),
-                  ),
-                ],
-              ),
-            )),
-          ],
-          if (summary['suggestions'] != null && summary['suggestions'].isNotEmpty) ...[
-            const SizedBox(height: 16),
-            const Text(
-              'Sugerencias:',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ...List<String>.from(summary['suggestions']).map((suggestion) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '→ ',
-                    style: TextStyle(color: Colors.green.shade400),
-                  ),
-                  Expanded(
-                    child: Text(
-                      suggestion,
-                      style: TextStyle(color: Colors.grey.shade300),
-                    ),
-                  ),
-                ],
-              ),
-            )),
-          ],
           const SizedBox(height: 12),
           Text(
-            'Generado el ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
+            'Analizado el ${DateTime.now().day}/${DateTime.now().month}/${DateTime.now().year}',
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.shade500,
+              fontStyle: FontStyle.italic,
             ),
           ),
         ],
@@ -477,7 +443,183 @@ class _AICoachScreenV2State extends State<AICoachScreenV2>
     );
   }
 
-  Widget _buildFeaturesCard() {
+  Widget _buildWeekDataSection(Map<String, dynamic> data) {
+    final avgMood = (data['avgMood'] as double? ?? 5.0);
+    final avgEnergy = (data['avgEnergy'] as double? ?? 5.0);
+    final avgStress = (data['avgStress'] as double? ?? 5.0);
+    final totalEntries = data['totalEntries'] as int? ?? 0;
+    final totalMoments = data['totalMoments'] as int? ?? 0;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: ModernColors.darkSecondary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.blue.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.analytics,
+                  color: Colors.blue,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Los Números de Tu Semana',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Métricas principales con emojis y colores
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricCard(
+                  '😊',
+                  'Estado de Ánimo',
+                  '${avgMood.toStringAsFixed(1)}/10',
+                  _getMoodColor(avgMood),
+                  _getMoodComment(avgMood),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMetricCard(
+                  '⚡',
+                  'Energía',
+                  '${avgEnergy.toStringAsFixed(1)}/10',
+                  _getEnergyColor(avgEnergy),
+                  _getEnergyComment(avgEnergy),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMetricCard(
+                  '😰',
+                  'Estrés',
+                  '${avgStress.toStringAsFixed(1)}/10',
+                  _getStressColor(avgStress),
+                  _getStressComment(avgStress),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildActivityCard(totalEntries, totalMoments),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricCard(String emoji, String label, String value, Color color, String comment) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 24)),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade400,
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            comment,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey.shade500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityCard(int entries, int moments) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.purple.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.purple.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          const Text('📝', style: TextStyle(fontSize: 24)),
+          const SizedBox(height: 4),
+          Text(
+            'Actividad',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey.shade400,
+            ),
+          ),
+          Text(
+            '$entries días\n$moments momentos',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Colors.purple,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          Text(
+            _getActivityComment(entries),
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey.shade500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInsightsSection(List<String> insights) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -501,8 +643,227 @@ class _AICoachScreenV2State extends State<AICoachScreenV2>
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
-                  Icons.new_releases,
+                  Icons.lightbulb,
                   color: Colors.orange,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Lo que me llamó la atención',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...insights.asMap().entries.map((entry) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 4),
+                  width: 6,
+                  height: 6,
+                  decoration: const BoxDecoration(
+                    color: Colors.orange,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    entry.value,
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.grey.shade300,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCelebrationSection(List<String> highlights) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: ModernColors.darkSecondary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.green.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.celebration,
+                  color: Colors.green,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Cosas que celebramos juntos',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...highlights.map((highlight) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.withOpacity(0.2)),
+              ),
+              child: Text(
+                highlight,
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: Colors.white,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuggestionsSection(List<String> suggestions) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: ModernColors.darkSecondary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.purple.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.purple.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.tips_and_updates,
+                  color: Colors.purple,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Te sugiero que pruebes...',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...suggestions.asMap().entries.map((entry) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.purple.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.purple.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    '${entry.key + 1}.',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.purple,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      entry.value,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        color: Colors.white,
+                        height: 1.4,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeaturesCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: ModernColors.darkSecondary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.cyan.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.cyan.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.new_releases,
+                  color: Colors.cyan,
                   size: 24,
                 ),
               ),
@@ -554,6 +915,56 @@ class _AICoachScreenV2State extends State<AICoachScreenV2>
     );
   }
 
+  // ✅ MÉTODOS AUXILIARES PARA COLORES Y COMENTARIOS
+  Color _getMoodColor(double mood) {
+    if (mood >= 8) return Colors.green;
+    if (mood >= 6) return Colors.blue;
+    if (mood >= 4) return Colors.orange;
+    return Colors.red;
+  }
+
+  String _getMoodComment(double mood) {
+    if (mood >= 8) return '¡Increíble!';
+    if (mood >= 6) return 'Bien encaminado';
+    if (mood >= 4) return 'Regular';
+    return 'Días difíciles';
+  }
+
+  Color _getEnergyColor(double energy) {
+    if (energy >= 7) return Colors.green;
+    if (energy >= 5) return Colors.blue;
+    if (energy >= 3) return Colors.orange;
+    return Colors.red;
+  }
+
+  String _getEnergyComment(double energy) {
+    if (energy >= 7) return 'A tope';
+    if (energy >= 5) return 'Estable';
+    if (energy >= 3) return 'Bajita';
+    return 'Agotado';
+  }
+
+  Color _getStressColor(double stress) {
+    if (stress >= 7) return Colors.red;
+    if (stress >= 5) return Colors.orange;
+    if (stress >= 3) return Colors.blue;
+    return Colors.green;
+  }
+
+  String _getStressComment(double stress) {
+    if (stress >= 7) return 'Muy alto';
+    if (stress >= 5) return 'Moderado';
+    if (stress >= 3) return 'Controlado';
+    return 'Muy relajado';
+  }
+
+  String _getActivityComment(int entries) {
+    if (entries >= 6) return '¡Súper constante!';
+    if (entries >= 4) return 'Buen ritmo';
+    if (entries >= 2) return 'Empezando';
+    return 'A mejorar';
+  }
+
   Future<void> _generateWeeklySummary() async {
     final authProvider = context.read<OptimizedAuthProvider>();
     if (authProvider.currentUser == null) return;
@@ -564,15 +975,12 @@ class _AICoachScreenV2State extends State<AICoachScreenV2>
     });
 
     try {
-      // Obtener datos de la semana
       final dbService = OptimizedDatabaseService();
       final weeklyData = await dbService.getWeeklyDataForAI(authProvider.currentUser!.id);
 
-      // Simular análisis IA (por ahora)
       await Future.delayed(const Duration(seconds: 3));
 
-      // Generar resumen basado en datos reales
-      final summary = _generateSmartSummary(
+      final summary = _generateFriendlySmartSummary(
         weeklyData,
         authProvider.currentUser!.name,
       );
@@ -585,8 +993,8 @@ class _AICoachScreenV2State extends State<AICoachScreenV2>
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('¡Resumen semanal generado exitosamente!'),
+          const SnackBar(
+            content: Text('¡Resumen semanal generado exitosamente!'),
             backgroundColor: Colors.green,
             behavior: SnackBarBehavior.floating,
           ),
@@ -611,77 +1019,276 @@ class _AICoachScreenV2State extends State<AICoachScreenV2>
     }
   }
 
-  Map<String, dynamic> _generateSmartSummary(Map<String, dynamic> weeklyData, String userName) {
-    final entries = List<Map<String, dynamic>>.from(weeklyData['entries'] ?? []);
-    final moments = List<Map<String, dynamic>>.from(weeklyData['moments'] ?? []);
+  // ✅ ANÁLISIS AMIGABLE Y CERCANO
+  Map<String, dynamic> _generateFriendlySmartSummary(Map<String, dynamic> weeklyData, String userName) {
+    final entries = List<Map<String, dynamic>>.from(weeklyData['entries'] ?? <Map<String, dynamic>>[]);
+    final moments = List<Map<String, dynamic>>.from(weeklyData['moments'] ?? <Map<String, dynamic>>[]);
 
-    // Análisis inteligente de datos
-    final moodScores = entries
-        .where((e) => e['mood_score'] != null)
-        .map((e) => e['mood_score'] as int)
-        .toList();
-
-    final energyLevels = entries
-        .where((e) => e['energy_level'] != null)
-        .map((e) => e['energy_level'] as int)
-        .toList();
-
-    final positiveMoments = moments.where((m) => m['type'] == 'positive').length;
-    final negativeMoments = moments.where((m) => m['type'] == 'negative').length;
-
-    final avgMood = moodScores.isNotEmpty ? moodScores.reduce((a, b) => a + b) / moodScores.length : 5.0;
-    final avgEnergy = energyLevels.isNotEmpty ? energyLevels.reduce((a, b) => a + b) / energyLevels.length : 5.0;
-
-    // Generar resumen personalizado
-    String summary;
-    List<String> insights = [];
-    List<String> suggestions = [];
-
-    if (avgMood >= 7) {
-      summary = 'Hola $userName, has tenido una semana fantástica! Tu estado de ánimo promedio fue de ${avgMood.toStringAsFixed(1)}/10, lo cual refleja una actitud muy positiva. ';
-    } else if (avgMood >= 5) {
-      summary = 'Hola $userName, has tenido una semana equilibrada. Tu estado de ánimo promedio fue de ${avgMood.toStringAsFixed(1)}/10, manteniéndote en un rango estable. ';
-    } else {
-      summary = 'Hola $userName, parece que has pasado por algunos desafíos esta semana. Tu estado de ánimo promedio fue de ${avgMood.toStringAsFixed(1)}/10, pero recuerda que los altibajos son normales. ';
+    if (entries.isEmpty && moments.isEmpty) {
+      return _generateEmptyWeekSummary(userName);
     }
 
-    if (positiveMoments > negativeMoments) {
-      summary += 'Es genial ver que registraste $positiveMoments momentos positivos frente a $negativeMoments negativos. ¡Sigues enfocándote en lo bueno!';
-      insights.add('Tienes una tendencia natural a notar y valorar los momentos positivos');
-    } else if (negativeMoments > positiveMoments) {
-      summary += 'Noté que registraste $negativeMoments momentos desafiantes y $positiveMoments positivos. Es importante reconocer ambos tipos de experiencias.';
-      insights.add('Estás siendo honesto contigo mismo al reconocer los momentos difíciles');
-      suggestions.add('Intenta también capturar momentos pequeños pero positivos del día');
-    }
+    // Cálculos básicos
+    final avgMood = _calculateAverage(entries, 'mood_score');
+    final avgEnergy = _calculateAverage(entries, 'energy_level');
+    final avgStress = _calculateAverage(entries, 'stress_level');
 
-    // Insights sobre energía
-    if (avgEnergy >= 7) {
-      insights.add('Tu nivel de energía promedio fue alto (${avgEnergy.toStringAsFixed(1)}/10)');
-    } else if (avgEnergy < 5) {
-      insights.add('Tu energía estuvo baja esta semana (${avgEnergy.toStringAsFixed(1)}/10)');
-      suggestions.add('Considera revisar tu rutina de sueño y actividad física');
-    }
+    final positiveMoments = moments.where((m) => m['type'] == 'positive').toList();
+    final negativeMoments = moments.where((m) => m['type'] == 'negative').toList();
 
-    // Sugerencias generales
-    if (entries.length < 5) {
-      suggestions.add('Intenta reflexionar más días de la semana para obtener mejores insights');
-    }
-
-    if (suggestions.isEmpty) {
-      suggestions.add('Continúa con tu práctica de auto-reflexión, vas muy bien');
-    }
+    // Crear análisis conversacional y cercano
+    final summary = _createFriendlyNarrative(userName, entries, moments, avgMood, avgEnergy, avgStress);
+    final insights = _generateFriendlyInsights(entries, moments, avgMood, avgEnergy, avgStress);
+    final suggestions = _generateFriendlySuggestions(entries, moments, avgMood, avgEnergy, avgStress);
+    final highlights = _getFriendlyHighlights(entries, moments);
 
     return {
       'summary': summary,
       'insights': insights,
       'suggestions': suggestions,
+      'momentos_destacados': highlights,
+      'patrones_observados': <String>[],
       'data': {
-        'avgMood': avgMood,
-        'avgEnergy': avgEnergy,
         'totalEntries': entries.length,
         'totalMoments': moments.length,
-        'positiveMoments': positiveMoments,
-        'negativeMoments': negativeMoments,
+        'avgMood': avgMood,
+        'avgEnergy': avgEnergy,
+        'avgStress': avgStress,
+      }
+    };
+  }
+
+  String _createFriendlyNarrative(String userName, List<Map<String, dynamic>> entries,
+      List<Map<String, dynamic>> moments, double avgMood, double avgEnergy, double avgStress) {
+
+    String narrative = 'Hola $userName 😊, ';
+
+    // Analizar el mood general de la semana
+    if (avgMood >= 7) {
+      narrative += 'veo que has tenido una semana realmente buena! Con un estado de ánimo promedio de ${avgMood.toStringAsFixed(1)}/10, se nota que las cosas han ido bien. ';
+    } else if (avgMood >= 5) {
+      narrative += 'has tenido una semana bastante equilibrada. Tu ánimo promedio de ${avgMood.toStringAsFixed(1)}/10 muestra que has sabido mantener las cosas en balance. ';
+    } else {
+      narrative += 'parece que ha sido una semana un poco más difícil de lo usual. Con un ánimo de ${avgMood.toStringAsFixed(1)}/10, me imagino que han pasado algunas cosas que te han afectado. ';
+    }
+
+    // Citar reflexiones específicas si están disponibles
+    if (entries.isNotEmpty) {
+      final sortedEntries = [...entries]..sort((a, b) =>
+          (a['entry_date'] ?? '').toString().compareTo((b['entry_date'] ?? '').toString()));
+
+      final lastEntry = sortedEntries.last;
+      final lastReflection = lastEntry['free_reflection'] as String? ?? '';
+
+      if (lastReflection.isNotEmpty && lastReflection.length > 15) {
+        final shortQuote = lastReflection.length > 60
+            ? '${lastReflection.substring(0, 57)}...'
+            : lastReflection;
+        narrative += 'Me quedé pensando en lo que escribiste el ${_formatDate(lastEntry['entry_date'])}: "$shortQuote". ';
+      }
+    }
+
+    // Comentar sobre los momentos registrados
+    if (moments.isNotEmpty) {
+      final positiveCount = moments.where((m) => m['type'] == 'positive').length;
+      final negativeCount = moments.where((m) => m['type'] == 'negative').length;
+
+      if (positiveCount > negativeCount) {
+        narrative += 'Me encanta que hayas registrado $positiveCount momentos positivos vs $negativeCount más complicados. ';
+
+        // Citar un momento positivo específico
+        final positiveMoments = moments.where((m) => m['type'] == 'positive').toList();
+        if (positiveMoments.isNotEmpty) {
+          final moment = positiveMoments[0];
+          final emoji = moment['emoji'] as String? ?? '';
+          final text = moment['text'] as String? ?? '';
+          if (text.isNotEmpty) {
+            narrative += 'Especialmente me gustó cuando dijiste $emoji "$text". ';
+          }
+        }
+      } else if (negativeCount > positiveCount) {
+        narrative += 'Registraste $negativeCount momentos difíciles y $positiveCount más positivos. ';
+        narrative += 'Es completamente normal tener días así, y me parece genial que seas honesto/a contigo mismo/a. ';
+      }
+    }
+
+    // Comentar sobre la energía
+    if (avgEnergy < 4) {
+      narrative += 'Noto que tu energía ha estado bastante baja (${avgEnergy.toStringAsFixed(1)}/10). ¿Has estado durmiendo bien?';
+    } else if (avgEnergy > 7) {
+      narrative += 'Tu energía ha estado genial esta semana (${avgEnergy.toStringAsFixed(1)}/10) - ¡eso me da mucha alegría!';
+    }
+
+    return narrative;
+  }
+
+  List<String> _generateFriendlyInsights(List<Map<String, dynamic>> entries,
+      List<Map<String, dynamic>> moments, double avgMood, double avgEnergy, double avgStress) {
+
+    List<String> insights = <String>[];
+
+    // Insight sobre la correlación energía-ánimo
+    if (entries.length >= 3) {
+      final moodEnergyCorrelation = _analyzeEnergyMoodCorrelation(entries);
+      if (moodEnergyCorrelation.isNotEmpty) {
+        insights.add('He notado que cuando tu energía sube, tu ánimo también mejora. Esto es súper importante para entender cómo funciona tu bienestar.');
+      }
+    }
+
+    // Insight sobre consistencia
+    if (entries.length >= 5) {
+      insights.add('Me parece increíble que hayas reflexionado ${entries.length} días esta semana. Esa constancia habla muy bien de tu compromiso contigo mismo/a.');
+    } else if (entries.length >= 3) {
+      insights.add('Has reflexionado ${entries.length} días esta semana, lo cual está muy bien. La reflexión regular es como hacer ejercicio para la mente.');
+    }
+
+    // Insight sobre manejo del estrés
+    if (avgStress > 6 && avgMood > 5) {
+      insights.add('Aunque tu estrés ha estado en ${avgStress.toStringAsFixed(1)}/10, has logrado mantener un buen ánimo. Eso dice mucho de tu resistencia emocional.');
+    }
+
+    // Insight sobre balance emocional
+    final positiveMoments = moments.where((m) => m['type'] == 'positive').length;
+    final negativeMoments = moments.where((m) => m['type'] == 'negative').length;
+
+    if (positiveMoments > 0 && negativeMoments > 0) {
+      insights.add('Valoro mucho que registres tanto momentos buenos como difíciles. Esa honestidad emocional es el primer paso hacia el crecimiento personal.');
+    }
+
+    // Asegurar al menos 2 insights
+    if (insights.length < 2) {
+      insights.addAll([
+        'Tu forma de escribir las reflexiones muestra una persona muy consciente de sus emociones.',
+        'Cada vez que registras algo aquí, estás invirtiendo en tu bienestar mental. Eso es algo que admiro.',
+      ]);
+    }
+
+    return insights.take(4).toList();
+  }
+
+  List<String> _generateFriendlySuggestions(List<Map<String, dynamic>> entries,
+      List<Map<String, dynamic>> moments, double avgMood, double avgEnergy, double avgStress) {
+
+    List<String> suggestions = <String>[];
+
+    // Sugerencias específicas basadas en los datos
+    if (avgEnergy < 5) {
+      suggestions.add('Como tu energía ha estado bajita, te sugiero que explores qué actividades específicas te recargan. ¿Podríamos identificar 2-3 cosas que realmente te den energía?');
+    }
+
+    if (avgStress > 6) {
+      suggestions.add('Tu nivel de estrés ha estado alto (${avgStress.toStringAsFixed(1)}/10). ¿Qué te parece si intentamos identificar exactamente qué te está estresando más para poder atacarlo de raíz?');
+    }
+
+    if (entries.length < 4) {
+      suggestions.add('Me encantaría que pudiéramos reflexionar juntos más días de la semana. Aunque sean 2-3 líneas, cada entrada me ayuda a entenderte mejor.');
+    }
+
+    final positiveMoments = moments.where((m) => m['type'] == 'positive').length;
+    if (positiveMoments < 2) {
+      suggestions.add('Intentemos capturar más momentos positivos, aunque sean pequeños. A veces nos enfocamos tanto en lo malo que se nos olvida celebrar lo bueno.');
+    }
+
+    // Sugerencias generales si no hay específicas
+    if (suggestions.isEmpty) {
+      suggestions.addAll([
+        'Sigues así con tu práctica de reflexión. Cada día que escribes aquí estás construyendo una mejor relación contigo mismo/a.',
+        'Me gustaría que intentaras ser más específico/a en tus reflexiones. Cuéntame qué exactamente te hizo sentir de cierta manera.',
+      ]);
+    }
+
+    return suggestions.take(3).toList();
+  }
+
+  List<String> _getFriendlyHighlights(List<Map<String, dynamic>> entries, List<Map<String, dynamic>> moments) {
+    List<String> highlights = <String>[];
+
+    // Buscar días con mood alto
+    for (final entry in entries) {
+      final mood = (entry['mood_score'] as num?)?.toInt() ?? 0;
+      if (mood >= 8) {
+        final date = _formatDate(entry['entry_date']);
+        highlights.add('🌟 $date fue un día especial - tu ánimo llegó a ${mood}/10');
+      }
+    }
+
+    // Destacar momentos positivos
+    final positiveMoments = moments.where((m) => m['type'] == 'positive').take(2);
+    for (final moment in positiveMoments) {
+      final emoji = moment['emoji'] as String? ?? '✨';
+      final text = moment['text'] as String? ?? '';
+      if (text.isNotEmpty) {
+        highlights.add('$emoji "$text" - me encantó leer esto');
+      }
+    }
+
+    // Highlight por constancia
+    if (entries.length >= 5) {
+      highlights.add('📝 ${entries.length} días de reflexión esta semana - ¡eres increíble!');
+    }
+
+    return highlights.take(3).toList();
+  }
+
+  // ✅ MÉTODOS AUXILIARES REUTILIZADOS
+  String _analyzeEnergyMoodCorrelation(List<Map<String, dynamic>> entries) {
+    if (entries.length < 3) return '';
+
+    int correlationCount = 0;
+    for (final entry in entries) {
+      final mood = (entry['mood_score'] as num?)?.toInt() ?? 0;
+      final energy = (entry['energy_level'] as num?)?.toInt() ?? 0;
+      if ((mood >= 7 && energy >= 7) || (mood <= 4 && energy <= 4)) {
+        correlationCount++;
+      }
+    }
+
+    if (correlationCount >= entries.length * 0.7) {
+      return 'correlación fuerte';
+    }
+    return '';
+  }
+
+  double _calculateAverage(List<Map<String, dynamic>> entries, String field) {
+    final values = entries
+        .where((e) => e[field] != null)
+        .map((e) => (e[field] as num).toDouble())
+        .toList();
+
+    return values.isNotEmpty ? values.reduce((a, b) => a + b) / values.length : 5.0;
+  }
+
+  String _formatDate(dynamic date) {
+    if (date == null) return 'un día';
+    final dateStr = date.toString();
+    final parts = dateStr.split('-');
+    if (parts.length >= 3) {
+      final day = parts[2].split(' ')[0];
+      final month = parts[1];
+      return '$day/$month';
+    }
+    return dateStr;
+  }
+
+  Map<String, dynamic> _generateEmptyWeekSummary(String userName) {
+    return {
+      'summary': 'Hola $userName 😊, veo que esta semana aún no has registrado reflexiones o momentos. No pasa nada, todos necesitamos nuestro tiempo. Cuando estés listo/a, estaré aquí para acompañarte en tu proceso de autoconocimiento.',
+      'insights': <String>[
+        'El simple hecho de estar aquí ya muestra tu interés en cuidar tu bienestar mental',
+        'No hay prisa - cada persona tiene su propio ritmo para la introspección',
+      ],
+      'suggestions': <String>[
+        'Cuando te sientas cómodo/a, empieza con algo simple: ¿cómo te sientes ahora mismo?',
+        'No necesitas escribir párrafos - a veces una sola palabra describe perfectamente tu día',
+      ],
+      'momentos_destacados': <String>[],
+      'patrones_observados': <String>[],
+      'data': {
+        'totalEntries': 0,
+        'totalMoments': 0,
+        'avgMood': 5.0,
+        'avgEnergy': 5.0,
+        'avgStress': 5.0,
       }
     };
   }
