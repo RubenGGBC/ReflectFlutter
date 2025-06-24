@@ -1,8 +1,14 @@
+// ============================================================================
+// presentation/screens/v2/profile_screen_v2.dart - VERSIÓN FINAL Y CORREGIDA
+// ============================================================================
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../../data/services/database_service.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/theme_provider.dart';
+
+// Providers optimizados
+import '../../providers/optimized_providers.dart';
+
+// Componentes modernos
 import '../components/modern_design_system.dart';
 
 class ProfileScreenV2 extends StatefulWidget {
@@ -14,102 +20,138 @@ class ProfileScreenV2 extends StatefulWidget {
 
 class _ProfileScreenV2State extends State<ProfileScreenV2>
     with TickerProviderStateMixin {
-  late AnimationController _avatarController;
-  late AnimationController _statsController;
-  late AnimationController _cardController;
 
-  late Animation<double> _avatarAnimation;
-  late Animation<double> _statsAnimation;
-  late Animation<double> _cardAnimation;
+  // Controladores de formulario
+  final _nameController = TextEditingController();
+  final _bioController = TextEditingController();
 
-  String selectedAvatar = '🧘‍♀️';
+  // Estado de la UI
+  bool _isEditing = false;
+  String _selectedAvatar = '🧘‍♀️';
 
-  final List<String> avatarEmojis = [
-    '🧘‍♀️', '🧘‍♂️', '🌟', '✨', '🦋', '🌸', '🌱', '💫',
-    '🌺', '🍃', '🌙', '☀️', '🌈', '💎', '🔮', '🕯️'
+  // Controladores de animación
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
+
+  final List<String> _availableAvatars = [
+    '🧘‍♀️', '🧘‍♂️', '😊', '😎', '🌟', '🦋', '🌸', '🌺',
+    '🎨', '📚', '🎵', '⚡', '🌈', '🦄', '🐱', '🦊',
+    '🌙', '☀️', '🔥', '❄️', '🌊', '🌿', '🍃', '💎'
   ];
 
   @override
   void initState() {
     super.initState();
     _setupAnimations();
-  }
-
-  void _setupAnimations() {
-    _avatarController = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    );
-
-    _statsController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-
-    _cardController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-
-    _avatarAnimation = Tween<double>(begin: 0.8, end: 1.2).animate(
-      CurvedAnimation(parent: _avatarController, curve: Curves.easeInOut),
-    );
-
-    _statsAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _statsController, curve: Curves.easeOutBack),
-    );
-
-    _cardAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _cardController, curve: Curves.elasticOut),
-    );
-
-    _avatarController.repeat(reverse: true);
-    _cardController.forward();
-
-    Future.delayed(const Duration(milliseconds: 400), () {
-      _statsController.forward();
-    });
+    _loadUserData();
   }
 
   @override
   void dispose() {
-    _avatarController.dispose();
-    _statsController.dispose();
-    _cardController.dispose();
+    _nameController.dispose();
+    _bioController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
     super.dispose();
+  }
+
+  void _setupAnimations() {
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
+    );
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeOutBack
+    ));
+    _fadeController.forward();
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) _slideController.forward();
+    });
+  }
+
+  void _loadUserData() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<OptimizedAuthProvider>();
+      final user = authProvider.currentUser;
+
+      if (user != null) {
+        setState(() {
+          _nameController.text = user.name;
+          _bioController.text = user.bio;
+          _selectedAvatar = user.avatarEmoji;
+        });
+        context.read<OptimizedAnalyticsProvider>().loadCompleteAnalytics(user.id, days: 90);
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    // Observamos los providers para que la UI se reconstruya con los cambios
+    final authProvider = context.watch<OptimizedAuthProvider>();
+    final analyticsProvider = context.watch<OptimizedAnalyticsProvider>();
+    final user = authProvider.currentUser;
+
+    if (user == null) {
+      return Scaffold(
+          body: Center(
+              child: Text('Error: Usuario no encontrado.',
+                  style: ModernTypography.bodyLarge.copyWith(color: Colors.red))));
+    }
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
-              Color(0xFF0a0e27),
-              Color(0xFF2d1b69),
-              Color(0xFF667eea),
+              Color(0xFF0F172A),
+              Color(0xFF1E293B),
+              Color(0xFF334155),
             ],
           ),
         ),
         child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(ModernSpacing.lg),
-            child: Column(
-              children: [
-                _buildHeader(),
-                const SizedBox(height: ModernSpacing.xl),
-                _buildProfileCard(),
-                const SizedBox(height: ModernSpacing.lg),
-                _buildStatsGrid(),
-                const SizedBox(height: ModernSpacing.lg),
-                _buildAchievements(),
-                const SizedBox(height: ModernSpacing.lg),
-                _buildSettings(),
-                const SizedBox(height: ModernSpacing.lg),
-              ],
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: CustomScrollView(
+                slivers: [
+                  _buildAppBar(),
+                  SliverPadding(
+                    padding: const EdgeInsets.all(16),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        _buildProfileCard(),
+                        const SizedBox(height: 16),
+                        _buildStatsCard(analyticsProvider),
+                        const SizedBox(height: 16),
+                        _buildAchievementsCard(analyticsProvider),
+                        const SizedBox(height: 16),
+                        _buildPreferencesCard(),
+                        const SizedBox(height: 16),
+                        _buildActionsCard(),
+                        const SizedBox(height: 24),
+                      ]),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -117,820 +159,652 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
     );
   }
 
-  Widget _buildHeader() {
-    return SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(0, -0.5),
-        end: Offset.zero,
-      ).animate(_cardAnimation),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(
-              Icons.arrow_back_ios,
-              color: Colors.white,
+  SliverAppBar _buildAppBar() {
+    // Leemos el provider aquí para que el botón reaccione al estado de carga
+    final authProvider = context.watch<OptimizedAuthProvider>();
+
+    return SliverAppBar(
+      expandedHeight: 120,
+      floating: false,
+      pinned: true,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: FlexibleSpaceBar(
+        background: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: ModernColors.primaryGradient,
+            ),
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(24),
+              bottomRight: Radius.circular(24),
             ),
           ),
-          const Expanded(
-            child: Text(
-              'Mi Perfil',
-              style: ModernTypography.heading2,
-              textAlign: TextAlign.center,
-            ),
-          ),
-          IconButton(
-            onPressed: _showEditProfileDialog,
-            icon: const Icon(
-              Icons.edit_outlined,
-              color: Colors.white,
-            ),
-          ),
-        ],
+        ),
       ),
+      leading: IconButton(
+        icon: const Icon(Icons.arrow_back, color: Colors.white),
+        onPressed: () => Navigator.of(context).pop(),
+      ),
+      title: const Text('👤 Mi Perfil', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      centerTitle: true,
+      actions: [
+        // ✅ BOTÓN DE GUARDAR CORREGIDO
+        IconButton(
+          icon: authProvider.isLoading && _isEditing
+              ? Container(
+            width: 24,
+            height: 24,
+            padding: const EdgeInsets.all(2.0),
+            child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+          )
+              : Icon(
+            _isEditing ? Icons.save : Icons.edit,
+            color: Colors.white,
+          ),
+          onPressed: authProvider.isLoading ? null : (_isEditing ? _saveProfile : _toggleEditing),
+        ),
+      ],
     );
   }
 
   Widget _buildProfileCard() {
-    return FadeTransition(
-      opacity: _cardAnimation,
-      child: ScaleTransition(
-        scale: _cardAnimation,
-        child: Consumer<AuthProvider>(
-          builder: (context, authProvider, child) {
-            final user = authProvider.currentUser;
-            if (user == null) return const SizedBox();
-
-            return ModernCard(
-              padding: const EdgeInsets.all(ModernSpacing.xl),
-              child: Column(
-                children: [
-                  GestureDetector(
-                    onTap: _showAvatarSelector,
-                    child: ScaleTransition(
-                      scale: _avatarAnimation,
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: ModernColors.primaryGradient,
-                          ),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: ModernColors.primaryGradient.first.withOpacity(0.3),
-                              blurRadius: 20,
-                              spreadRadius: 5,
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Text(
-                            selectedAvatar,
-                            style: const TextStyle(fontSize: 60),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: ModernSpacing.lg),
-                  Text(
-                    user.name,
-                    style: ModernTypography.heading2,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: ModernSpacing.sm),
-                  Text(
-                    user.email,
-                    style: ModernTypography.bodyMedium.copyWith(
-                      color: ModernColors.textSecondary,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: ModernSpacing.lg),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: ModernSpacing.lg,
-                      vertical: ModernSpacing.sm,
-                    ),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: ModernColors.positiveGradient,
-                      ),
-                      borderRadius: BorderRadius.circular(ModernSpacing.radiusRound),
-                    ),
-                    child: Text(
-                      '⭐ Reflexionador Nivel ${_calculateUserLevel()}',
-                      style: ModernTypography.bodyMedium.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
         ),
       ),
-    );
-  }
-
-  Widget _buildStatsGrid() {
-    return AnimatedBuilder(
-      animation: _statsAnimation,
-      builder: (context, child) {
-        return Column(
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Transform.scale(
-                    scale: _statsAnimation.value,
-                    child: ModernProgressCard(
-                      title: 'Días Activos',
-                      subtitle: 'Este mes',
-                      progress: 0.75 * _statsAnimation.value,
-                      color: ModernColors.success,
-                      icon: Icons.calendar_today,
-                      trailing: '23/30',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: ModernSpacing.md),
-                Expanded(
-                  child: Transform.scale(
-                    scale: _statsAnimation.value,
-                    child: ModernProgressCard(
-                      title: 'Momentos Capturados',
-                      subtitle: 'Total',
-                      progress: 0.85 * _statsAnimation.value,
-                      color: ModernColors.info,
-                      icon: Icons.timeline,
-                      trailing: '342',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: ModernSpacing.md),
-            Row(
-              children: [
-                Expanded(
-                  child: Transform.scale(
-                    scale: _statsAnimation.value,
-                    child: ModernProgressCard(
-                      title: 'Racha Actual',
-                      subtitle: 'Días consecutivos',
-                      progress: 0.60 * _statsAnimation.value,
-                      color: ModernColors.warning,
-                      icon: Icons.local_fire_department,
-                      trailing: '12',
-                    ),
-                  ),
-                ),
-                const SizedBox(width: ModernSpacing.md),
-                Expanded(
-                  child: Transform.scale(
-                    scale: _statsAnimation.value,
-                    child: ModernProgressCard(
-                      title: 'Balance Positivo',
-                      subtitle: 'Promedio',
-                      progress: 0.90 * _statsAnimation.value,
-                      color: ModernColors.primaryGradient.first,
-                      icon: Icons.sentiment_very_satisfied,
-                      trailing: '87%',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildAchievements() {
-    return FadeTransition(
-      opacity: _cardAnimation,
-      child: ModernCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '🏆 Logros Desbloqueados',
-              style: ModernTypography.heading3,
-            ),
-            const SizedBox(height: ModernSpacing.lg),
-            _buildAchievementItem(
-              '🌟',
-              'Primer Paso',
-              'Completaste tu primera reflexión',
-              true,
-            ),
-            _buildAchievementItem(
-              '🔥',
-              'En Racha',
-              'Mantuviste una racha de 7 días',
-              true,
-            ),
-            _buildAchievementItem(
-              '💎',
-              'Reflexionador Constante',
-              'Completaste 30 días de reflexiones',
-              false,
-            ),
-            _buildAchievementItem(
-              '🌈',
-              'Maestro del Balance',
-              'Mantuviste balance positivo por 14 días',
-              false,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAchievementItem(String emoji, String title, String description, bool unlocked) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: ModernSpacing.md),
-      child: Row(
+      child: Column(
         children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: unlocked
-                  ? ModernColors.success.withOpacity(0.2)
-                  : Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
-              border: Border.all(
-                color: unlocked
-                    ? ModernColors.success
-                    : Colors.white.withOpacity(0.1),
+          GestureDetector(
+            onTap: _isEditing ? _showAvatarSelector : null,
+            child: Container(
+              width: 100,
+              height: 100,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  colors: ModernColors.primaryGradient,
+                ),
               ),
-            ),
-            child: Center(
-              child: Text(
-                emoji,
-                style: TextStyle(
-                  fontSize: 24,
-                  color: unlocked ? null : Colors.white.withOpacity(0.3),
+              child: Center(
+                child: Text(
+                  _selectedAvatar,
+                  style: const TextStyle(fontSize: 40),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: ModernSpacing.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: ModernTypography.bodyLarge.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: unlocked ? Colors.white : ModernColors.textSecondary,
-                  ),
-                ),
-                Text(
-                  description,
-                  style: ModernTypography.bodySmall.copyWith(
-                    color: unlocked ? ModernColors.textSecondary : ModernColors.textHint,
-                  ),
-                ),
-              ],
+          if (_isEditing) ...[
+            const SizedBox(height: 8),
+            const Text(
+              'Toca para cambiar avatar',
+              style: TextStyle(
+                color: Colors.white54,
+                fontSize: 12,
+              ),
             ),
+          ],
+          const SizedBox(height: 24),
+          _isEditing
+              ? _buildEditableField(
+            controller: _nameController,
+            label: 'Nombre',
+            icon: Icons.person_outline,
+          )
+              : Text(
+            _nameController.text,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+            textAlign: TextAlign.center,
           ),
-          if (unlocked)
-            const Icon(
-              Icons.check_circle,
-              color: ModernColors.success,
-              size: 20,
+          const SizedBox(height: 16),
+          _isEditing
+              ? _buildEditableField(
+            controller: _bioController,
+            label: 'Biografía',
+            icon: Icons.description_outlined,
+            maxLines: 3,
+          )
+              : Text(
+            _bioController.text.isEmpty
+                ? 'Sin biografía'
+                : _bioController.text,
+            style: TextStyle(
+              color: _bioController.text.isEmpty
+                  ? Colors.white38
+                  : Colors.white70,
+              fontSize: 16,
             ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          _buildMemberInfo(),
         ],
       ),
     );
   }
 
-  Widget _buildSettings() {
-    return FadeTransition(
-      opacity: _cardAnimation,
-      child: ModernCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildEditableField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    int maxLines = 1,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: TextField(
+        controller: controller,
+        maxLines: maxLines,
+        style: const TextStyle(color: Colors.white),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: Colors.white60),
+          prefixIcon: Icon(icon, color: Colors.white54),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.all(16),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMemberInfo() {
+    final user = context.read<OptimizedAuthProvider>().currentUser;
+    if (user == null) return const SizedBox.shrink();
+    final memberSince = user.createdAt;
+    final daysSinceMember = DateTime.now().difference(memberSince).inDays;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.calendar_today, color: Colors.white54, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Miembro desde',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 12,
+                  ),
+                ),
+                Text(
+                  '${_formatDate(memberSince)} ($daysSinceMember días)',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsCard(OptimizedAnalyticsProvider analyticsProvider) {
+    if (analyticsProvider.isLoading && analyticsProvider.analytics.isEmpty) {
+      return _buildLoadingCard('Cargando estadísticas...');
+    }
+    final analyticsData = analyticsProvider.analytics;
+    final basicStats = analyticsData['basic_stats'] as Map<String, dynamic>? ?? {};
+    final streakData = analyticsData['streak_data'] as Map<String, dynamic>? ?? {};
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.analytics, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text('Estadísticas Personales',
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold,),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatItem(
+                  icon: '📝',
+                  value: '${basicStats['total_entries'] ?? 0}',
+                  label: 'Entradas',
+                  color: Colors.blue,
+                ),
+              ),
+              Expanded(
+                child: _buildStatItem(
+                  icon: '🔥',
+                  value: '${streakData['current_streak'] ?? 0}',
+                  label: 'Racha Actual',
+                  color: Colors.orange,
+                ),
+              ),
+              Expanded(
+                child: _buildStatItem(
+                  icon: '🏆',
+                  value: '${streakData['longest_streak'] ?? 0}',
+                  label: 'Mejor Racha',
+                  color: Colors.amber,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem({
+    required String icon,
+    required String value,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Text(icon, style: const TextStyle(fontSize: 20)),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              color: color.withOpacity(0.8),
+              fontSize: 10,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAchievementsCard(OptimizedAnalyticsProvider analyticsProvider) {
+    if (analyticsProvider.isLoading && analyticsProvider.analytics.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.emoji_events, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text(
+                'Logros Desbloqueados',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: _calculateAchievementsWidgets(analyticsProvider.analytics),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _calculateAchievementsWidgets(Map<String, dynamic> analyticsData) {
+    final basicStats = analyticsData['basic_stats'] as Map<String, dynamic>? ?? {};
+    final streakData = analyticsData['streak_data'] as Map<String, dynamic>? ?? {};
+    final totalEntries = basicStats['total_entries'] as int? ?? 0;
+    final longestStreak = streakData['longest_streak'] as int? ?? 0;
+    final avgMood = basicStats['avg_mood'] as double? ?? 0.0;
+    final totalMeditation = (basicStats['total_meditation'] as num? ?? 0).toInt();
+
+    final achievementsData = [
+      {'icon': '🌱', 'name': 'Primer Paso', 'unlocked': totalEntries >= 1, 'color': Colors.green},
+      {'icon': '📚', 'name': 'Escritor', 'unlocked': totalEntries >= 10, 'color': Colors.blue},
+      {'icon': '🔥', 'name': 'Constante', 'unlocked': longestStreak >= 7, 'color': Colors.orange},
+      {'icon': '💎', 'name': 'Dedicado', 'unlocked': longestStreak >= 30, 'color': Colors.purple},
+      {'icon': '😊', 'name': 'Optimista', 'unlocked': avgMood >= 7.0, 'color': Colors.yellow},
+      {'icon': '🧘', 'name': 'Zen', 'unlocked': totalMeditation >= 300, 'color': Colors.indigo},
+      {'icon': '🏆', 'name': 'Maestro', 'unlocked': totalEntries >= 100, 'color': Colors.amber},
+    ];
+
+    return achievementsData.map((achievement) {
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: (achievement['unlocked'] as bool) ? (achievement['color'] as Color).withOpacity(0.2) : Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: (achievement['unlocked'] as bool) ? (achievement['color'] as Color) : Colors.white.withOpacity(0.1),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '⚙️ Configuración',
-              style: ModernTypography.heading3,
+              achievement['icon'] as String,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.white.withOpacity((achievement['unlocked'] as bool) ? 1.0 : 0.3),
+              ),
             ),
-            const SizedBox(height: ModernSpacing.lg),
-            _buildSettingItem(
-              Icons.palette_outlined,
-              'Personalizar Tema',
-              'Cambia los colores y estilos',
-                  () => _showThemeSelector(),
+            const SizedBox(width: 6),
+            Text(
+              achievement['name'] as String,
+              style: TextStyle(
+                color: (achievement['unlocked'] as bool) ? (achievement['color'] as Color) : Colors.white38,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-            _buildSettingItem(
-              Icons.notifications_outlined,
-              'Notificaciones',
-              'Configura recordatorios diarios',
-                  () => Navigator.pushNamed(context, '/notifications'),
+          ],
+        ),
+      );
+    }).toList();
+  }
+
+  Widget _buildPreferencesCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.settings, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text('Preferencias', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildPreferenceItem(
+            icon: Icons.notifications_outlined,
+            title: 'Notificaciones',
+            subtitle: 'Recordatorios diarios',
+            onTap: () {},
+          ),
+          const Divider(color: Colors.white12, height: 24),
+          _buildPreferenceItem(
+            icon: Icons.palette_outlined,
+            title: 'Tema',
+            subtitle: 'Personalizar apariencia',
+            onTap: () {},
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPreferenceItem({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(icon, color: Colors.white54, size: 20),
+      ),
+      title: Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+      subtitle: Text(subtitle, style: const TextStyle(color: Colors.white54, fontSize: 14)),
+      trailing: const Icon(Icons.chevron_right, color: Colors.white54),
+      onTap: onTap,
+    );
+  }
+
+  Widget _buildActionsCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _showLogoutDialog,
+              icon: const Icon(Icons.exit_to_app, color: Colors.white),
+              label: const Text('Cerrar Sesión', style: TextStyle(color: Colors.white)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.withOpacity(0.2),
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
             ),
-            _buildSettingItem(
-              Icons.backup_outlined,
-              'Exportar Datos',
-              'Descarga tus reflexiones',
-                  () => _showExportDialog(),
-            ),
-            _buildSettingItem(
-              Icons.info_outline,
-              'Acerca de',
-              'Información de la aplicación',
-                  () => _showAboutDialog(),
-            ),
-            _buildSettingItem(
-              Icons.developer_mode,
-              'Opciones de Desarrollador',
-              'Generar datos de prueba',
-              _showDeveloperOptionsDialog,
-            ),
-            const SizedBox(height: ModernSpacing.lg),
-            ModernButton(
-              text: 'Cerrar Sesión',
-              onPressed: _handleLogout,
-              isPrimary: false,
-              width: double.infinity,
-              icon: Icons.logout,
-            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingCard(String message) {
+    return Container(
+      padding: const EdgeInsets.all(40),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(color: Colors.white),
+            const SizedBox(height: 16),
+            Text(message, style: const TextStyle(color: Colors.white70, fontSize: 14)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildSettingItem(IconData icon, String title, String subtitle, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: ModernSpacing.md),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(ModernSpacing.sm),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(ModernSpacing.radiusSmall),
-              ),
-              child: Icon(
-                icon,
-                color: ModernColors.textSecondary,
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: ModernSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: ModernTypography.bodyLarge,
-                  ),
-                  Text(
-                    subtitle,
-                    style: ModernTypography.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              color: ModernColors.textHint,
-              size: 16,
-            ),
-          ],
-        ),
-      ),
+  void _toggleEditing() {
+    setState(() {
+      _isEditing = !_isEditing;
+    });
+  }
+
+  Future<void> _saveProfile() async {
+    if (_nameController.text.trim().isEmpty) {
+      _showSnackBar('El nombre no puede estar vacío', isError: true);
+      return;
+    }
+
+    final authProvider = context.read<OptimizedAuthProvider>();
+
+    final success = await authProvider.updateProfile(
+      name: _nameController.text.trim(),
+      bio: _bioController.text.trim(),
+      avatarEmoji: _selectedAvatar,
     );
+
+    if (mounted) {
+      if (success) {
+        setState(() => _isEditing = false);
+        _showSnackBar('Perfil actualizado exitosamente');
+      } else {
+        _showSnackBar(authProvider.errorMessage ?? 'Error al actualizar perfil', isError: true);
+      }
+    }
   }
 
   void _showAvatarSelector() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: ModernCard(
-          padding: const EdgeInsets.all(ModernSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '🎭 Elige tu Avatar',
-                style: ModernTypography.heading3,
-              ),
-              const SizedBox(height: ModernSpacing.lg),
-              GridView.builder(
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1E293B),
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(24), topRight: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(20),
+              child: Text('Selecciona tu avatar', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              child: GridView.builder(
                 shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
                 gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  mainAxisSpacing: ModernSpacing.md,
-                  crossAxisSpacing: ModernSpacing.md,
+                  crossAxisCount: 6,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
                 ),
-                itemCount: avatarEmojis.length,
+                itemCount: _availableAvatars.length,
                 itemBuilder: (context, index) {
-                  final emoji = avatarEmojis[index];
-                  final isSelected = selectedAvatar == emoji;
-
+                  final avatar = _availableAvatars[index];
+                  final isSelected = avatar == _selectedAvatar;
                   return GestureDetector(
                     onTap: () {
-                      setState(() {
-                        selectedAvatar = emoji;
-                      });
+                      setState(() => _selectedAvatar = avatar);
                       Navigator.pop(context);
                     },
-                    child: AnimatedContainer(
-                      duration: ModernAnimations.medium,
+                    child: Container(
                       decoration: BoxDecoration(
-                        color: isSelected
-                            ? ModernColors.primaryGradient.first.withOpacity(0.2)
-                            : Colors.white.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
+                        shape: BoxShape.circle,
+                        color: isSelected ? ModernColors.primaryGradient.first.withOpacity(0.3) : Colors.white.withOpacity(0.1),
                         border: Border.all(
-                          color: isSelected
-                              ? ModernColors.primaryGradient.first
-                              : Colors.white.withOpacity(0.1),
+                          color: isSelected ? ModernColors.primaryGradient.first : Colors.transparent,
+                          width: 2,
                         ),
                       ),
-                      child: Center(
-                        child: Text(
-                          emoji,
-                          style: const TextStyle(fontSize: 32),
-                        ),
-                      ),
+                      child: Center(child: Text(avatar, style: const TextStyle(fontSize: 24))),
                     ),
                   );
                 },
               ),
-              const SizedBox(height: ModernSpacing.lg),
-              ModernButton(
-                text: 'Cerrar',
-                onPressed: () => Navigator.pop(context),
-                isPrimary: false,
-                width: double.infinity,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  void _showEditProfileDialog() {
-    final nameController = TextEditingController();
-    final emailController = TextEditingController();
-
+  void _showLogoutDialog() {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: ModernCard(
-          padding: const EdgeInsets.all(ModernSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '✏️ Editar Perfil',
-                style: ModernTypography.heading3,
-              ),
-              const SizedBox(height: ModernSpacing.lg),
-              ModernTextField(
-                controller: nameController,
-                labelText: 'Nombre',
-                prefixIcon: Icons.person_outline,
-              ),
-              const SizedBox(height: ModernSpacing.md),
-              ModernTextField(
-                controller: emailController,
-                labelText: 'Email',
-                prefixIcon: Icons.email_outlined,
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: ModernSpacing.xl),
-              Row(
-                children: [
-                  Expanded(
-                    child: ModernButton(
-                      text: 'Cancelar',
-                      onPressed: () => Navigator.pop(context),
-                      isPrimary: false,
-                    ),
-                  ),
-                  const SizedBox(width: ModernSpacing.md),
-                  Expanded(
-                    child: ModernButton(
-                      text: 'Guardar',
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('👋 Cerrar Sesión', style: TextStyle(color: Colors.white)),
+        content: const Text('¿Estás seguro de que quieres cerrar sesión?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
           ),
-        ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _logout();
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: ModernColors.primaryGradient.first),
+            child: const Text('Cerrar Sesión', style: TextStyle(color: Colors.white)),
+          ),
+        ],
       ),
     );
   }
 
-  void _showThemeSelector() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: ModernCard(
-          padding: const EdgeInsets.all(ModernSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '🎨 Personalizar Tema',
-                style: ModernTypography.heading3,
-              ),
-              const SizedBox(height: ModernSpacing.lg),
-              const Text(
-                'Esta funcionalidad estará disponible próximamente. Podrás personalizar colores, fuentes y efectos visuales.',
-                style: ModernTypography.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: ModernSpacing.xl),
-              ModernButton(
-                text: 'Entendido',
-                onPressed: () => Navigator.pop(context),
-                width: double.infinity,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showExportDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: ModernCard(
-          padding: const EdgeInsets.all(ModernSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.download_outlined,
-                color: ModernColors.info,
-                size: 48,
-              ),
-              const SizedBox(height: ModernSpacing.lg),
-              Text(
-                '📥 Exportar Datos',
-                style: ModernTypography.heading3,
-              ),
-              const SizedBox(height: ModernSpacing.md),
-              const Text(
-                'Descarga todas tus reflexiones y momentos en formato JSON para hacer respaldo o migrar a otra aplicación.',
-                style: ModernTypography.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: ModernSpacing.xl),
-              Row(
-                children: [
-                  Expanded(
-                    child: ModernButton(
-                      text: 'Cancelar',
-                      onPressed: () => Navigator.pop(context),
-                      isPrimary: false,
-                    ),
-                  ),
-                  const SizedBox(width: ModernSpacing.md),
-                  Expanded(
-                    child: ModernButton(
-                      text: 'Exportar',
-                      onPressed: () {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('📁 Datos exportados exitosamente'),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showAboutDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: ModernCard(
-          padding: const EdgeInsets.all(ModernSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.info_outline,
-                color: ModernColors.info,
-                size: 48,
-              ),
-              const SizedBox(height: ModernSpacing.lg),
-              Text(
-                'ReflectApp v2.0',
-                style: ModernTypography.heading3,
-              ),
-              const SizedBox(height: ModernSpacing.md),
-              const Text(
-                'Tu compañero de reflexión y crecimiento personal. Captura momentos, reflexiona sobre tu día y cultiva una mentalidad positiva.',
-                style: ModernTypography.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: ModernSpacing.lg),
-              const Text(
-                '✨ Nueva versión con UI moderna\n🎨 Sistema de diseño mejorado\n📊 Estadísticas visuales\n🏆 Sistema de logros',
-                style: ModernTypography.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: ModernSpacing.xl),
-              ModernButton(
-                text: 'Cerrar',
-                onPressed: () => Navigator.pop(context),
-                width: double.infinity,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showDeveloperOptionsDialog() {
-    final dbService = DatabaseService();
-    final userId = context.read<AuthProvider>().currentUser?.id;
-
-    if (userId == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ Error: No se pudo obtener el ID de usuario.')),
-      );
-      return;
+  Future<void> _logout() async {
+    final authProvider = context.read<OptimizedAuthProvider>();
+    await authProvider.logout();
+    if (mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/login', (route) => false);
     }
+  }
 
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: ModernCard(
-          padding: const EdgeInsets.all(ModernSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('👨‍💻 Opciones de Dev', style: ModernTypography.heading3),
-              const SizedBox(height: ModernSpacing.lg),
-              ModernButton(
-                text: 'Crear Cuenta Dev y Datos',
-                icon: Icons.person_add,
-                onPressed: () async {
-                  final devUserId = await dbService.createDeveloperAccount();
-                  if (mounted) Navigator.pop(context);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('✅ Cuenta de desarrollador creada con ID: $devUserId')),
-                    );
-                  }
-                },
-              ),
-              const SizedBox(height: ModernSpacing.md),
-              ModernButton(
-                text: 'Regenerar Datos (1 Mes)',
-                icon: Icons.refresh,
-                onPressed: () async {
-                  await dbService.regenerateLastMonthData(userId);
-                  if (mounted) Navigator.pop(context);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('🔄 Datos del último mes regenerados')),
-                    );
-                  }
-                },
-              ),
-              const SizedBox(height: ModernSpacing.md),
-              ModernButton(
-                text: 'Ver Estadísticas Dev',
-                icon: Icons.analytics,
-                onPressed: () async {
-                  final stats = await dbService.getDeveloperDataStats(userId);
-                  if (mounted) Navigator.pop(context);
-                  if (mounted) {
-                    print('Estadísticas Dev: $stats');
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Estadísticas de Datos Generados'),
-                        content: SingleChildScrollView(child: Text(stats.toString())),
-                        actions: [
-                          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cerrar'))
-                        ],
-                      ),
-                    );
-                  }
-                },
-              ),
-              const SizedBox(height: ModernSpacing.lg),
-              ModernButton(
-                text: 'Cerrar',
-                onPressed: () => Navigator.pop(context),
-                isPrimary: false,
-              ),
-            ],
-          ),
-        ),
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
-  int _calculateUserLevel() {
-    return 3;
-  }
-
-  void _handleLogout() async {
-    final shouldLogout = await showDialog<bool>(
-      context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: ModernCard(
-          padding: const EdgeInsets.all(ModernSpacing.xl),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.logout,
-                color: ModernColors.warning,
-                size: 48,
-              ),
-              const SizedBox(height: ModernSpacing.lg),
-              Text(
-                '¿Cerrar Sesión?',
-                style: ModernTypography.heading3,
-              ),
-              const SizedBox(height: ModernSpacing.md),
-              const Text(
-                '¿Estás seguro de que deseas cerrar sesión? Perderás el acceso a tus reflexiones hasta que vuelvas a iniciar sesión.',
-                style: ModernTypography.bodyMedium,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: ModernSpacing.xl),
-              Row(
-                children: [
-                  Expanded(
-                    child: ModernButton(
-                      text: 'Cancelar',
-                      onPressed: () => Navigator.pop(context, false),
-                      isPrimary: false,
-                    ),
-                  ),
-                  const SizedBox(width: ModernSpacing.md),
-                  Expanded(
-                    child: ModernButton(
-                      text: 'Cerrar Sesión',
-                      onPressed: () => Navigator.pop(context, true),
-                      gradient: ModernColors.negativeGradient,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (shouldLogout == true && mounted) {
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.logout();
-
-      if (mounted) {
-        Navigator.pushNamedAndRemoveUntil(
-          context,
-          '/login',
-              (route) => false,
-        );
-      }
-    }
+  String _formatDate(DateTime date) {
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return '${date.day} de ${months[date.month - 1]}. de ${date.year}';
   }
 }

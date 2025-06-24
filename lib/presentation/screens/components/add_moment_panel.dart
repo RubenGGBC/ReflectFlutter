@@ -1,12 +1,12 @@
 // ============================================================================
-// components/add_moment_panel.dart - PANEL PARA AÑADIR MOMENTOS
+// components/add_moment_panel.dart - PANEL PARA AÑADIR MOMENTOS - FIXED
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:untitled3/data/models/optimized_models.dart';
+import 'package:untitled3/presentation/providers/optimized_providers.dart';
 // FIX: Corrected import path
-import '../../providers/auth_provider.dart';
-import '../../providers/interactive_moments_provider.dart';
 import 'modern_design_system.dart';
 // FIX: Corrected import path to go up two directories and then into data/models
 import '../../../../data/models/moment_category.dart';
@@ -34,8 +34,9 @@ class _AddMomentPanelState extends State<AddMomentPanel> {
   void _addMoment() async {
     if (_textController.text.trim().isEmpty) return;
 
-    final authProvider = context.read<AuthProvider>();
-    final momentsProvider = context.read<InteractiveMomentsProvider>();
+    final authProvider = context.read<OptimizedAuthProvider>();
+    // FIX: Cambiar a OptimizedMomentsProvider en lugar de OptimizedInteractiveMomentModel
+    final momentsProvider = context.read<OptimizedMomentsProvider>();
 
     final userId = authProvider.currentUser?.id;
     if (userId == null) return;

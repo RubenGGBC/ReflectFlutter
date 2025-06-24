@@ -5,8 +5,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-// Imports corregidos
-import '../../providers/auth_provider.dart';
+// ✅ IMPORTS ARREGLADOS - usar optimized providers directamente
+import '../../providers/optimized_providers.dart';
 import '../v2/home_screen_v2.dart';
 import '../v2/interactive_moments_screen_v2.dart';
 import '../v2/calendar_screen_v2.dart';
@@ -78,7 +78,7 @@ class _ModernNavigationWrapperState extends State<ModernNavigationWrapper> {
     return BottomAppBar(
       shape: const CircularNotchedRectangle(),
       notchMargin: 8.0,
-      color: const Color(0xFF1a1a2e).withOpacity(0.95), // ✅ CORREGIDO: withOpacity en lugar de withValues
+      color: const Color(0xFF1a1a2e).withOpacity(0.95), // ✅ ARREGLADO: withOpacity
       elevation: 8,
       child: Container(
         height: 60,

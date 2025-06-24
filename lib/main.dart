@@ -1,143 +1,101 @@
-// ============================================================================
-// main.dart - VERSIÓN FINAL Y CORREGIDA
-// ============================================================================
+// lib/main.dart - VERSIÓN SIMPLE Y FUNCIONAL
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:get_it/get_it.dart'; // FIX: Import GetIt para el allReady
 import 'package:logger/logger.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'dart:io';
 
-import 'app_v2.dart';
-import 'injection_container.dart' as di;
+// Imports corregidos
+import 'optimized_reflect_app.dart';
+import 'injection_container_clean.dart' as clean_di;
 
-/// Punto de entrada principal de la aplicación
 void main() async {
-  // Asegurar inicialización de Flutter
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializar FFI para sqflite en plataformas de escritorio
-  if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-  }
+  // Configurar FFI para sqflite en desktop
 
-  final logger = Logger();
+
+  // Configurar orientación
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  // Configurar UI del sistema
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.light,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.light,
+    ),
+  );
 
   try {
-    logger.i('🚀 Iniciando ReflectApp v2...');
-
-    // Configurar orientación (solo portrait)
-    await SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-
-    // Configurar UI del sistema
-    SystemChrome.setSystemUIOverlayStyle(
-      const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        systemNavigationBarColor: Colors.transparent,
-        systemNavigationBarIconBrightness: Brightness.light,
-      ),
-    );
-
     // Inicializar dependencias
-    await di.init();
+    await clean_di.initCleanDependencies();
 
-    // >>>>> CORRECCIÓN CLAVE <<<<<
-    // Espera a que todos los singletons asíncronos (como DatabaseService)
-    // estén completamente inicializados y listos para ser usados.
-    await GetIt.instance.allReady();
+    // Verificar que todo esté listo
+    if (!clean_di.areCleanServicesRegistered()) {
+      throw Exception('Error registrando dependencias');
+    }
 
-    logger.i('✅ ReflectApp v2 inicializado correctamente');
+    final logger = clean_di.sl<Logger>();
+    logger.i('✅ App inicializada correctamente');
 
-    // Ahora es seguro ejecutar la aplicación
-    runApp(const ReflectAppV2());
+    // Ejecutar app
+    runApp(const OptimizedReflectApp());
 
-  } catch (e, stackTrace) {
-    logger.e('❌ Error crítico iniciando ReflectApp: $e',
-        error: e, stackTrace: stackTrace);
-    runApp(_buildErrorApp(e.toString()));
+  } catch (e) {
+    // Fallback si hay problemas
+    print('❌ Error inicializando app: $e');
+    runApp(const ErrorApp());
   }
 }
 
-/// Construir aplicación de error en caso de fallo crítico
-Widget _buildErrorApp(String error) {
-  return MaterialApp(
-    title: 'ReflectApp - Error',
-    debugShowCheckedModeBanner: false,
-    home: ErrorScreen(error: error),
-  );
-}
+// ============================================================================
+// APP DE ERROR SIMPLE
+// ============================================================================
 
-/// Pantalla de error para fallos críticos
-class ErrorScreen extends StatelessWidget {
-  final String error;
-
-  const ErrorScreen({
-    super.key,
-    required this.error,
-  });
+class ErrorApp extends StatelessWidget {
+  const ErrorApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.red.shade50,
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+    return MaterialApp(
+      home: Scaffold(
+        backgroundColor: const Color(0xFF0F172A),
+        body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade100,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red.shade600,
-                ),
-              ),
-              const SizedBox(height: 32),
-              Text(
-                'Error de Inicialización',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red.shade700,
-                ),
-                textAlign: TextAlign.center,
+              const Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red,
               ),
               const SizedBox(height: 16),
-              Text(
-                'ReflectApp no pudo inicializarse correctamente.',
-                style: Theme.of(context).textTheme.bodyLarge,
+              const Text(
+                'Error al inicializar la aplicación',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-              ExpansionTile(
-                title: const Text('Detalles técnicos'),
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      error,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontFamily: 'monospace',
-                        color: Colors.grey.shade700,
-                      ),
-                    ),
-                  ),
-                ],
+              ElevatedButton(
+                onPressed: () {
+                  // Reiniciar la app
+                  main();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                ),
+                child: const Text(
+                  'Reintentar',
+                  style: TextStyle(color: Colors.white),
+                ),
               ),
             ],
           ),

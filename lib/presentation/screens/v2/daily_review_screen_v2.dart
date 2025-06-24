@@ -1,11 +1,14 @@
 // ============================================================================
-// daily_review_screen_v2.dart - VERSIÓN CORREGIDA Y ROBUSTA
+// presentation/screens/v2/daily_review_screen_v2.dart - CÓDIGO COMPLETO Y CORREGIDO
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../providers/auth_provider.dart';
-import '../../providers/interactive_moments_provider.dart';
+
+// Providers optimizados
+import '../../providers/optimized_providers.dart';
+
+// Componentes modernos
 import '../components/modern_design_system.dart';
 
 class DailyReviewScreenV2 extends StatefulWidget {
@@ -17,464 +20,641 @@ class DailyReviewScreenV2 extends StatefulWidget {
 
 class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     with TickerProviderStateMixin {
-  final _formKey = GlobalKey<FormState>();
+
+  // Controladores de formulario
   final _reflectionController = TextEditingController();
-  final _goalsController = TextEditingController();
   final _gratitudeController = TextEditingController();
+  final _positiveTagsController = TextEditingController();
+  final _negativeTagsController = TextEditingController();
 
-  int selectedMood = 5;
-  bool worthIt = true;
-  String selectedBackground = 'gradient1';
+  // Estados del formulario
+  int _moodScore = 5;
+  int _energyLevel = 5;
+  int _stressLevel = 5;
+  int _sleepQuality = 5;
+  int _anxietyLevel = 5;
+  int _motivationLevel = 5;
+  int _socialInteraction = 5;
+  int _physicalActivity = 5;
+  int _workProductivity = 5;
+  double _sleepHours = 8.0;
+  int _waterIntake = 8;
+  int _meditationMinutes = 0;
+  int _exerciseMinutes = 0;
+  double _screenTimeHours = 4.0;
+  int _weatherMoodImpact = 0;
+  int _socialBattery = 5;
+  int _creativeEnergy = 5;
+  int _emotionalStability = 5;
+  int _focusLevel = 5;
+  int _lifeSatisfaction = 5;
+  bool? _worthIt;
 
-  late AnimationController _backgroundController;
-  late AnimationController _cardController;
-  late AnimationController _chartController;
+  // Estado de la UI
+  int _currentStep = 0;
+  bool _isLoading = false;
 
-  late Animation<double> _backgroundAnimation;
-  late Animation<double> _cardAnimation;
-  late Animation<double> _chartAnimation;
-
-  final Map<String, List<Color>> backgrounds = {
-    'gradient1': [const Color(0xFF667eea), const Color(0xFF764ba2)],
-    'gradient2': [const Color(0xFF11998e), const Color(0xFF38ef7d)],
-    'gradient3': [const Color(0xFFff6b6b), const Color(0xFFfeca57)],
-    'gradient4': [const Color(0xFF4ecdc4), const Color(0xFF44a08d)],
-    'gradient5': [const Color(0xFFa8edea), const Color(0xFFfed6e3)],
-  };
+  // Controladores de animación
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late PageController _pageController;
 
   @override
   void initState() {
     super.initState();
     _setupAnimations();
-    // Use addPostFrameCallback to ensure providers are available.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
-    });
-  }
-
-  void _setupAnimations() {
-    _backgroundController = AnimationController(
-      duration: const Duration(seconds: 3),
-      vsync: this,
-    );
-    _cardController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _chartController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    _backgroundAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _backgroundController, curve: Curves.easeInOut),
-    );
-    _cardAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _cardController, curve: Curves.elasticOut),
-    );
-    _chartAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _chartController, curve: Curves.easeOutBack),
-    );
-    _backgroundController.repeat(reverse: true);
-    _cardController.forward();
-    Future.delayed(const Duration(milliseconds: 600), () {
-      _chartController.forward();
-    });
-  }
-
-  void _loadData() {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final momentsProvider = Provider.of<InteractiveMomentsProvider>(context, listen: false);
-
-    // FIX: Safely get the user ID and check for null before using it.
-    final userId = authProvider.currentUser?.id;
-    if (userId != null) {
-      momentsProvider.loadTodayMoments(userId);
-    }
+    _loadExistingEntry();
   }
 
   @override
   void dispose() {
-    _backgroundController.dispose();
-    _cardController.dispose();
-    _chartController.dispose();
     _reflectionController.dispose();
-    _goalsController.dispose();
     _gratitudeController.dispose();
+    _positiveTagsController.dispose();
+    _negativeTagsController.dispose();
+    _fadeController.dispose();
+    _slideController.dispose();
+    _pageController.dispose();
     super.dispose();
+  }
+
+  void _setupAnimations() {
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _pageController = PageController();
+
+    _fadeController.forward();
+    _slideController.forward();
+  }
+
+  Future<void> _loadExistingEntry() async {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final authProvider = context.read<OptimizedAuthProvider>();
+      final entriesProvider = context.read<OptimizedDailyEntriesProvider>();
+      final user = authProvider.currentUser;
+      if (user == null) return;
+
+      final todayEntry = entriesProvider.getEntryByDate(DateTime.now());
+
+      if (todayEntry != null && mounted) {
+        setState(() {
+          _reflectionController.text = todayEntry.freeReflection;
+          _gratitudeController.text = todayEntry.gratitudeItems ?? '';
+          _positiveTagsController.text = todayEntry.positiveTags.join(', ');
+          _negativeTagsController.text = todayEntry.negativeTags.join(', ');
+          _moodScore = todayEntry.moodScore ?? 5;
+          _energyLevel = todayEntry.energyLevel ?? 5;
+          _stressLevel = todayEntry.stressLevel ?? 5;
+          _sleepQuality = todayEntry.sleepQuality ?? 5;
+          _anxietyLevel = todayEntry.anxietyLevel ?? 5;
+          _motivationLevel = todayEntry.motivationLevel ?? 5;
+          _socialInteraction = todayEntry.socialInteraction ?? 5;
+          _physicalActivity = todayEntry.physicalActivity ?? 5;
+          _workProductivity = todayEntry.workProductivity ?? 5;
+          _sleepHours = todayEntry.sleepHours ?? 8.0;
+          _waterIntake = todayEntry.waterIntake ?? 8;
+          _meditationMinutes = todayEntry.meditationMinutes ?? 0;
+          _exerciseMinutes = todayEntry.exerciseMinutes ?? 0;
+          _screenTimeHours = todayEntry.screenTimeHours ?? 4.0;
+          _weatherMoodImpact = todayEntry.weatherMoodImpact ?? 0;
+          _socialBattery = todayEntry.socialBattery ?? 5;
+          _creativeEnergy = todayEntry.creativeEnergy ?? 5;
+          _emotionalStability = todayEntry.emotionalStability ?? 5;
+          _focusLevel = todayEntry.focusLevel ?? 5;
+          _lifeSatisfaction = todayEntry.lifeSatisfaction ?? 5;
+          _worthIt = todayEntry.worthIt;
+        });
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          _buildDynamicBackground(),
-          _buildMainContent(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDynamicBackground() {
-    return AnimatedBuilder(
-      animation: _backgroundAnimation,
-      builder: (context, child) {
-        final currentGradient = backgrounds[selectedBackground]!;
-        return Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color.lerp(currentGradient[0], currentGradient[0].withAlpha(204), _backgroundAnimation.value * 0.3)!,
-                Color.lerp(currentGradient[1], currentGradient[1].withAlpha(230), _backgroundAnimation.value * 0.2)!,
-                ModernColors.darkPrimary,
-              ],
-            ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF0F172A),
+              Color(0xFF1E293B),
+              Color(0xFF334155),
+            ],
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildMainContent() {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(ModernSpacing.lg),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: ModernSpacing.xl),
-            _buildMoodSelector(),
-            const SizedBox(height: ModernSpacing.lg),
-            _buildDaySummaryChart(),
-            const SizedBox(height: ModernSpacing.lg),
-            _buildReflectionForm(),
-            const SizedBox(height: ModernSpacing.lg),
-            _buildBackgroundSelector(),
-            const SizedBox(height: ModernSpacing.xl),
-            _buildSaveButton(),
-            const SizedBox(height: ModernSpacing.lg),
-          ],
+        ),
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              _buildProgressIndicator(),
+              Expanded(
+                child: FadeTransition(
+                  opacity: _fadeController,
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentStep = index;
+                      });
+                    },
+                    children: [
+                      _buildReflectionStep(),
+                      _buildWellbeingStep(),
+                      _buildLifestyleStep(),
+                      _buildFinalStep(),
+                    ],
+                  ),
+                ),
+              ),
+              _buildNavigationButtons(),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildHeader() {
-    return SlideTransition(
-      position: Tween<Offset>(begin: const Offset(0, -0.5), end: Offset.zero).animate(_cardAnimation),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: () => Navigator.pop(context),
-            icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Reflexión del Día', style: ModernTypography.heading2.copyWith(fontSize: 28)),
-                Text('Cierra el día con gratitud y reflexión', style: ModernTypography.bodyMedium.copyWith(color: Colors.white.withAlpha(204))),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: ModernSpacing.md, vertical: ModernSpacing.sm),
-            decoration: BoxDecoration(
-              color: Colors.white.withAlpha(51),
-              borderRadius: BorderRadius.circular(ModernSpacing.radiusRound),
-              border: Border.all(color: Colors.white.withAlpha(77)),
-            ),
-            child: Text(DateTime.now().day.toString().padLeft(2, '0'), style: ModernTypography.bodyLarge.copyWith(fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
-  }
+    final today = DateTime.now();
+    final dayName = _getDayName(today.weekday);
+    final monthName = _getMonthName(today.month);
 
-  Widget _buildMoodSelector() {
-    return FadeTransition(
-      opacity: _cardAnimation,
-      child: ScaleTransition(
-        scale: _cardAnimation,
-        child: ModernMoodSelector(
-          selectedMood: selectedMood,
-          onMoodChanged: (mood) {
-            setState(() {
-              selectedMood = mood;
-              selectedBackground = _getMoodBackground(mood);
-            });
-          },
-          animated: true,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDaySummaryChart() {
-    return FadeTransition(
-      opacity: _chartAnimation,
-      child: ScaleTransition(
-        scale: _chartAnimation,
-        child: Consumer<InteractiveMomentsProvider>(
-          builder: (context, provider, child) {
-            final summary = provider.getDaySummary();
-            final totalMoments = (summary['total_moments'] as int?) ?? 0;
-            final balanceScore = (summary['balance_score'] as double?) ?? 0.0;
-            return ModernCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('📊 Resumen del Día', style: ModernTypography.heading3),
-                  const SizedBox(height: ModernSpacing.lg),
-                  Row(
-                    children: [
-                      Expanded(child: _buildStatCard('Momentos Totales', totalMoments.toString(), Icons.timeline, ModernColors.info)),
-                      const SizedBox(width: ModernSpacing.md),
-                      Expanded(child: _buildStatCard('Balance', _getBalanceText(balanceScore), Icons.balance, _getBalanceColor(balanceScore))),
-                    ],
-                  ),
-                  const SizedBox(height: ModernSpacing.lg),
-                  _buildMomentChart(provider),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(ModernSpacing.md),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: color.withAlpha(26),
-        borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
-        border: Border.all(color: color.withAlpha(51)),
+        gradient: LinearGradient(colors: ModernColors.primaryGradient),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(24),
+          bottomRight: Radius.circular(24),
+        ),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: ModernSpacing.sm),
-          Text(value, style: ModernTypography.heading3.copyWith(color: color, fontSize: 20)),
-          Text(title, style: ModernTypography.bodySmall, textAlign: TextAlign.center),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  '📝 Reflexión Diaria',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '$dayName, ${today.day} de $monthName',
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 16,
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMomentChart(InteractiveMomentsProvider provider) {
-    final int positive = provider.positiveCount;
-    final int negative = provider.negativeCount;
-    final int total = provider.totalCount;
-    if (total == 0) {
-      return Container(
-        height: 100,
-        decoration: BoxDecoration(
-          color: Colors.white.withAlpha(13),
-          borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
-        ),
-        child: const Center(child: Text('Sin datos para mostrar aún', style: ModernTypography.bodyMedium)),
-      );
-    }
-    return AnimatedBuilder(
-      animation: _chartAnimation,
-      builder: (context, child) {
-        final positiveFlex = (positive * _chartAnimation.value).round();
-        final negativeFlex = (negative * _chartAnimation.value).round();
-        return Column(
-          children: [
-            Row(
-              children: [
-                if (positiveFlex > 0)
-                  Expanded(
-                    flex: positiveFlex,
-                    child: Container(
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(colors: ModernColors.positiveGradient),
-                        borderRadius: BorderRadius.only(topLeft: Radius.circular(4), bottomLeft: Radius.circular(4)),
-                      ),
-                    ),
-                  ),
-                if (negativeFlex > 0)
-                  Expanded(
-                    flex: negativeFlex,
-                    child: Container(
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(colors: ModernColors.negativeGradient),
-                        borderRadius: BorderRadius.only(topRight: Radius.circular(4), bottomRight: Radius.circular(4)),
-                      ),
-                    ),
-                  ),
-              ],
+  Widget _buildProgressIndicator() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: List.generate(4, (index) {
+          return Expanded(
+            child: Container(
+              height: 4,
+              margin: EdgeInsets.only(right: index < 3 ? 8 : 0),
+              decoration: BoxDecoration(
+                color: index <= _currentStep
+                    ? ModernColors.primaryGradient.first
+                    : Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            const SizedBox(height: ModernSpacing.md),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildLegendItem('😊 Positivos', positive.toString(), ModernColors.success),
-                _buildLegendItem('💭 Reflexivos', negative.toString(), ModernColors.warning),
-              ],
-            ),
-          ],
-        );
-      },
+          );
+        }),
+      ),
     );
   }
 
-  Widget _buildLegendItem(String label, String value, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
+  Widget _buildReflectionStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStepHeader(
+            '✍️ Reflexión Personal',
+            'Comparte cómo ha sido tu día',
+          ),
+          const SizedBox(height: 24),
+          _buildSectionCard(
+            title: 'Reflexión libre',
+            child: TextField(
+              controller: _reflectionController,
+              maxLines: 6,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: '¿Cómo ha sido tu día? ¿Qué has aprendido? ¿Cómo te sientes?',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.1),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildSectionCard(
+            title: 'Aspectos positivos',
+            child: TextField(
+              controller: _positiveTagsController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Ejemplo: trabajo productivo, tiempo con familia, ejercicio',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.1),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildSectionCard(
+            title: 'Desafíos o aspectos a mejorar',
+            child: TextField(
+              controller: _negativeTagsController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Ejemplo: estrés laboral, falta de sueño, procrastinación',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.1),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildSectionCard(
+            title: 'Gratitud',
+            child: TextField(
+              controller: _gratitudeController,
+              maxLines: 3,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: '¿Por qué estás agradecido/a hoy?',
+                hintStyle: const TextStyle(color: Colors.white38),
+                filled: true,
+                fillColor: Colors.white.withOpacity(0.1),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWellbeingStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStepHeader(
+            '💖 Bienestar Emocional',
+            'Evalúa cómo te has sentido hoy',
+          ),
+          const SizedBox(height: 24),
+          _buildSliderCard('Estado de ánimo general', _moodScore, '😔', '😊', (value) { setState(() => _moodScore = value); }),
+          _buildSliderCard('Nivel de energía', _energyLevel, '🔋', '⚡', (value) { setState(() => _energyLevel = value); }),
+          _buildSliderCard('Nivel de estrés', _stressLevel, '😌', '😰', (value) { setState(() => _stressLevel = value); }),
+          _buildSliderCard('Nivel de ansiedad', _anxietyLevel, '😊', '😟', (value) { setState(() => _anxietyLevel = value); }),
+          _buildSliderCard('Motivación', _motivationLevel, '😴', '🔥', (value) { setState(() => _motivationLevel = value); }),
+          _buildSliderCard('Estabilidad emocional', _emotionalStability, '🌪️', '🧘', (value) { setState(() => _emotionalStability = value); }),
+          _buildSliderCard('Nivel de enfoque', _focusLevel, '🤯', '🎯', (value) { setState(() => _focusLevel = value); }),
+          _buildSliderCard('Satisfacción con la vida', _lifeSatisfaction, '😞', '🌟', (value) { setState(() => _lifeSatisfaction = value); }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLifestyleStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStepHeader(
+            '🏃‍♀️ Estilo de Vida',
+            'Registra tus actividades del día',
+          ),
+          const SizedBox(height: 24),
+          _buildSliderCard('Calidad del sueño', _sleepQuality, '😴', '✨', (value) {
+            setState(() => _sleepQuality = value);
+          }),
+          _buildNumberCard('Horas de sueño', _sleepHours, 'horas', 0, 12, (value) {
+            setState(() => _sleepHours = value);
+          }),
+          _buildSliderCard('Interacción social', _socialInteraction, '🏠', '👥', (value) {
+            setState(() => _socialInteraction = value);
+          }),
+          _buildSliderCard('Actividad física', _physicalActivity, '🛋️', '🏃‍♀️', (value) {
+            setState(() => _physicalActivity = value);
+          }),
+          _buildSliderCard('Productividad laboral', _workProductivity, '😴', '🚀', (value) {
+            setState(() => _workProductivity = value);
+          }),
+          _buildNumberCard('Vasos de agua', _waterIntake.toDouble(), 'vasos', 0, 20, (value) {
+            setState(() => _waterIntake = value.round());
+          }),
+          _buildNumberCard('Minutos de meditación', _meditationMinutes.toDouble(), 'min', 0, 120, (value) {
+            setState(() => _meditationMinutes = value.round());
+          }),
+          _buildNumberCard('Minutos de ejercicio', _exerciseMinutes.toDouble(), 'min', 0, 180, (value) {
+            setState(() => _exerciseMinutes = value.round());
+          }),
+          _buildNumberCard('Horas de pantalla', _screenTimeHours, 'horas', 0, 16, (value) {
+            setState(() => _screenTimeHours = value);
+          }),
+          _buildSliderCard('Batería social', _socialBattery, '🔋', '⚡', (value) {
+            setState(() => _socialBattery = value);
+          }),
+          _buildSliderCard('Energía creativa', _creativeEnergy, '🎨', '🌟', (value) {
+            setState(() => _creativeEnergy = value);
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFinalStep() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildStepHeader(
+            '🎯 Reflexión Final',
+            'Evalúa tu día en general',
+          ),
+          const SizedBox(height: 24),
+          _buildSectionCard(
+            title: '¿Ha valido la pena este día?',
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(child: _buildWorthItButton(true, '👍 Sí', 'Ha sido un buen día')),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildWorthItButton(false, '👎 No', 'Podría haber sido mejor')),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (_worthIt == null) TextButton(onPressed: () => setState(() => _worthIt = null), child: const Text('Prefiero no responder')),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildSliderCard('Impacto del clima en el ánimo', _weatherMoodImpact + 5, '☔', '☀️', (value) {
+            setState(() => _weatherMoodImpact = value - 5);
+          }, min: 0, max: 10),
+          const SizedBox(height: 24),
+          _buildSummaryCard(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStepHeader(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(width: 12, height: 12, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: ModernSpacing.sm),
-        Text('$label: $value', style: ModernTypography.bodySmall),
+        Text(title, style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Text(subtitle, style: const TextStyle(color: Colors.white70, fontSize: 16)),
       ],
     );
   }
 
-  Widget _buildReflectionForm() {
-    return FadeTransition(
-      opacity: _cardAnimation,
-      child: Form(
-        key: _formKey,
+  Widget _buildSectionCard({required String title, required Widget child}) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSliderCard(String title, int value, String lowEmoji, String highEmoji, Function(int) onChanged, {int min = 1, int max = 10}) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(color: ModernColors.primaryGradient.first.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                child: Text(value.toString(), style: TextStyle(color: ModernColors.primaryGradient.first, fontSize: 14, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Text(lowEmoji, style: const TextStyle(fontSize: 20)),
+              Expanded(
+                child: Slider(
+                  value: value.toDouble(),
+                  min: min.toDouble(),
+                  max: max.toDouble(),
+                  divisions: max - min,
+                  activeColor: ModernColors.primaryGradient.first,
+                  inactiveColor: Colors.white.withOpacity(0.2),
+                  onChanged: (newValue) => onChanged(newValue.round()),
+                ),
+              ),
+              Text(highEmoji, style: const TextStyle(fontSize: 20)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNumberCard(String title, double value, String unit, double min, double max, Function(double) onChanged) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.1), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(title, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(color: ModernColors.primaryGradient.first.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                child: Text('${value.toStringAsFixed(value.truncateToDouble() == value ? 0 : 1)} $unit', style: TextStyle(color: ModernColors.primaryGradient.first, fontSize: 14, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Slider(
+            value: value,
+            min: min,
+            max: max,
+            divisions: ((max - min) * (unit == 'horas' ? 2 : 1)).round().clamp(1, 1000),
+            activeColor: ModernColors.primaryGradient.first,
+            inactiveColor: Colors.white.withOpacity(0.2),
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWorthItButton(bool value, String title, String description) {
+    final isSelected = _worthIt == value;
+    return GestureDetector(
+      onTap: () => setState(() => _worthIt = value),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected ? ModernColors.primaryGradient.first.withOpacity(0.2) : Colors.white.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isSelected ? ModernColors.primaryGradient.first : Colors.white.withOpacity(0.1), width: 2),
+        ),
         child: Column(
           children: [
-            ModernCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('✍️ ¿Cómo fue tu día?', style: ModernTypography.heading3),
-                  const SizedBox(height: ModernSpacing.md),
-                  ModernTextField(
-                    controller: _reflectionController,
-                    hintText: 'Describe los momentos más importantes del día...',
-                    maxLines: 4,
-                    validator: (value) => (value == null || value.trim().isEmpty) ? 'Comparte al menos una reflexión del día' : null,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: ModernSpacing.lg),
-            ModernCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('🙏 ¿Por qué estás agradecido/a?', style: ModernTypography.heading3),
-                  const SizedBox(height: ModernSpacing.md),
-                  ModernTextField(
-                    controller: _gratitudeController,
-                    hintText: 'Comparte tres cosas por las que te sientes agradecido/a...',
-                    maxLines: 3,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: ModernSpacing.lg),
-            ModernCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('🎯 ¿Qué esperas para mañana?', style: ModernTypography.heading3),
-                  const SizedBox(height: ModernSpacing.md),
-                  ModernTextField(
-                    controller: _goalsController,
-                    hintText: 'Establece una intención o meta para mañana...',
-                    maxLines: 2,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: ModernSpacing.lg),
-            ModernCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('💎 ¿Valió la pena el día de hoy?', style: ModernTypography.heading3),
-                  const SizedBox(height: ModernSpacing.md),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => worthIt = true),
-                          child: AnimatedContainer(
-                            duration: ModernAnimations.medium,
-                            padding: const EdgeInsets.symmetric(vertical: ModernSpacing.md),
-                            decoration: BoxDecoration(
-                              gradient: worthIt ? const LinearGradient(colors: ModernColors.positiveGradient) : null,
-                              color: worthIt ? null : Colors.white.withAlpha(26),
-                              borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
-                              border: Border.all(color: worthIt ? ModernColors.success : Colors.white.withAlpha(51)),
-                            ),
-                            child: Text('✨ Sí, valió la pena', style: ModernTypography.bodyLarge.copyWith(fontWeight: worthIt ? FontWeight.w600 : FontWeight.w400), textAlign: TextAlign.center),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: ModernSpacing.md),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () => setState(() => worthIt = false),
-                          child: AnimatedContainer(
-                            duration: ModernAnimations.medium,
-                            padding: const EdgeInsets.symmetric(vertical: ModernSpacing.md),
-                            decoration: BoxDecoration(
-                              gradient: !worthIt ? const LinearGradient(colors: ModernColors.negativeGradient) : null,
-                              color: !worthIt ? null : Colors.white.withAlpha(26),
-                              borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
-                              border: Border.all(color: !worthIt ? ModernColors.warning : Colors.white.withAlpha(51)),
-                            ),
-                            child: Text('🤔 Podría ser mejor', style: ModernTypography.bodyLarge.copyWith(fontWeight: !worthIt ? FontWeight.w600 : FontWeight.w400), textAlign: TextAlign.center),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            Text(title, style: TextStyle(color: isSelected ? ModernColors.primaryGradient.first : Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            Text(description, style: TextStyle(color: isSelected ? ModernColors.primaryGradient.first : Colors.white70, fontSize: 12), textAlign: TextAlign.center),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBackgroundSelector() {
-    return ModernCard(
+  Widget _buildSummaryCard() {
+    final wellbeingScore = _calculateWellbeingScore();
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: ModernColors.primaryGradient.map((c) => c.withOpacity(0.2)).toList()),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: ModernColors.primaryGradient.first.withOpacity(0.3), width: 1),
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('🎨 Personaliza tu fondo', style: ModernTypography.heading3),
-          const SizedBox(height: ModernSpacing.md),
-          Text('Elige un fondo que refleje tu estado de ánimo', style: ModernTypography.bodyMedium),
-          const SizedBox(height: ModernSpacing.lg),
-          SizedBox(
-            height: 60,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: backgrounds.length,
-              itemBuilder: (context, index) {
-                final key = backgrounds.keys.elementAt(index);
-                final gradient = backgrounds[key]!;
-                final isSelected = selectedBackground == key;
-                return GestureDetector(
-                  onTap: () => setState(() => selectedBackground = key),
-                  child: AnimatedContainer(
-                    duration: ModernAnimations.medium,
-                    width: 60, height: 60,
-                    margin: const EdgeInsets.only(right: ModernSpacing.md),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: gradient),
-                      borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge),
-                      border: Border.all(color: isSelected ? Colors.white : Colors.transparent, width: 3),
-                      boxShadow: isSelected ? [BoxShadow(color: gradient.first.withAlpha(77), blurRadius: 12, spreadRadius: 2)] : null,
-                    ),
-                    child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 24) : null,
-                  ),
+          const Text('Resumen del Día', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(wellbeingScore.toStringAsFixed(1), style: TextStyle(color: ModernColors.primaryGradient.first, fontSize: 32, fontWeight: FontWeight.bold)),
+                    const Text('Puntuación de\nBienestar', style: TextStyle(color: Colors.white70, fontSize: 12), textAlign: TextAlign.center),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(_getWellbeingEmoji(wellbeingScore), style: const TextStyle(fontSize: 32)),
+                    Text(_getWellbeingLevel(wellbeingScore), style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600), textAlign: TextAlign.center),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNavigationButtons() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          if (_currentStep > 0)
+            Expanded(
+              child: ElevatedButton(
+                onPressed: () => _pageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.white.withOpacity(0.1), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                child: const Text('Anterior', style: TextStyle(color: Colors.white)),
+              ),
+            ),
+          if (_currentStep > 0) const SizedBox(width: 16),
+          Expanded(
+            flex: _currentStep == 0 ? 2 : 1,
+            child: Consumer<OptimizedDailyEntriesProvider>(
+              builder: (context, entriesProvider, child) {
+                return ElevatedButton(
+                  onPressed: _isLoading || entriesProvider.isLoading ? null : (_currentStep < 3 ? _nextStep : _saveEntry),
+                  style: ElevatedButton.styleFrom(backgroundColor: ModernColors.primaryGradient.first, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  child: _isLoading || entriesProvider.isLoading
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                      : Text(_currentStep < 3 ? 'Siguiente' : 'Guardar Reflexión', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 );
               },
             ),
@@ -484,93 +664,121 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     );
   }
 
-  Widget _buildSaveButton() {
-    return FadeTransition(
-      opacity: _cardAnimation,
-      child: ModernButton(
-        text: 'Guardar Reflexión del Día',
-        onPressed: _saveDailyReview,
-        icon: Icons.save_outlined,
-        width: double.infinity,
-        gradient: backgrounds[selectedBackground],
+  void _nextStep() {
+    if (_currentStep < 3) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  Future<void> _saveEntry() async {
+    if (_reflectionController.text.trim().isEmpty) {
+      _showSnackBar('Por favor completa tu reflexión personal', isError: true);
+      return;
+    }
+    setState(() => _isLoading = true);
+    try {
+      final authProvider = context.read<OptimizedAuthProvider>();
+      final entriesProvider = context.read<OptimizedDailyEntriesProvider>();
+      final user = authProvider.currentUser;
+      if (user == null) {
+        _showSnackBar('Error: Usuario no autenticado', isError: true);
+        setState(() => _isLoading = false);
+        return;
+      }
+      final success = await entriesProvider.saveDailyEntry(
+        userId: user.id,
+        freeReflection: _reflectionController.text.trim(),
+        positiveTags: _parseTagsString(_positiveTagsController.text),
+        negativeTags: _parseTagsString(_negativeTagsController.text),
+        worthIt: _worthIt,
+        moodScore: _moodScore,
+        energyLevel: _energyLevel,
+        stressLevel: _stressLevel,
+        sleepQuality: _sleepQuality,
+        anxietyLevel: _anxietyLevel,
+        motivationLevel: _motivationLevel,
+        socialInteraction: _socialInteraction,
+        physicalActivity: _physicalActivity,
+        workProductivity: _workProductivity,
+        sleepHours: _sleepHours,
+        waterIntake: _waterIntake,
+        meditationMinutes: _meditationMinutes,
+        exerciseMinutes: _exerciseMinutes,
+        screenTimeHours: _screenTimeHours,
+        gratitudeItems: _gratitudeController.text.trim(),
+        weatherMoodImpact: _weatherMoodImpact,
+        socialBattery: _socialBattery,
+        creativeEnergy: _creativeEnergy,
+        emotionalStability: _emotionalStability,
+        focusLevel: _focusLevel,
+        lifeSatisfaction: _lifeSatisfaction,
+      );
+      if (!mounted) return;
+      if (success) {
+        _showSnackBar('¡Reflexión diaria guardada exitosamente!');
+        Future.delayed(const Duration(seconds: 1), () {
+          if (mounted) Navigator.of(context).pop();
+        });
+      } else {
+        _showSnackBar(entriesProvider.errorMessage ?? 'Error al guardar la reflexión', isError: true);
+      }
+    } catch (e) {
+      _showSnackBar('Error inesperado: $e', isError: true);
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  List<String> _parseTagsString(String tagsString) {
+    if (tagsString.trim().isEmpty) return [];
+    return tagsString.split(',').map((tag) => tag.trim()).where((tag) => tag.isNotEmpty).toList();
+  }
+
+  double _calculateWellbeingScore() {
+    final scores = [_moodScore, _energyLevel, (11 - _stressLevel), _sleepQuality, (11 - _anxietyLevel), _motivationLevel, _socialInteraction, _physicalActivity, _workProductivity, _socialBattery, _creativeEnergy, _emotionalStability, _focusLevel, _lifeSatisfaction];
+    return scores.reduce((a, b) => a + b) / scores.length;
+  }
+
+  String _getWellbeingEmoji(double score) {
+    if (score >= 8.5) return '🌟';
+    if (score >= 7.0) return '😊';
+    if (score >= 5.5) return '🙂';
+    if (score >= 4.0) return '😐';
+    return '😔';
+  }
+
+  String _getWellbeingLevel(double score) {
+    if (score >= 8.5) return 'Excelente';
+    if (score >= 7.0) return 'Muy Bueno';
+    if (score >= 5.5) return 'Bueno';
+    if (score >= 4.0) return 'Regular';
+    return 'Necesita Atención';
+  }
+
+  void _showSnackBar(String message, {bool isError = false}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: isError ? Colors.red : Colors.green,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
 
-  String _getMoodBackground(int mood) {
-    if (mood <= 2) return 'gradient3';
-    if (mood <= 3) return 'gradient4';
-    if (mood <= 4) return 'gradient1';
-    return 'gradient2';
+  String _getDayName(int weekday) {
+    const days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    return days[weekday - 1];
   }
 
-  String _getBalanceText(double balance) {
-    if (balance > 0.3) return 'Positivo';
-    if (balance < -0.3) return 'Reflexivo';
-    return 'Equilibrado';
-  }
-
-  Color _getBalanceColor(double balance) {
-    if (balance > 0.3) return ModernColors.success;
-    if (balance < -0.3) return ModernColors.warning;
-    return ModernColors.info;
-  }
-
-  void _saveDailyReview() async {
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final momentsProvider = Provider.of<InteractiveMomentsProvider>(context, listen: false);
-
-    // FIX: Safely get the user ID and use a guard clause if it's null.
-    final userId = authProvider.currentUser?.id;
-    if (userId == null) {
-      _showErrorMessage('Error: No se ha encontrado el usuario.');
-      return;
-    }
-
-    final reflection = _buildFullReflection();
-
-    try {
-      final entryId = await momentsProvider.saveMomentsAsEntry(
-        userId, // Now it's guaranteed to be non-null.
-        reflection: reflection,
-        worthIt: worthIt,
-      );
-      if (mounted && entryId != null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: const Row(children: [Icon(Icons.check_circle, color: Colors.white), SizedBox(width: ModernSpacing.sm), Expanded(child: Text('✨ Reflexión guardada exitosamente', style: ModernTypography.bodyMedium))]),
-          backgroundColor: ModernColors.success,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge)),
-          margin: const EdgeInsets.all(ModernSpacing.md),
-        ));
-        Navigator.pop(context);
-      } else if (mounted) {
-        _showErrorMessage('Error al guardar la reflexión. Inténtalo de nuevo.');
-      }
-    } catch (e) {
-      if (mounted) _showErrorMessage('Error de conexión. Inténtalo de nuevo.');
-    }
-  }
-
-  String _buildFullReflection() {
-    final buffer = StringBuffer();
-    buffer.writeln('🌟 REFLEXIÓN DEL DÍA\nMood: $selectedMood/5\n¿Valió la pena?: ${worthIt ? "Sí" : "No"}\n');
-    if (_reflectionController.text.trim().isNotEmpty) buffer.writeln('📝 Reflexión:\n${_reflectionController.text.trim()}\n');
-    if (_gratitudeController.text.trim().isNotEmpty) buffer.writeln('🙏 Gratitud:\n${_gratitudeController.text.trim()}\n');
-    if (_goalsController.text.trim().isNotEmpty) buffer.writeln('🎯 Para mañana:\n${_goalsController.text.trim()}');
-    return buffer.toString();
-  }
-
-  void _showErrorMessage(String message) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Row(children: [const Icon(Icons.error_outline, color: Colors.white), const SizedBox(width: ModernSpacing.sm), Expanded(child: Text(message, style: ModernTypography.bodyMedium))]),
-      backgroundColor: ModernColors.error,
-      behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(ModernSpacing.radiusLarge)),
-      margin: const EdgeInsets.all(ModernSpacing.md),
-    ));
+  String _getMonthName(int month) {
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    return months[month - 1];
   }
 }

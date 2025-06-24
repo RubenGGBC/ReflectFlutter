@@ -15,17 +15,20 @@ dependencies:
   logger: ^2.0.2+1
   sqflite: ^2.3.0
   device_info_plus: ^10.1.0
-  sqflite_common_ffi: ^2.3.0+4
   path: ^1.8.3
-  fl_chart: ^0.68.0 # O la última versión disponible
+  fl_chart: ^0.68.0
   path_provider: ^2.1.1
   shared_preferences: ^2.2.2
   json_annotation: ^4.8.1
   crypto: ^3.0.3
   get_it: ^7.6.4
   cupertino_icons: ^1.0.6
+  http: ^1.1.0
+  dio: ^5.3.2
 
-  # 🔔 NOTIFICACIONES
+  onnxruntime: ^1.4.1
+  ffi: ^2.1.0
+
   flutter_local_notifications: ^17.2.2
   timezone: ^0.9.4
   permission_handler: ^11.3.1
@@ -39,3 +42,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+
