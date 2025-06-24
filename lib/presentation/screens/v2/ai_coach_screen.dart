@@ -10,6 +10,8 @@ import '../../providers/optimized_providers.dart';
 import '../../../ai/provider/ai_provider.dart'; // Importar AIProvider
 import '../components/modern_design_system.dart';
 
+// ... imports iguales ...
+
 class AICoachScreenV2 extends StatefulWidget {
   const AICoachScreenV2({super.key});
 
@@ -18,200 +20,218 @@ class AICoachScreenV2 extends StatefulWidget {
 }
 
 class _AICoachScreenV2State extends State<AICoachScreenV2> {
-
-  // Simplemente genera la UI, el estado lo maneja el AIProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: ModernColors.darkPrimary,
       appBar: AppBar(
-        title: const Text('Tu Coach de Bienestar IA'),
+        title: const Text('🧠 Tu Coach de Bienestar IA'),
         backgroundColor: ModernColors.darkPrimary,
+        centerTitle: true,
+        elevation: 0,
       ),
       body: Consumer2<OptimizedAuthProvider, AIProvider>(
-        builder: (context, authProvider, aiProvider, child) {
+        builder: (context, authProvider, aiProvider, _) {
           if (!authProvider.isLoggedIn || authProvider.currentUser == null) {
-            return const Center(child: Text('Inicia sesión para usar el coach.'));
+            return const Center(
+              child: Text(
+                'Inicia sesión para usar el coach.',
+                style: ModernTypography.bodyMedium,
+              ),
+            );
           }
 
-          // La UI cambia según el estado del AIProvider
-          return _buildMainView(authProvider, aiProvider);
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (!aiProvider.isInitialized && !aiProvider.isInitializing)
+                  _buildInitializeCard(aiProvider),
+
+                if (aiProvider.isInitializing)
+                  _buildInitializingCard(aiProvider),
+
+                if (aiProvider.errorMessage != null)
+                  _buildErrorCard(aiProvider),
+
+                if (aiProvider.isInitialized)
+                  _buildGenerateSummaryCard(authProvider, aiProvider),
+
+                if (aiProvider.lastSummary != null)
+                  _buildSummaryDisplay(aiProvider.lastSummary!),
+              ],
+            ),
+          );
         },
       ),
     );
   }
 
-  Widget _buildMainView(OptimizedAuthProvider auth, AIProvider ai) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        children: [
-          // Si la IA no está inicializada, muestra el botón para empezar.
-          if (!ai.isInitialized && !ai.isInitializing)
-            _buildInitializeCard(ai),
-
-          // Si se está inicializando, muestra el progreso.
-          if (ai.isInitializing)
-            _buildInitializingCard(ai),
-
-          // Si hay un error, lo muestra.
-          if (ai.errorMessage != null)
-            _buildErrorCard(ai),
-
-          // Si la IA está lista, muestra el generador de resúmenes.
-          if (ai.isInitialized)
-            _buildGenerateSummaryCard(auth, ai),
-
-          // Muestra el último resumen generado.
-          if (ai.lastSummary != null)
-            _buildSummaryDisplay(ai.lastSummary!),
-        ],
-      ),
-    );
-  }
-
-  // Widget para iniciar el proceso
   Widget _buildInitializeCard(AIProvider ai) {
     return ModernCard(
+      margin: const EdgeInsets.only(bottom: 20),
       child: Column(
         children: [
-          const Icon(Icons.psychology, size: 48, color: ModernColors.accentPurple),
-          const SizedBox(height: 16),
+          const Icon(Icons.auto_mode_outlined, size: 64, color: ModernColors.accentPurple),
+          const SizedBox(height: 20),
           const Text('Activa tu Coach de IA', style: ModernTypography.heading2),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           const Text(
-            'El coach necesita descargar un modelo de lenguaje (2.1 GB) para funcionar sin conexión. Este proceso solo se realizará una vez.',
+            'Se descargará un modelo (2.1 GB) para usar el coach sin conexión. Esto solo ocurre una vez.',
             textAlign: TextAlign.center,
             style: ModernTypography.bodyMedium,
           ),
           const SizedBox(height: 24),
           ModernButton(
-            text: 'Descargar y Activar IA',
+            icon: Icons.download,
+            text: 'Descargar y Activar',
             onPressed: () => _confirmAndStartDownload(ai),
-          )
+          ),
         ],
       ),
     );
   }
 
-  // Widget para mostrar el progreso de la descarga/inicialización
   Widget _buildInitializingCard(AIProvider ai) {
     return ModernCard(
+      margin: const EdgeInsets.only(bottom: 20),
       child: Column(
         children: [
-          const CircularProgressIndicator(),
+          const SizedBox(height: 12),
+          const CircularProgressIndicator(strokeWidth: 4, color: ModernColors.accentPurple),
           const SizedBox(height: 20),
           Text(ai.status, style: ModernTypography.heading3),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           LinearProgressIndicator(
             value: ai.initProgress,
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(4),
+            minHeight: 10,
+            borderRadius: BorderRadius.circular(8),
+            backgroundColor: Colors.grey.shade800,
+            valueColor: const AlwaysStoppedAnimation(ModernColors.accentPurple),
           ),
-          const SizedBox(height: 8),
-          Text('${(ai.initProgress * 100).toStringAsFixed(1)}%', style: ModernTypography.bodySmall)
+          const SizedBox(height: 10),
+          Text('${(ai.initProgress * 100).toStringAsFixed(1)}%', style: ModernTypography.bodySmall),
+          const SizedBox(height: 12),
         ],
       ),
     );
   }
 
-  // Widget para mostrar errores
   Widget _buildErrorCard(AIProvider ai) {
     return ModernCard(
-      backgroundColor: ModernColors.error.withOpacity(0.2),
+      margin: const EdgeInsets.only(bottom: 20),
+      backgroundColor: ModernColors.error.withOpacity(0.15),
       child: Column(
         children: [
-          const Icon(Icons.error_outline, color: ModernColors.error, size: 32),
+          const Icon(Icons.warning_amber_rounded, size: 40, color: ModernColors.error),
           const SizedBox(height: 12),
-          Text("Error de Inicialización", style: ModernTypography.heading3.copyWith(color: ModernColors.error)),
-          const SizedBox(height: 8),
+          Text('Error de Inicialización',
+              style: ModernTypography.heading3.copyWith(color: ModernColors.error)),
+          const SizedBox(height: 10),
           Text(ai.errorMessage!, style: ModernTypography.bodyMedium, textAlign: TextAlign.center),
           const SizedBox(height: 16),
-          ModernButton(text: "Reintentar", onPressed: () => ai.initializeAI(), isPrimary: false)
+          ModernButton(
+            text: 'Reintentar',
+            onPressed: () => ai.initializeAI(),
+            isPrimary: false,
+            icon: Icons.refresh,
+          ),
         ],
       ),
     );
   }
 
-  // Widget para generar el resumen cuando la IA está lista
   Widget _buildGenerateSummaryCard(OptimizedAuthProvider auth, AIProvider ai) {
     return ModernCard(
+      margin: const EdgeInsets.only(bottom: 20),
       child: Column(
         children: [
           const Text('Genera tu Análisis Semanal', style: ModernTypography.heading3),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(ai.status, style: ModernTypography.bodySmall),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           ModernButton(
             text: 'Analizar mi Semana',
-            onPressed: () => _generateSummary(auth, ai),
+            icon: Icons.analytics_outlined,
             isLoading: ai.isInitializing,
-          )
+            onPressed: ai.isInitializing ? null : () => _generateSummary(auth, ai),
+          ),
         ],
       ),
     );
   }
 
-  // Widget para mostrar el resumen de la IA
   Widget _buildSummaryDisplay(AIResponseModel summary) {
     return ModernCard(
-      margin: const EdgeInsets.only(top: 16),
+      margin: const EdgeInsets.only(top: 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Análisis del Coach', style: ModernTypography.heading2),
-          const Divider(height: 24),
-
-          Text('Resumen', style: ModernTypography.heading3.copyWith(color: ModernColors.accentBlue)),
-          const SizedBox(height: 8),
-          Text(summary.summary, style: ModernTypography.bodyMedium),
-          const SizedBox(height: 20),
-
-          Text('Insights Clave', style: ModernTypography.heading3.copyWith(color: ModernColors.accentGreen)),
-          const SizedBox(height: 8),
-          ...summary.insights.map((insight) => ListTile(
-            leading: const Icon(Icons.lightbulb_outline, color: ModernColors.accentGreen),
-            title: Text(insight, style: ModernTypography.bodyMedium),
-          )),
-          const SizedBox(height: 20),
-
-          Text('Sugerencias', style: ModernTypography.heading3.copyWith(color: ModernColors.accentOrange)),
-          const SizedBox(height: 8),
-          ...summary.suggestions.map((suggestion) => ListTile(
-            leading: const Icon(Icons.thumb_up_alt_outlined, color: ModernColors.accentOrange),
-            title: Text(suggestion, style: ModernTypography.bodyMedium),
-          )),
+          const Text('📝 Análisis del Coach', style: ModernTypography.heading2),
+          const Divider(height: 28),
+          _buildSection('Resumen', summary.summary, ModernColors.accentBlue),
+          _buildListSection('Insights Clave', summary.insights, Icons.insights, ModernColors.accentGreen),
+          _buildListSection('Sugerencias', summary.suggestions, Icons.recommend, ModernColors.accentOrange),
         ],
       ),
     );
   }
 
-  // Lógica para confirmar y empezar la descarga
+  Widget _buildSection(String title, String content, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: ModernTypography.heading3.copyWith(color: color)),
+        const SizedBox(height: 8),
+        Text(content, style: ModernTypography.bodyMedium),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildListSection(String title, List<String> items, IconData icon, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: ModernTypography.heading3.copyWith(color: color)),
+        const SizedBox(height: 8),
+        ...items.map((item) => ListTile(
+          dense: true,
+          leading: Icon(icon, color: color),
+          title: Text(item, style: ModernTypography.bodyMedium),
+          contentPadding: EdgeInsets.zero,
+        )),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
   void _confirmAndStartDownload(AIProvider ai) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Confirmar Descarga'),
+        title: const Text('¿Descargar modelo de IA?'),
         content: const Text(
-            'Se descargará el modelo de IA (aprox. 2.1 GB). Se recomienda usar Wi-Fi. ¿Deseas continuar?'),
+          'Se descargará un modelo de IA de 2.1 GB. Se recomienda Wi-Fi. ¿Deseas continuar?',
+        ),
         actions: [
           TextButton(
-            child: const Text('Cancelar'),
             onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Cancelar'),
           ),
           ElevatedButton(
-            child: const Text('Descargar'),
             onPressed: () {
               Navigator.of(ctx).pop();
               ai.initializeAI();
             },
+            child: const Text('Descargar'),
           ),
         ],
       ),
     );
   }
 
-  // Lógica para generar el resumen
   Future<void> _generateSummary(OptimizedAuthProvider auth, AIProvider ai) async {
     final dbService = OptimizedDatabaseService();
     final weeklyData = await dbService.getWeeklyDataForAI(auth.currentUser!.id);

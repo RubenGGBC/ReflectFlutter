@@ -1,11 +1,14 @@
-// android/app/src/main/kotlin/com/example/temp_clean_project/GenAIPlugin.java
-package io.flutter.kotlin.com.example.temp_clean_project
+package com.example.temp_clean_project // Correct package name
 
+import android.content.Context
+import androidx.annotation.NonNull
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
 
 class GenAIPlugin : FlutterPlugin, MethodCallHandler {
     private var channel: MethodChannel? = null
@@ -13,19 +16,23 @@ class GenAIPlugin : FlutterPlugin, MethodCallHandler {
     private var executor: ExecutorService? = null
     private var isModelLoaded: Boolean = false
 
-    override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPluginBinding) {
-        channel = MethodChannel(flutterPluginBinding.getBinaryMessenger(), "com.yourapp.genai")
-        channel.setMethodCallHandler(this)
-        context = flutterPluginBinding.getApplicationContext()
+    override fun onAttachedToEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+        channel = MethodChannel(binding.binaryMessenger, "com.yourapp.genai")
+        channel?.setMethodCallHandler(this)
+        context = binding.applicationContext
         executor = Executors.newSingleThreadExecutor()
     }
 
     override fun onMethodCall(@NonNull call: MethodCall, @NonNull result: Result) {
         when (call.method) {
-            "isGenAIAvailable" -> result.success(true) // Siempre disponible para modo simulado
+            "isGenAIAvailable" -> result.success(true) // Always available for simulated mode
             "initializeModel" -> {
-                val modelPath: String = call.argument("modelPath")
-                initializeModelAsync(modelPath, result)
+                val modelPath: String? = call.argument("modelPath")
+                if (modelPath != null) {
+                    initializeModelAsync(modelPath, result)
+                } else {
+                    result.error("INVALID_ARGS", "modelPath is null", null)
+                }
             }
 
             "generateText" -> {
@@ -34,12 +41,16 @@ class GenAIPlugin : FlutterPlugin, MethodCallHandler {
                     return
                 }
 
-                val prompt: String = call.argument("prompt")
-                val maxTokens: Int = call.argument("maxTokens")
-                val temperature: Double = call.argument("temperature")
-                val topP: Double = call.argument("topP")
+                val prompt: String? = call.argument("prompt")
+                val maxTokens: Int? = call.argument("maxTokens")
+                val temperature: Double? = call.argument("temperature")
+                val topP: Double? = call.argument("topP")
 
-                generateTextAsync(prompt, maxTokens, temperature, topP, result)
+                if (prompt != null && maxTokens != null && temperature != null && topP != null) {
+                    generateTextAsync(prompt, maxTokens, temperature, topP, result)
+                } else {
+                    result.error("INVALID_ARGS", "One or more arguments are null", null)
+                }
             }
 
             "disposeModel" -> disposeModelAsync(result)
@@ -48,16 +59,16 @@ class GenAIPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     private fun initializeModelAsync(modelPath: String, result: Result) {
-        executor.execute(java.lang.Runnable {
+        executor?.execute {
             try {
-                // Simular carga del modelo
-                java.lang.Thread.sleep(2000)
+                // Simulate model loading
+                Thread.sleep(2000)
                 isModelLoaded = true
                 result.success(true)
-            } catch (e: java.lang.Exception) {
+            } catch (e: Exception) {
                 result.error("INIT_ERROR", "Failed to initialize model: " + e.message, null)
             }
-        })
+        }
     }
 
     private fun generateTextAsync(
@@ -67,18 +78,17 @@ class GenAIPlugin : FlutterPlugin, MethodCallHandler {
         topP: Double,
         result: Result
     ) {
-        executor.execute(java.lang.Runnable {
+        executor?.execute {
             try {
-                // Simular tiempo de procesamiento
-                java.lang.Thread.sleep(3000)
+                // Simulate processing time
+                Thread.sleep(3000)
                 val response: String = generateIntelligentResponse(prompt)
                 result.success(response)
-            } catch (e: java.lang.Exception) {
+            } catch (e: Exception) {
                 result.error("GENERATION_ERROR", "Failed to generate text: " + e.message, null)
             }
-        })
+        }
     }
-
     private fun generateIntelligentResponse(prompt: String): String {
         try {
             // Extraer datos del prompt para análisis real
@@ -89,228 +99,127 @@ class GenAIPlugin : FlutterPlugin, MethodCallHandler {
             } else {
                 return generateEmptyWeekResponse(data.userName)
             }
-        } catch (e: java.lang.Exception) {
+        } catch (e: Exception) {
             // Fallback en caso de error
             return generateFallbackResponse()
         }
     }
 
     private fun parseUserDataFromPrompt(prompt: String): UserWeekData {
-        val data: UserWeekData = UserWeekData()
-
+        val data = UserWeekData()
 
         // Extraer nombre de usuario
-        if (prompt.contains("de ") && prompt.contains(" de esta semana")) {
-            val start: Int = prompt.indexOf("de ") + 3
-            val end: Int = prompt.indexOf(" de esta semana")
-            if (start < end && start >= 0 && end >= 0) {
-                data.userName = prompt.substring(start, end).trim { it <= ' ' }
-            }
+        val nameRegex = "de (.*?) de esta semana".toRegex()
+        nameRegex.find(prompt)?.let {
+            data.userName = it.groupValues[1].trim()
         }
-
 
         // Extraer número de reflexiones
-        if (prompt.contains("Total de días con reflexiones: ")) {
-            try {
-                val start: Int = prompt.indexOf("Total de días con reflexiones: ") + 32
-                var end: Int = prompt.indexOf("\n", start)
-                if (end == -1) end = start + 2
-                val countStr: String = prompt.substring(start, end).trim { it <= ' ' }
-                data.totalReflections = countStr.toInt()
-            } catch (ignored: java.lang.Exception) {
-            }
+        val reflectionsRegex = "Total de días con reflexiones: (\\d+)".toRegex()
+        reflectionsRegex.find(prompt)?.let {
+            data.totalReflections = it.groupValues[1].toIntOrNull() ?: 0
         }
-
 
         // Extraer estado de ánimo promedio
-        if (prompt.contains("Estado de ánimo promedio: ")) {
-            try {
-                val start: Int = prompt.indexOf("Estado de ánimo promedio: ") + 26
-                val end: Int = prompt.indexOf("/10", start)
-                val moodStr: String = prompt.substring(start, end).trim { it <= ' ' }
-                data.avgMood = moodStr.toDouble()
-            } catch (ignored: java.lang.Exception) {
-            }
+        val moodRegex = "Estado de ánimo promedio: (\\d+\\.\\d+)/10".toRegex()
+        moodRegex.find(prompt)?.let {
+            data.avgMood = it.groupValues[1].toDoubleOrNull() ?: 0.0
         }
-
 
         // Extraer nivel de energía
-        if (prompt.contains("Nivel de energía promedio: ")) {
-            try {
-                val start: Int = prompt.indexOf("Nivel de energía promedio: ") + 28
-                val end: Int = prompt.indexOf("/10", start)
-                val energyStr: String = prompt.substring(start, end).trim { it <= ' ' }
-                data.avgEnergy = energyStr.toDouble()
-            } catch (ignored: java.lang.Exception) {
-            }
+        val energyRegex = "Nivel de energía promedio: (\\d+\\.\\d+)/10".toRegex()
+        energyRegex.find(prompt)?.let {
+            data.avgEnergy = it.groupValues[1].toDoubleOrNull() ?: 0.0
         }
-
 
         // Extraer nivel de estrés
-        if (prompt.contains("Nivel de estrés promedio: ")) {
-            try {
-                val start: Int = prompt.indexOf("Nivel de estrés promedio: ") + 26
-                val end: Int = prompt.indexOf("/10", start)
-                val stressStr: String = prompt.substring(start, end).trim { it <= ' ' }
-                data.avgStress = stressStr.toDouble()
-            } catch (ignored: java.lang.Exception) {
-            }
+        val stressRegex = "Nivel de estrés promedio: (\\d+\\.\\d+)/10".toRegex()
+        stressRegex.find(prompt)?.let {
+            data.avgStress = it.groupValues[1].toDoubleOrNull() ?: 0.0
         }
-
 
         // Extraer reflexiones destacadas
-        if (prompt.contains("REFLEXIONES DESTACADAS:")) {
-            val start: Int = prompt.indexOf("REFLEXIONES DESTACADAS:") + 24
-            var end: Int = prompt.indexOf("\n\nMOMENTOS", start)
-            if (end == -1) end = prompt.length
-
-            val reflectionsSection: String = prompt.substring(start, end)
-            val lines: Array<String> =
-                reflectionsSection.split("\n".toRegex()).dropLastWhile { it.isEmpty() }
-                    .toTypedArray()
-
-            for (line: String in lines) {
-                if (line.trim { it <= ' ' }.matches("\\d+\\..*".toRegex())) {
-                    data.keyReflections.add(
-                        line.trim { it <= ' ' }.substring(3)
-                            .replace("\"".toRegex(), "")
-                    )
-                }
+        val reflectionsSectionRegex = "REFLEXIONES DESTACADAS:(.*?)(?=\\n\\nMOMENTOS|$)".toRegex(RegexOption.DOT_MATCHES_ALL)
+        reflectionsSectionRegex.find(prompt)?.let {
+            val section = it.groupValues[1]
+            val reflectionLineRegex = "\\d+\\.\\s*\"(.*?)\"".toRegex()
+            reflectionLineRegex.findAll(section).forEach { match ->
+                data.keyReflections.add(match.groupValues[1])
             }
         }
 
-
         // Extraer momentos especiales
-        if (prompt.contains("Total de momentos registrados: ")) {
-            try {
-                val start: Int = prompt.indexOf("Total de momentos registrados: ") + 31
-                val end: Int = prompt.indexOf("\n", start)
-                val momentsStr: String = prompt.substring(start, end).trim { it <= ' ' }
-                data.totalMoments = momentsStr.toInt()
-            } catch (ignored: java.lang.Exception) {
-            }
+        val momentsRegex = "Total de momentos registrados: (\\d+)".toRegex()
+        momentsRegex.find(prompt)?.let {
+            data.totalMoments = it.groupValues[1].toIntOrNull() ?: 0
         }
 
         return data
     }
 
     private fun generatePersonalizedAnalysis(data: UserWeekData): String {
-        val analysis: java.lang.StringBuilder = java.lang.StringBuilder()
+        val analysis = StringBuilder()
 
-        analysis.append("**¡Hola ").append(if (data.userName != null) data.userName else "")
-            .append("!**\n\n")
-
+        analysis.append("**¡Hola ${data.userName ?: ""}!**\n\n")
 
         // RESUMEN SEMANAL personalizado
         analysis.append("**RESUMEN SEMANAL:**\n")
-        analysis.append("Esta semana registraste ").append(data.totalReflections)
-            .append(" reflexiones, mostrando ")
-
-        if (data.avgMood >= 7) {
-            analysis.append("un excelente estado de ánimo promedio de ")
-                .append(String.format("%.1f", data.avgMood)).append("/10. ")
-        } else if (data.avgMood >= 5) {
-            analysis.append("un estado de ánimo equilibrado de ")
-                .append(String.format("%.1f", data.avgMood)).append("/10. ")
-        } else {
-            analysis.append("un estado de ánimo de ")
-                .append(String.format("%.1f", data.avgMood))
-                .append("/10, sugiriendo algunos desafíos importantes. ")
+        val moodText = when {
+            data.avgMood >= 7 -> "un excelente estado de ánimo promedio de ${"%.1f".format(data.avgMood)}/10. "
+            data.avgMood >= 5 -> "un estado de ánimo equilibrado de ${"%.1f".format(data.avgMood)}/10. "
+            else -> "un estado de ánimo de ${"%.1f".format(data.avgMood)}/10, sugiriendo algunos desafíos importantes. "
         }
+        analysis.append("Esta semana registraste ${data.totalReflections} reflexiones, mostrando $moodText")
 
         if (data.avgEnergy > 0) {
-            analysis.append("Tu nivel de energía (").append(String.format("%.1f", data.avgEnergy))
-                .append("/10) ")
-            if (data.avgEnergy >= 7) {
-                analysis.append("muestra vitalidad constante.")
-            } else if (data.avgEnergy >= 5) {
-                analysis.append("indica un equilibrio energético razonable.")
-            } else {
-                analysis.append("sugiere la necesidad de recargar energías.")
+            val energyText = when {
+                data.avgEnergy >= 7 -> "muestra vitalidad constante."
+                data.avgEnergy >= 5 -> "indica un equilibrio energético razonable."
+                else -> "sugiere la necesidad de recargar energías."
             }
+            analysis.append("Tu nivel de energía (${"%.1f".format(data.avgEnergy)}/10) $energyText")
         }
-
         analysis.append("\n\n")
-
 
         // INSIGHTS PROFUNDOS personalizados
         analysis.append("**INSIGHTS PROFUNDOS:**\n")
-
-
-        // Análisis de consistencia
         if (data.totalReflections >= 5) {
-            analysis.append("• Tu consistencia en la reflexión (")
-                .append(data.totalReflections)
-                .append(" días) demuestra un compromiso excepcional\n")
+            analysis.append("• Tu consistencia en la reflexión (${data.totalReflections} días) demuestra un compromiso excepcional\n")
         } else if (data.totalReflections >= 3) {
             analysis.append("• Tu práctica regular de reflexión muestra disciplina personal valiosa\n")
         } else {
             analysis.append("• Hay oportunidad para mayor consistencia en tu práctica reflexiva\n")
         }
-
-
-        // Análisis emocional
         if (data.avgMood >= 7 && data.avgStress <= 4) {
             analysis.append("• Logras mantener un equilibrio emocional admirable con bajo estrés\n")
         } else if (data.avgMood >= 6) {
             analysis.append("• Tu capacidad de mantener una perspectiva positiva es una fortaleza clave\n")
-        } else {
-            analysis.append("• Tu honestidad sobre los desafíos emocionales muestra gran autoconocimiento\n")
         }
-
-
-        // Análisis energético
-        if (data.avgEnergy > 0) {
-            if (data.avgEnergy >= 7) {
-                analysis.append("• Tu alta energía sugiere hábitos de vida que te favorecen\n")
-            } else if (data.avgEnergy <= 4) {
-                analysis.append("• Los niveles bajos de energía podrían indicar necesidad de cambios en rutinas\n")
-            }
+        if (data.avgEnergy > 0 && data.avgEnergy <= 4) {
+            analysis.append("• Los niveles bajos de energía podrían indicar necesidad de cambios en rutinas\n")
         }
-
-
-        // Análisis de reflexiones
-        if (!data.keyReflections.isEmpty()) {
+        if (data.keyReflections.isNotEmpty()) {
             analysis.append("• Tus reflexiones muestran profundidad y sinceridad en el autoexamen\n")
         }
-
         analysis.append("\n")
-
 
         // RECOMENDACIONES PERSONALIZADAS
         analysis.append("**RECOMENDACIONES PERSONALIZADAS:**\n")
-
         if (data.totalReflections < 4) {
             analysis.append("• Intenta reflexionar más frecuentemente - incluso 2 minutos diarios marcan diferencia\n")
         }
-
         if (data.avgMood < 5) {
             analysis.append("• Considera incorporar una pequeña actividad que disfrutes cada día\n")
-            analysis.append("• Explora técnicas de manejo emocional como respiración o caminatas\n")
-        } else if (data.avgMood >= 7) {
-            analysis.append("• Mantén las prácticas que están funcionando tan bien para ti\n")
-            analysis.append("• Considera compartir tu enfoque positivo con otros\n")
         }
-
-        if (data.avgEnergy > 0 && data.avgEnergy <= 4) {
-            analysis.append("• Revisa tus patrones de sueño y nutrición para optimizar energía\n")
-            analysis.append("• Pequeños descansos durante el día pueden ser muy efectivos\n")
-        }
-
         if (data.avgStress > 6) {
             analysis.append("• Identifica las principales fuentes de estrés y abórdalas gradualmente\n")
-            analysis.append("• Técnicas de relajación específicas podrían ser muy beneficiosas\n")
         }
-
         analysis.append("\n")
-
 
         // REFLEXIÓN FINAL personalizada
         analysis.append("**REFLEXIÓN FINAL:**\n")
         if (data.avgMood >= 6 && data.totalReflections >= 4) {
             analysis.append("Tu dedicación constante y tu actitud positiva crean una base sólida para el crecimiento continuo. ¡Excelente trabajo!")
-        } else if (data.avgMood < 5) {
-            analysis.append("Atravesar momentos difíciles con la voluntad de reflexionar demuestra una fortaleza admirable. Cada día es una nueva oportunidad.")
         } else {
             analysis.append("Tu compromiso con el autoconocimiento te está llevando por un camino valioso de desarrollo personal. ¡Continúa adelante!")
         }
@@ -319,24 +228,36 @@ class GenAIPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     private fun generateEmptyWeekResponse(userName: String?): String {
-        return "**¡Hola " + (if (userName != null) userName else "") + "!**\n\n" +
-                "**OBSERVACIÓN CLAVE:**\n" +
-                "Esta semana no registraste reflexiones en tu diario, y eso también nos dice algo valioso.\n\n" +
-                "**INSIGHT PROFUNDO:**\n" +
-                "Los períodos sin registro suelen coincidir con semanas muy ocupadas o momentos de transición. Esto es completamente normal y parte del ritmo natural de la vida.\n\n" +
-                "**RECOMENDACIÓN PERSONALIZADA:**\n" +
-                "Prueba la \"reflexión de 30 segundos\": antes de dormir, pregúntate simplemente \"¿Cómo me sentí hoy?\" No necesitas escribir un párrafo; incluso una palabra o emoji cuenta.\n\n" +
-                "Recuerda: la constancia importa más que la perfección. ¡Nos vemos la próxima semana! 🌟"
+        return """
+            **¡Hola ${userName ?: ""}!**
+
+            **OBSERVACIÓN CLAVE:**
+            Esta semana no registraste reflexiones en tu diario, y eso también nos dice algo valioso.
+
+            **INSIGHT PROFUNDO:**
+            Los períodos sin registro suelen coincidir con semanas muy ocupadas o momentos de transición. Esto es completamente normal y parte del ritmo natural de la vida.
+
+            **RECOMENDACIÓN PERSONALIZADA:**
+            Prueba la "reflexión de 30 segundos": antes de dormir, pregúntate simplemente "¿Cómo me sentí hoy?" No necesitas escribir un párrafo; incluso una palabra o emoji cuenta.
+
+            Recuerda: la constancia importa más que la perfección. ¡Nos vemos la próxima semana! 🌟
+            """.trimIndent()
     }
 
     private fun generateFallbackResponse(): String {
-        return "**¡Hola!**\n\n" +
-                "He analizado tus datos de esta semana y puedo ver tu compromiso con el bienestar personal.\n\n" +
-                "**INSIGHT CLAVE:**\n" +
-                "Tu práctica de reflexión muestra una dedicación valiosa al autoconocimiento.\n\n" +
-                "**RECOMENDACIÓN:**\n" +
-                "Continúa con esta práctica tan beneficiosa para tu desarrollo personal.\n\n" +
-                "¡Sigue adelante en tu camino de crecimiento!"
+        return """
+            **¡Hola!**
+
+            He analizado tus datos de esta semana y puedo ver tu compromiso con el bienestar personal.
+
+            **INSIGHT CLAVE:**
+            Tu práctica de reflexión muestra una dedicación valiosa al autoconocimiento.
+
+            **RECOMENDACIÓN:**
+            Continúa con esta práctica tan beneficiosa para tu desarrollo personal.
+
+            ¡Sigue adelante en tu camino de crecimiento!
+            """.trimIndent()
     }
 
     // Clase auxiliar para datos del usuario
@@ -347,28 +268,30 @@ class GenAIPlugin : FlutterPlugin, MethodCallHandler {
         var avgEnergy: Double = 0.0
         var avgStress: Double = 0.0
         var totalMoments: Int = 0
-        var keyReflections: MutableList<String> = ArrayList<String>()
+        var keyReflections: MutableList<String> = mutableListOf()
 
         fun hasData(): Boolean {
-            return totalReflections > 0 || totalMoments > 0 || !keyReflections.isEmpty()
+            return totalReflections > 0 || totalMoments > 0 || keyReflections.isNotEmpty()
         }
     }
 
+
     private fun disposeModelAsync(result: Result) {
-        executor.execute(java.lang.Runnable {
+        executor?.execute {
             try {
                 isModelLoaded = false
                 result.success(null)
-            } catch (e: java.lang.Exception) {
+            } catch (e: Exception) {
                 result.error("DISPOSE_ERROR", "Failed to dispose model: " + e.message, null)
             }
-        })
+        }
     }
 
-    override fun onDetachedFromEngine(@NonNull binding: FlutterPluginBinding?) {
-        channel.setMethodCallHandler(null)
-        if (executor != null) {
-            executor.shutdown()
-        }
+    override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
+        channel?.setMethodCallHandler(null)
+        executor?.shutdown()
+        executor = null
+        context = null
+        channel = null
     }
 }
