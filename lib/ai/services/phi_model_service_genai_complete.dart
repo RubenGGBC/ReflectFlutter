@@ -1,5 +1,5 @@
 // lib/ai/services/phi_model_service_genai_complete.dart
-// IMPLEMENTACIÓN COMPLETA CON ONNX RUNTIME GENAI
+// VERSIÓN ACTUALIZADA PARA GENERAR ANÁLISIS RICO
 
 import 'dart:io';
 import 'package:flutter/foundation.dart';
@@ -8,6 +8,9 @@ import '../models/ai_response_model.dart';
 import '../prompts/wellness_coach_prompts.dart';
 import 'model_downloader.dart';
 import 'genai_platform_interface.dart';
+
+// ✅ IMPORTAR EL NUEVO SERVICIO DE ANÁLISIS INTERACTIVO
+import 'interactive_ai_analysis_service.dart';
 
 class PhiModelServiceGenAI {
   static PhiModelServiceGenAI? _instance;
@@ -86,7 +89,7 @@ class PhiModelServiceGenAI {
     }
   }
 
-  /// Genera resumen semanal usando GenAI
+  /// ✅ MÉTODO ACTUALIZADO: Genera resumen semanal RICO usando el nuevo sistema INTERACTIVO
   Future<AIResponseModel?> generateWeeklySummary({
     required List<Map<String, dynamic>> weeklyEntries,
     required List<Map<String, dynamic>> weeklyMoments,
@@ -97,39 +100,109 @@ class PhiModelServiceGenAI {
     }
 
     try {
-      debugPrint('🤖 Generando resumen semanal con GenAI...');
+      debugPrint('🤖 Generando análisis semanal INTERACTIVO...');
       debugPrint('📊 Datos: ${weeklyEntries.length} entradas, ${weeklyMoments.length} momentos');
 
-      // Construir prompt optimizado para Phi-3.5
-      final prompt = _buildOptimizedPrompt(weeklyEntries, weeklyMoments, userName);
+      // ✅ NUEVO: Usar el servicio de análisis interactivo que cita datos específicos
+      final interactiveAnalysis = await InteractiveAIAnalysisService.generatePersonalizedAnalysis(
+        weeklyEntries: weeklyEntries,
+        weeklyMoments: weeklyMoments,
+        userName: userName,
+      );
 
-      String responseText;
+      debugPrint('✅ Análisis INTERACTIVO generado: ${interactiveAnalysis.summary.length} caracteres');
+      debugPrint('📈 Datos específicos citados: wellnessScore=${interactiveAnalysis.wellnessScore}');
 
-      if (_isGenAIAvailable) {
-        // Usar GenAI nativo
-        responseText = await _generateWithNativeGenAI(prompt);
-      } else {
-        // Usar análisis inteligente como fallback
-        responseText = await _generateWithIntelligentAnalysis(prompt, weeklyEntries, weeklyMoments, userName);
-      }
-
-      debugPrint('✅ Resumen generado: ${responseText.length} caracteres');
-      return AIResponseModel.fromText(responseText);
+      return interactiveAnalysis;
 
     } catch (e) {
-      debugPrint('❌ Error generando resumen: $e');
+      debugPrint('❌ Error generando análisis interactivo: $e');
 
-      // Fallback en caso de error
+      // ✅ FALLBACK: Si falla el análisis interactivo, usar versión básica mejorada
       try {
-        final fallbackResponse = await _generateWithIntelligentAnalysis(
-            '', weeklyEntries, weeklyMoments, userName
-        );
-        return AIResponseModel.fromText(fallbackResponse);
+        debugPrint('🔄 Usando fallback básico mejorado...');
+        return await _generateBasicEnhancedFallback(weeklyEntries, weeklyMoments, userName);
       } catch (fallbackError) {
-        debugPrint('❌ Error en fallback: $fallbackError');
+        debugPrint('❌ Error en fallback básico: $fallbackError');
         return null;
       }
     }
+  }
+
+  /// ✅ NUEVO: Fallback básico pero que usa el modelo expandido
+  Future<AIResponseModel> _generateBasicEnhancedFallback(
+      List<Map<String, dynamic>> weeklyEntries,
+      List<Map<String, dynamic>> weeklyMoments,
+      String userName,
+      ) async {
+
+    if (weeklyEntries.isEmpty) {
+      return AIResponseModel.fromRichAnalysis(
+        summary: '''Esta semana tomaste un descanso de las reflexiones, y eso también es valioso. A veces necesitamos espacio para simplemente vivir el momento.
+
+Los períodos sin registro pueden indicar inmersión completa en el presente. El descanso de la autoobservación también es una forma de autocuidado.''',
+        insights: [
+          'Los períodos sin registro pueden indicar inmersión completa en el presente',
+          'El descanso de la autoobservación también es una forma de autocuidado',
+          'La pausa consciente puede ofrecer perspectiva renovada'
+        ],
+        suggestions: [
+          'Considera una reflexión breve de 30 segundos antes de dormir',
+          'Una sola palabra o emoji puede ser suficiente para mantener la conexión',
+          'La constancia importa más que la perfección'
+        ],
+        wellnessScore: 5.0,
+        nextWeekFocus: 'Retoma gradualmente tu práctica reflexiva sin presión',
+        celebrationMoments: [
+          'Tu capacidad de autocuidado al tomar descansos conscientes'
+        ],
+      );
+    }
+
+    // Calcular métricas básicas
+    final moodScores = weeklyEntries.map((e) => (e['mood_score'] as num?)?.toDouble() ?? 5.0).toList();
+    final energyLevels = weeklyEntries.map((e) => (e['energy_level'] as num?)?.toDouble() ?? 5.0).toList();
+    final stressLevels = weeklyEntries.map((e) => (e['stress_level'] as num?)?.toDouble() ?? 5.0).toList();
+
+    final avgMood = moodScores.reduce((a, b) => a + b) / moodScores.length;
+    final avgEnergy = energyLevels.reduce((a, b) => a + b) / energyLevels.length;
+    final avgStress = stressLevels.reduce((a, b) => a + b) / stressLevels.length;
+
+    // Calcular puntuación de bienestar
+    final wellnessScore = (avgMood * 0.4 + avgEnergy * 0.3 + (10 - avgStress) * 0.3);
+
+    return AIResponseModel.fromRichAnalysis(
+      summary: '''Esta semana registraste ${weeklyEntries.length} reflexiones con un estado de ánimo promedio de ${avgMood.toStringAsFixed(1)}/10.
+
+Tu compromiso con la reflexión muestra madurez emocional. El patrón semanal indica ${avgMood >= 7 ? 'un período positivo' : avgMood >= 5 ? 'equilibrio emocional' : 'algunos desafíos que muestran fortaleza'}. La consistencia en tu práctica refleja dedicación al crecimiento.''',
+      insights: [
+        'Tu compromiso con la reflexión muestra madurez emocional',
+        'El patrón semanal indica ${avgMood >= 7 ? 'un período positivo' : avgMood >= 5 ? 'equilibrio emocional' : 'algunos desafíos que muestran fortaleza'}',
+        'La consistencia en tu práctica refleja dedicación al crecimiento',
+        'Tu nivel de energía promedio (${avgEnergy.toStringAsFixed(1)}/10) ${avgEnergy >= 7 ? 'muestra vitalidad' : 'indica oportunidades de mejora'}',
+      ],
+      suggestions: [
+        'Continúa con tu práctica reflexiva actual',
+        avgMood < 6 ? 'Considera actividades que históricamente mejoran tu ánimo' : 'Mantén las estrategias que están funcionando bien',
+        'Celebra tu compromiso con el autoconocimiento',
+        avgEnergy < 6 ? 'Evalúa tus patrones de sueño y actividad física' : 'Tu energía está en buen nivel',
+      ],
+      wellnessScore: wellnessScore,
+      weeklyMetrics: {
+        'daysWithReflections': weeklyEntries.length,
+        'averageMood': avgMood,
+        'averageEnergy': avgEnergy,
+        'averageStress': avgStress,
+      },
+      highlightedMoment: 'Tu dedicación a la reflexión personal es admirable - cada entrada es un acto de amor propio',
+      celebrationMoments: [
+        'Tu compromiso constante con el autoconocimiento',
+        'La valentía de mantener la práctica reflexiva',
+        weeklyEntries.length >= 5 ? 'Excelente consistencia esta semana' : 'Cada reflexión cuenta y es valiosa',
+      ],
+      nextWeekFocus: 'Continúa cultivando tu práctica de autoconocimiento con la misma dedicación',
+      correlations: avgMood > 6 && avgEnergy > 6 ? {'mood_energy': 0.75} : null,
+    );
   }
 
   /// Construye prompt optimizado para Phi-3.5
@@ -292,13 +365,11 @@ Formato la respuesta de manera clara y estructurada, usando un lenguaje cercano 
     if (weeklyEntries.isEmpty && weeklyMoments.isEmpty) {
       return '''**¡Hola $userName!**
 
+**OBSERVACIÓN CLAVE:**
 Esta semana no registraste reflexiones en tu diario, y eso también nos dice algo valioso.
 
-**OBSERVACIÓN CLAVE:**
-Los períodos sin registro suelen coincidir con semanas muy ocupadas o momentos de transición. Esto es completamente normal y parte del ritmo natural de la vida.
-
 **INSIGHT PROFUNDO:**
-La ausencia de datos es en sí misma un dato. Puede indicar que estuviste tan inmerso en el presente que no hubo tiempo para la reflexión, o que necesitas simplificar tu proceso de autoobservación.
+Los períodos sin registro suelen coincidir con semanas muy ocupadas o momentos de transición. Esto es completamente normal y parte del ritmo natural de la vida.
 
 **RECOMENDACIÓN PERSONALIZADA:**
 Prueba la "reflexión de 30 segundos": antes de dormir, pregúntate simplemente "¿Cómo me sentí hoy?" No necesitas escribir un párrafo; incluso una palabra o emoji cuenta.
@@ -343,7 +414,7 @@ Recuerda: la constancia importa más que la perfección. ¡Nos vemos la próxima
   }
 }
 
-/// Analizador inteligente de datos semanales
+/// ✅ MANTENER: Analizador inteligente de datos semanales (versión básica)
 class WeeklyDataAnalyzer {
   final List<Map<String, dynamic>> entries;
   final List<Map<String, dynamic>> moments;
@@ -486,80 +557,62 @@ ${_generatePersonalReflection(stats)}
       insights.add('Tu constancia en la autorreflexión es excepcional y seguramente está contribuyendo a tu autoconocimiento');
     }
 
-    return insights.isNotEmpty ? insights : ['Tus datos revelan un patrón de crecimiento personal continuo'];
+    return insights.isNotEmpty ? insights : ['Tus reflexiones muestran un compromiso genuino con el crecimiento personal'];
   }
 
   List<String> _generatePersonalizedRecommendations(Map<String, dynamic> stats, List<String> patterns) {
     final recommendations = <String>[];
 
     if (!stats['hasData']) {
-      recommendations.add('Considera establecer un recordatorio suave para retomar la práctica de reflexión diaria');
-      recommendations.add('Prueba con reflexiones muy breves (una sola frase) para facilitar la constancia');
+      recommendations.add('Considera retomar gradualmente tu práctica de reflexión con sesiones breves de 1-2 minutos');
       return recommendations;
     }
 
-    final avgStress = stats['avgStress'] as double;
-    final avgEnergy = stats['avgEnergy'] as double;
     final avgMood = stats['avgMood'] as double;
-    final consistency = stats['consistency'] as String;
-
-    if (avgStress > 7) {
-      recommendations.add('Incorpora técnicas de respiración profunda o meditación breve en tu rutina diaria');
-    }
-
-    if (avgEnergy < 5) {
-      recommendations.add('Evalúa tus patrones de sueño y considera aumentar gradualmente tu actividad física');
-    }
+    final avgEnergy = stats['avgEnergy'] as double;
+    final avgStress = stats['avgStress'] as double;
 
     if (avgMood < 6) {
-      recommendations.add('Dedica tiempo diario a actividades que genuinamente disfrutes, aunque sean pequeñas');
+      recommendations.add('Identifica y programa más actividades que históricamente han mejorado tu estado de ánimo');
     }
 
-    if (consistency == 'baja') {
-      recommendations.add('Establece un momento específico del día para la reflexión - la consistencia amplifica los beneficios');
+    if (avgEnergy < 6) {
+      recommendations.add('Evalúa tus patrones de sueño, alimentación y actividad física para optimizar tus niveles de energía');
     }
 
-    // Recomendaciones basadas en patrones
-    if (patterns.any((p) => p.contains('laboral'))) {
-      recommendations.add('Considera establecer límites más claros entre tu tiempo de trabajo y personal');
+    if (avgStress > 7) {
+      recommendations.add('Considera implementar técnicas de manejo del estrés como respiración profunda o meditación breve');
     }
 
-    if (patterns.any((p) => p.contains('estrés'))) {
-      recommendations.add('Identifica los principales triggers de estrés y desarrolla estrategias específicas para cada uno');
+    if (stats['consistency'] == 'baja') {
+      recommendations.add('Intenta establecer un horario fijo para la reflexión, aunque sea solo 30 segundos al día');
     }
 
-    return recommendations.isNotEmpty ? recommendations : ['Continúa con tus prácticas actuales - están dando buenos resultados'];
+    return recommendations.isNotEmpty ? recommendations : ['Continúa con tu excelente práctica de autorreflexión'];
   }
 
   String _generateWeeklySummary(Map<String, dynamic> stats) {
     if (!stats['hasData']) {
-      return 'Esta semana tomaste un descanso de las reflexiones escritas.';
+      return 'Esta semana tomaste un descanso de las reflexiones. Los períodos sin registro son también parte natural del proceso de autoconocimiento.';
     }
 
     final totalEntries = stats['totalEntries'] as int;
-    final totalMoments = stats['totalMoments'] as int;
     final avgMood = stats['avgMood'] as double;
-    final moodTrend = stats['moodTrend'] as String;
+    final consistency = stats['consistency'] as String;
 
-    return 'Registraste $totalEntries reflexiones y $totalMoments momentos especiales. '
-        'Tu estado de ánimo promedio fue ${avgMood.toStringAsFixed(1)}/10, '
-        'con una tendencia $moodTrend a lo largo de la semana.';
+    return 'Registraste $totalEntries reflexiones esta semana con un estado de ánimo promedio de ${avgMood.toStringAsFixed(1)}/10. Tu nivel de consistencia fue $consistency, lo que ${consistency == 'alta' ? 'demuestra un excelente compromiso' : 'muestra tu dedicación al crecimiento'} con el autoconocimiento.';
   }
 
   String _generatePersonalReflection(Map<String, dynamic> stats) {
     if (!stats['hasData']) {
-      return 'Recuerda que tanto los momentos de pausa como los de actividad tienen su lugar en el crecimiento personal.';
+      return 'Recuerda que tanto los períodos de reflexión activa como los de pausa consciente son valiosos para tu desarrollo personal.';
     }
 
-    final avgMood = stats['avgMood'] as double;
-    final consistency = stats['consistency'] as String;
-
-    if (avgMood >= 7 && consistency == 'alta') {
-      return 'Tu dedicación a la autorreflexión combinada con tu actitud positiva crean una base sólida para el bienestar continuo.';
-    } else if (avgMood < 5) {
-      return 'Has navegado algunos desafíos esta semana, y tu voluntad de reflexionar sobre ellos demuestra una fortaleza admirable.';
+    final moodTrend = stats['moodTrend'] as String;
+    if (moodTrend.contains('mejorando')) {
+      return 'La tendencia positiva en tu bienestar es una señal esperanzadora. Continúa cultivando las prácticas que están funcionando para ti.';
     } else {
-      return 'Tu enfoque equilibrado hacia la autorreflexión muestra una madurez emocional que te servirá bien en el futuro.';
+      return 'Cada reflexión que compartes es un paso valioso hacia un mayor autoconocimiento y crecimiento personal.';
     }
   }
 }

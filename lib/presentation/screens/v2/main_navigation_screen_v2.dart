@@ -128,7 +128,7 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
       _SafeScreenWrapper(child: const InteractiveMomentsScreenV2()),
       _SafeScreenWrapper(child: const DailyReviewScreenV2()),
       _SafeScreenWrapper(child: const AnalyticsScreenV2()),
-      _SafeScreenWrapper(child: const AICoachScreenV2()), // ✅ NUEVA PANTALLA
+      _SafeScreenWrapper(child: const AICoachScreen()), // ✅ NUEVA PANTALLA
       _SafeScreenWrapper(child: const ProfileScreenV2()),
     ];
   }
