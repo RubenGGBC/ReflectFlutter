@@ -1,5 +1,5 @@
 // lib/ai/services/interactive_ai_analysis_service.dart
-// ANÁLISIS IA COMPLETAMENTE INTERACTIVO CON DATOS ESPECÍFICOS DEL USUARIO
+// ANÁLISIS IA COMPLETAMENTE INTERACTIVO CON DATOS ESPECÍFICOS DEL USUARIO - CORREGIDO
 
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
@@ -149,14 +149,16 @@ class PersonalizedDataAnalyzer {
 
     // Mejor momento específico de la semana
     if (moments.isNotEmpty) {
-      final positivesMoments = moments.where((m) =>
-      (m['type'] == 'positive' || m['intensity'] > 7)
-      ).toList();
+      // ✅ FIX: Se elimina la dependencia del campo `intensity` que no estaba presente.
+      // Ahora solo se consideran los momentos explícitamente marcados como 'positive'.
+      final positivesMoments = moments.where((m) => m['type'] == 'positive').toList();
 
       if (positivesMoments.isNotEmpty) {
         final bestMoment = positivesMoments.first;
+        // ✅ FIX: Se usa `entry_date` en lugar de `created_at` y `text` en lugar de `description`
+        // para coincidir con los datos que realmente se consultan.
         citableMoments['bestMoment'] =
-        'El ${_formatDate(bestMoment['created_at'])} registraste: "${_getShortText(bestMoment['description'])}"';
+        'El ${_formatDate(bestMoment['entry_date'])} registraste: "${_getShortText(bestMoment['text'])}"';
       }
     }
 

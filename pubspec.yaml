@@ -26,11 +26,9 @@ dependencies:
   http: ^1.1.0
   dio: ^5.3.2
 
-  # 🤖 AI Dependencies (Using available versions)
   onnxruntime: ^1.4.1
   ffi: ^2.1.0
 
-  # 🔔 NOTIFICACIONES
   flutter_local_notifications: ^17.2.2
   timezone: ^0.9.4
   permission_handler: ^11.3.1

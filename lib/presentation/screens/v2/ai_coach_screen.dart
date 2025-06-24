@@ -366,7 +366,7 @@ class _AICoachScreenState extends State<AICoachScreen>
                 icon: Icons.rocket_launch,
                 onPressed: () => _confirmAndStartDownload(ai),
                 gradient: const [Colors.white, Color(0xFFF8F9FA)],
-                textColor: const Color(0xFF667eea),
+                textColor: const Color(0xff66a6ea),
               ),
             ],
           ),
@@ -610,7 +610,6 @@ class _AICoachScreenState extends State<AICoachScreen>
 
         const SizedBox(height: 16),
 
-        // Métricas y correlaciones en grid (si hay datos ricos)
         if (summary.hasRichData)
           _buildMetricsGrid(summary),
 
