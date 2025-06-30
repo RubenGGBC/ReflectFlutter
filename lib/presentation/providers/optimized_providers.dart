@@ -825,6 +825,363 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
 
     return insights;
   }
+  // ============================================================================
+// presentation/providers/analytics_extensions.dart - NUEVAS FUNCIONALIDADES
+// ============================================================================
+
+// Métodos adicionales para el OptimizedAnalyticsProvider
+// Agregar estos métodos al provider existente
+
+  /// Predicción de bienestar para los próximos días basada en patrones
+  Map<String, dynamic> getWellbeingPrediction() {
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+    final moodTrends = _analytics['mood_trends'] as List? ?? [];
+
+    if (basicStats == null || moodTrends.isEmpty) {
+      return {
+        'prediction': 'neutral',
+        'confidence': 0.0,
+        'trend': 'stable',
+        'recommendation': 'Registra más días para obtener predicciones',
+        'predicted_score': 5.0,
+      };
+    }
+
+    final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
+    final avgEnergy = basicStats['avg_energy'] as double? ?? 5.0;
+    final avgStress = basicStats['avg_stress'] as double? ?? 5.0;
+
+    // Análisis de tendencia de los últimos 7 días
+    final recentTrends = moodTrends.take(7).toList();
+    double trendDirection = 0.0;
+
+    if (recentTrends.length >= 3) {
+      final recent = recentTrends.take(3).map((t) => t['mood_score'] as double? ?? 5.0).toList();
+      final older = recentTrends.skip(3).map((t) => t['mood_score'] as double? ?? 5.0).toList();
+
+      if (older.isNotEmpty) {
+        final recentAvg = recent.reduce((a, b) => a + b) / recent.length;
+        final olderAvg = older.reduce((a, b) => a + b) / older.length;
+        trendDirection = recentAvg - olderAvg;
+      }
+    }
+
+    // Predicción basada en patrones
+    final predictedScore = (avgMood + (trendDirection * 0.5)).clamp(1.0, 10.0);
+    final confidence = (recentTrends.length / 7.0).clamp(0.0, 1.0);
+
+    String prediction, trend, recommendation;
+
+    if (trendDirection > 0.5) {
+      prediction = 'improving';
+      trend = 'ascending';
+      recommendation = 'Continúa con tus hábitos actuales';
+    } else if (trendDirection < -0.5) {
+      prediction = 'declining';
+      trend = 'descending';
+      recommendation = 'Considera dedicar tiempo al autocuidado';
+    } else {
+      prediction = 'stable';
+      trend = 'stable';
+      recommendation = 'Mantén el equilibrio actual';
+    }
+
+    return {
+      'prediction': prediction,
+      'confidence': confidence,
+      'trend': trend,
+      'recommendation': recommendation,
+      'predicted_score': predictedScore,
+      'current_score': avgMood,
+    };
+  }
+
+  /// Análisis de hábitos saludables basado en registros
+  Map<String, dynamic> getHealthyHabitsAnalysis() {
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+
+    if (basicStats == null) {
+      return {
+        'sleep_score': 0.0,
+        'exercise_score': 0.0,
+        'meditation_score': 0.0,
+        'social_score': 0.0,
+        'overall_score': 0.0,
+        'recommendations': ['Registra más días para análisis de hábitos'],
+      };
+    }
+
+    final avgSleep = basicStats['avg_sleep_quality'] as double? ?? 5.0;
+    final avgPhysical = basicStats['avg_physical_activity'] as double? ?? 5.0;
+    final avgMeditation = basicStats['avg_meditation_minutes'] as double? ?? 0.0;
+    final avgSocial = basicStats['avg_social_interaction'] as double? ?? 5.0;
+
+    // Normalizar puntuaciones a 0-1
+    final sleepScore = (avgSleep / 10.0).clamp(0.0, 1.0);
+    final exerciseScore = (avgPhysical / 10.0).clamp(0.0, 1.0);
+    final meditationScore = (avgMeditation / 30.0).clamp(0.0, 1.0); // 30 min = máximo
+    final socialScore = (avgSocial / 10.0).clamp(0.0, 1.0);
+
+    final overallScore = (sleepScore + exerciseScore + meditationScore + socialScore) / 4.0;
+
+    final recommendations = <String>[];
+
+    if (sleepScore < 0.6) recommendations.add('Mejora tu calidad de sueño');
+    if (exerciseScore < 0.6) recommendations.add('Incrementa tu actividad física');
+    if (meditationScore < 0.3) recommendations.add('Prueba la meditación diaria');
+    if (socialScore < 0.6) recommendations.add('Conecta más con otros');
+
+    if (recommendations.isEmpty) {
+      recommendations.add('¡Excelente! Mantén tus hábitos saludables');
+    }
+
+    return {
+      'sleep_score': sleepScore,
+      'exercise_score': exerciseScore,
+      'meditation_score': meditationScore,
+      'social_score': socialScore,
+      'overall_score': overallScore,
+      'recommendations': recommendations,
+    };
+  }
+
+  /// Comparación con semanas anteriores
+  Map<String, dynamic> getWeeklyComparison() {
+    final moodTrends = _analytics['mood_trends'] as List? ?? [];
+
+    if (moodTrends.length < 14) {
+      return {
+        'has_data': false,
+        'message': 'Necesitas al menos 2 semanas de datos',
+        'mood_change': 0.0,
+        'energy_change': 0.0,
+        'stress_change': 0.0,
+      };
+    }
+
+    // Última semana vs anterior
+    final thisWeek = moodTrends.take(7).toList();
+    final lastWeek = moodTrends.skip(7).take(7).toList();
+
+    final thisWeekMood = thisWeek.map((t) => t['mood_score'] as double? ?? 5.0)
+        .reduce((a, b) => a + b) / thisWeek.length;
+    final lastWeekMood = lastWeek.map((t) => t['mood_score'] as double? ?? 5.0)
+        .reduce((a, b) => a + b) / lastWeek.length;
+
+    final thisWeekEnergy = thisWeek.map((t) => t['energy_level'] as double? ?? 5.0)
+        .reduce((a, b) => a + b) / thisWeek.length;
+    final lastWeekEnergy = lastWeek.map((t) => t['energy_level'] as double? ?? 5.0)
+        .reduce((a, b) => a + b) / lastWeek.length;
+
+    final thisWeekStress = thisWeek.map((t) => t['stress_level'] as double? ?? 5.0)
+        .reduce((a, b) => a + b) / thisWeek.length;
+    final lastWeekStress = lastWeek.map((t) => t['stress_level'] as double? ?? 5.0)
+        .reduce((a, b) => a + b) / lastWeek.length;
+
+    return {
+      'has_data': true,
+      'mood_change': thisWeekMood - lastWeekMood,
+      'energy_change': thisWeekEnergy - lastWeekEnergy,
+      'stress_change': thisWeekStress - lastWeekStress,
+      'current_week': {
+        'mood': thisWeekMood,
+        'energy': thisWeekEnergy,
+        'stress': thisWeekStress,
+      },
+      'previous_week': {
+        'mood': lastWeekMood,
+        'energy': lastWeekEnergy,
+        'stress': lastWeekStress,
+      },
+    };
+  }
+
+  /// Recomendaciones personalizadas basadas en IA
+  List<Map<String, dynamic>> getPersonalizedRecommendations() {
+    final recommendations = <Map<String, dynamic>>[];
+
+    final wellbeingStatus = getWellbeingStatus();
+    final habitsAnalysis = getHealthyHabitsAnalysis();
+    final stressAlerts = getStressAlerts();
+    final prediction = getWellbeingPrediction();
+
+    final currentScore = wellbeingStatus['score'] as int? ?? 5;
+    final stressLevel = stressAlerts['level'] as String? ?? 'sin datos';
+    final trend = prediction['trend'] as String? ?? 'stable';
+
+    // Recomendaciones basadas en estrés
+    if (stressLevel == 'alto') {
+      recommendations.add({
+        'icon': '🧘‍♀️',
+        'title': 'Sesión de Mindfulness',
+        'description': 'Dedica 10 minutos a la meditación',
+        'type': 'stress_relief',
+        'priority': 'high',
+        'action': 'meditate',
+        'estimated_time': '10 min',
+      });
+    }
+
+    // Recomendaciones basadas en hábitos
+    final sleepScore = habitsAnalysis['sleep_score'] as double? ?? 0.5;
+    if (sleepScore < 0.6) {
+      recommendations.add({
+        'icon': '😴',
+        'title': 'Rutina de Sueño',
+        'description': 'Establece una hora fija para dormir',
+        'type': 'sleep',
+        'priority': 'medium',
+        'action': 'plan_sleep',
+        'estimated_time': '5 min',
+      });
+    }
+
+    // Recomendaciones basadas en tendencia
+    if (trend == 'descending') {
+      recommendations.add({
+        'icon': '🌱',
+        'title': 'Momento de Gratitud',
+        'description': 'Escribe 3 cosas por las que estás agradecido',
+        'type': 'mood_boost',
+        'priority': 'medium',
+        'action': 'gratitude',
+        'estimated_time': '5 min',
+      });
+    }
+
+    // Recomendación de ejercicio
+    final exerciseScore = habitsAnalysis['exercise_score'] as double? ?? 0.5;
+    if (exerciseScore < 0.6) {
+      recommendations.add({
+        'icon': '🏃‍♀️',
+        'title': 'Actividad Física',
+        'description': 'Una caminata corta puede mejorar tu energía',
+        'type': 'exercise',
+        'priority': 'low',
+        'action': 'walk',
+        'estimated_time': '15 min',
+      });
+    }
+
+    // Recomendación social
+    final socialScore = habitsAnalysis['social_score'] as double? ?? 0.5;
+    if (socialScore < 0.5) {
+      recommendations.add({
+        'icon': '👥',
+        'title': 'Conexión Social',
+        'description': 'Llama a un amigo o familiar',
+        'type': 'social',
+        'priority': 'low',
+        'action': 'connect',
+        'estimated_time': '10 min',
+      });
+    }
+
+    // Ordenar por prioridad
+    recommendations.sort((a, b) {
+      final priorityOrder = {'high': 0, 'medium': 1, 'low': 2};
+      return priorityOrder[a['priority']]!.compareTo(priorityOrder[b['priority']]!);
+    });
+
+    return recommendations.take(3).toList(); // Máximo 3 recomendaciones
+  }
+
+  /// Calendario de estados de ánimo para los últimos días
+  List<Map<String, dynamic>> getMoodCalendarData() {
+    final moodTrends = _analytics['mood_trends'] as List? ?? [];
+
+    return moodTrends.take(30).map((trend) {
+      final mood = trend['mood_score'] as double? ?? 5.0;
+      final energy = trend['energy_level'] as double? ?? 5.0;
+      final stress = trend['stress_level'] as double? ?? 5.0;
+      final date = DateTime.tryParse(trend['entry_date'] as String? ?? '') ?? DateTime.now();
+
+      String emoji;
+      Color color;
+
+      final avgScore = (mood + energy + (10 - stress)) / 3;
+
+      if (avgScore >= 7) {
+        emoji = '😊';
+        color = Colors.green;
+      } else if (avgScore >= 5) {
+        emoji = '😐';
+        color = Colors.blue;
+      } else {
+        emoji = '😔';
+        color = Colors.orange;
+      }
+
+      return {
+        'date': date,
+        'mood': mood,
+        'energy': energy,
+        'stress': stress,
+        'avg_score': avgScore,
+        'emoji': emoji,
+        'color': color,
+      };
+    }).toList();
+  }
+
+  /// Challenges personalizados basados en datos del usuario
+  List<Map<String, dynamic>> getPersonalizedChallenges() {
+    final challenges = <Map<String, dynamic>>[];
+
+    final streakData = getStreakData();
+    final habitsAnalysis = getHealthyHabitsAnalysis();
+    final currentStreak = streakData['current'] as int? ?? 0;
+
+    // Challenge de racha
+    if (currentStreak < 7) {
+      challenges.add({
+        'id': 'weekly_streak',
+        'title': 'Racha Semanal',
+        'description': 'Completa 7 días seguidos de registro',
+        'icon': '🔥',
+        'progress': currentStreak / 7.0,
+        'target': 7,
+        'current': currentStreak,
+        'type': 'streak',
+        'reward': '¡Insignia de Constancia!',
+      });
+    }
+
+    // Challenge de meditación
+    final meditationScore = habitsAnalysis['meditation_score'] as double? ?? 0.0;
+    if (meditationScore < 0.5) {
+      challenges.add({
+        'id': 'meditation_week',
+        'title': 'Semana Mindful',
+        'description': 'Medita 5 minutos por 5 días',
+        'icon': '🧘‍♀️',
+        'progress': meditationScore * 2, // Convertir a progreso del challenge
+        'target': 5,
+        'current': (meditationScore * 5).round(),
+        'type': 'meditation',
+        'reward': '¡Maestro del Mindfulness!',
+      });
+    }
+
+    // Challenge de actividad física
+    final exerciseScore = habitsAnalysis['exercise_score'] as double? ?? 0.0;
+    if (exerciseScore < 0.7) {
+      challenges.add({
+        'id': 'active_week',
+        'title': 'Semana Activa',
+        'description': 'Haz ejercicio 4 días esta semana',
+        'icon': '💪',
+        'progress': exerciseScore,
+        'target': 4,
+        'current': (exerciseScore * 4).round(),
+        'type': 'exercise',
+        'reward': '¡Guerrero del Fitness!',
+      });
+    }
+
+    return challenges.take(2).toList(); // Máximo 2 challenges activos
+  }
+
 
   /// Obtener siguiente logro (basado en datos reales)
   Map<String, dynamic>? getNextAchievementToUnlock() {
