@@ -32,7 +32,10 @@ class OptimizedReflectApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<AIProvider>(
           create: (_) => clean_di.sl<AIProvider>(),
+
         ),
+        ChangeNotifierProvider(create: (_) => clean_di.sl<GoalsProvider>()),
+
         // ✅ Providers dependientes se crean después del AuthProvider
         ChangeNotifierProxyProvider<OptimizedAuthProvider, OptimizedDailyEntriesProvider>(
           create: (_) => clean_di.sl<OptimizedDailyEntriesProvider>(),
@@ -52,6 +55,7 @@ class OptimizedReflectApp extends StatelessWidget {
             return previous!;
           },
         ),
+
         ChangeNotifierProxyProvider<OptimizedAuthProvider, OptimizedAnalyticsProvider>(
           create: (_) => clean_di.sl<OptimizedAnalyticsProvider>(),
           update: (context, auth, previous) {

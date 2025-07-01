@@ -2078,8 +2078,8 @@ class GoalsProvider with ChangeNotifier {
 
       // Para reducción de estrés, menor valor = mejor progreso
       // Convertir: si objetivo es reducir estrés a 3, y actual es 7, progreso sería bajo
-      final stressReduction = math.max(0, 10 - avgStress);
-      return stressReduction;
+      final stressReduction = math.max(0.0, 10.0 - avgStress); // ✅ FIXED: Usar double explícitamente
+      return stressReduction.toDouble(); // ✅ FIXED: Conversión explícita a double
     } catch (e) {
       _logger.e('Error calculando progreso de reducción de estrés: $e');
       return goal.currentValue;

@@ -1,6 +1,6 @@
-// lib/presentation/screens/v2/home_screen_v2.dart - VERSIÓN FINAL OPTIMIZADA
+// lib/presentation/screens/v2/home_screen_v2.dart - VERSIÓN CON INTEGRACIÓN DE GOALS
 // ============================================================================
-// PANTALLA DE INICIO HÍBRIDA INSPIRADA EN LAS IMÁGENES CON TODAS LAS MÉTRICAS
+// PANTALLA DE INICIO HÍBRIDA CON INTEGRACIÓN COMPLETA DE GOALS Y MÉTRICAS
 // ============================================================================
 
 import 'dart:io';
@@ -13,6 +13,7 @@ import '../../providers/optimized_providers.dart';
 
 // Modelos
 import '../../../data/models/optimized_models.dart';
+import '../../../data/models/goal_model.dart';
 
 // Componentes modernos
 import '../components/modern_design_system.dart';
@@ -36,6 +37,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   late AnimationController _welcomeTextController;
   late AnimationController _cardsController;
   late AnimationController _pulseController;
+  late AnimationController _goalsController; // ✅ NUEVO: Para goals
 
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
@@ -43,6 +45,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   late Animation<Offset> _welcomeTextAnimation;
   late Animation<double> _cardsAnimation;
   late Animation<double> _pulseAnimation;
+  late Animation<double> _goalsAnimation; // ✅ NUEVO: Para goals
 
   @override
   void initState() {
@@ -63,10 +66,12 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     _welcomeTextController.dispose();
     _cardsController.dispose();
     _pulseController.dispose();
+    _goalsController.dispose(); // ✅ NUEVO
     super.dispose();
   }
 
   void _setupAnimations() {
+    // Controladores existentes
     _fadeController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
@@ -76,26 +81,31 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       vsync: this,
     );
     _profilePictureController = AnimationController(
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 600),
       vsync: this,
     );
     _welcomeTextController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     _cardsController = AnimationController(
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
     _pulseController = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
+    // ✅ NUEVO: Controller para goals
+    _goalsController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
     );
 
+    // Animaciones existentes
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
@@ -103,56 +113,35 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       parent: _slideController,
       curve: Curves.easeOutBack,
     ));
-
     _profilePictureAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _profilePictureController,
-        curve: Curves.elasticOut,
-      ),
+      CurvedAnimation(parent: _profilePictureController, curve: Curves.elasticOut),
     );
-
     _welcomeTextAnimation = Tween<Offset>(
-      begin: const Offset(-0.5, 0),
+      begin: const Offset(-0.3, 0),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _welcomeTextController,
-      curve: Curves.easeOutBack,
+      curve: Curves.easeOutCubic,
     ));
-
     _cardsAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _cardsController,
-        curve: Curves.easeOutBack,
-      ),
+      CurvedAnimation(parent: _cardsController, curve: Curves.easeOutBack),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    // ✅ NUEVO: Animación para goals
+    _goalsAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _goalsController, curve: Curves.easeOutCubic),
     );
 
-    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _pulseController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    // Secuencia de animaciones
+    // Iniciar animaciones
     _fadeController.forward();
+    _slideController.forward();
+    _profilePictureController.forward();
+    _welcomeTextController.forward();
+    _cardsController.forward();
+    _goalsController.forward(); // ✅ NUEVO
     _pulseController.repeat(reverse: true);
-
-    Future.delayed(const Duration(milliseconds: 200), () {
-      if (mounted) {
-        _slideController.forward();
-        _profilePictureController.forward();
-      }
-    });
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        _welcomeTextController.forward();
-      }
-    });
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (mounted) {
-        _cardsController.forward();
-      }
-    });
   }
 
   void _loadInitialData() {
@@ -160,71 +149,51 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     final user = authProvider.currentUser;
 
     if (user != null) {
-      try {
-        final momentsProvider = context.read<OptimizedMomentsProvider>();
-        final analyticsProvider = context.read<OptimizedAnalyticsProvider>();
+      // Cargar datos existentes
+      context.read<OptimizedAnalyticsProvider>().loadCompleteAnalytics(user.id);
+      context.read<OptimizedMomentsProvider>().loadMoments(user.id);
+      context.read<OptimizedDailyEntriesProvider>().loadEntries(user.id);
 
-        // Cargar datos completos
-        momentsProvider.loadTodayMoments(user.id);
-        analyticsProvider.loadCompleteAnalytics(user.id, days: 30);
-      } catch (e) {
-        debugPrint('Error loading initial data: $e');
-      }
+      // ✅ NUEVO: Cargar goals
+      context.read<GoalsProvider>().loadUserGoals(user.id);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<OptimizedAuthProvider>();
-    final momentsProvider = context.watch<OptimizedMomentsProvider>();
-    final analyticsProvider = context.watch<OptimizedAnalyticsProvider>();
-    final user = authProvider.currentUser;
+    return Consumer4<OptimizedAuthProvider, OptimizedAnalyticsProvider,
+        OptimizedMomentsProvider, GoalsProvider>( // ✅ NUEVO: GoalsProvider
+      builder: (context, authProvider, analyticsProvider, momentsProvider, goalsProvider, child) {
+        final user = authProvider.currentUser;
+        if (user == null) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-    if (user == null) {
-      return const Scaffold(
-        body: Center(
-          child: Text('Error: Usuario no encontrado.'),
-        ),
-      );
-    }
+        final isLoadingData = analyticsProvider.isLoading ||
+            momentsProvider.isLoading ||
+            goalsProvider.isLoading; // ✅ NUEVO
 
-    final isLoadingData = momentsProvider.isLoading || analyticsProvider.isLoading;
-
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0B),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF1A1A2E), // Azul oscuro
-              Color(0xFF16213E), // Azul medio
-              Color(0xFF0F3460), // Azul más claro
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: RefreshIndicator(
-              onRefresh: () async {
-                _loadInitialData();
-              },
+        return Scaffold(
+          backgroundColor: ModernColors.darkPrimary,
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: ModernColors.primaryGradient,
+              ),
+            ),
+            child: SafeArea(
               child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
-                ),
+                physics: const BouncingScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Header moderno (inspirado en imagen 3)
+                    // Header moderno
                     _buildModernHeader(user),
                     const SizedBox(height: 32),
 
-                    // Mensaje de bienvenida personalizado (inspirado en imagen 2)
+                    // Mensaje de bienvenida personalizado
                     _buildWelcomeMessage(user),
                     const SizedBox(height: 24),
 
@@ -232,28 +201,40 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     if (isLoadingData) ...[
                       _buildLoadingContent(),
                     ] else ...[
-                      // Métricas principales híbridas (inspirado en imagen 1)
+                      // ✅ NUEVO: Resumen de goals en la parte superior
+                      _buildGoalsOverviewSection(goalsProvider),
+                      const SizedBox(height: 24),
+
+                      // Métricas principales híbridas (existente)
                       _buildHybridMetricsCards(analyticsProvider, momentsProvider),
                       const SizedBox(height: 24),
 
-                      // Progreso semanal con gráfico (inspirado en imagen 3)
+                      // ✅ NUEVO: Chart de progreso de goals
+                      _buildGoalsProgressChart(goalsProvider),
+                      const SizedBox(height: 24),
+
+                      // Progreso semanal con gráfico (existente)
                       _buildWeeklyProgressChart(analyticsProvider),
                       const SizedBox(height: 24),
 
-                      // Tracker de humor (inspirado en imagen 3)
+                      // Tracker de humor (existente)
                       _buildMoodTracker(analyticsProvider),
                       const SizedBox(height: 24),
 
-                      // Tareas de hoy (inspirado en imagen 3)
+                      // ✅ NUEVO: Goals activos destacados
+                      _buildActiveGoalsSection(goalsProvider),
+                      const SizedBox(height: 24),
+
+                      // Tareas de hoy (existente)
                       _buildTodayTasks(momentsProvider),
                       const SizedBox(height: 24),
 
-                      // Recomendaciones personalizadas (inspirado en imagen 2)
+                      // Recomendaciones personalizadas (existente)
                       _buildPersonalizedRecommendations(analyticsProvider),
                       const SizedBox(height: 24),
                     ],
 
-                    // Programas destacados (inspirado en imagen 2)
+                    // Programas destacados (existente)
                     _buildFeaturedPrograms(),
                     const SizedBox(height: 100), // Espacio para el bottom nav
                   ],
@@ -261,58 +242,120 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+
+  // ============================================================================
+  // ✅ NUEVOS MÉTODOS PARA GOALS
+  // ============================================================================
+
+  Widget _buildGoalsOverviewSection(GoalsProvider goalsProvider) {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _goalsAnimation,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    '🎯 Your Goals',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, '/goals'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        'View All',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildGoalMetricCard(
+                      'Active',
+                      goalsProvider.activeGoals.length.toString(),
+                      Icons.trending_up,
+                      const Color(0xFF4ECDC4),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildGoalMetricCard(
+                      'Progress',
+                      '${(goalsProvider.averageProgress * 100).round()}%',
+                      Icons.track_changes,
+                      const Color(0xFFFFD700),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildGoalMetricCard(
+                      'Completed',
+                      goalsProvider.completedGoals.length.toString(),
+                      Icons.check_circle,
+                      const Color(0xFF45B7D1),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildMomentsStatsRow(OptimizedMomentsProvider moments) {
-    final todayCount = moments.todayCount;
-    final totalCount = moments.totalCount;
-    final positiveCount = moments.positiveCount;
-    final negativeCount = moments.negativeCount;
-
-    // Calcular ratio de momentos positivos
-    final positiveRatio = totalCount > 0 ? (positiveCount / totalCount) : 0.0;
-
+  Widget _buildGoalMetricCard(String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
       ),
-      child: Row(
+      child: Column(
         children: [
-          Expanded(
-            child: _buildMiniStat(
-                todayCount.toString(),
-                'Today',
-                const Color(0xFFFFD700)
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          Container(
-            width: 1,
-            height: 20,
-            color: Colors.white.withOpacity(0.2),
-          ),
-          Expanded(
-            child: _buildMiniStat(
-                '${(positiveRatio * 100).round()}%',
-                'Positive',
-                const Color(0xFF4ECDC4)
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 20,
-            color: Colors.white.withOpacity(0.2),
-          ),
-          Expanded(
-            child: _buildMiniStat(
-                totalCount.toString(),
-                'Total',
-                const Color(0xFF45B7D1)
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 12,
             ),
           ),
         ],
@@ -320,142 +363,433 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  Widget _buildMiniStat(String value, String label, Color color) {
+  Widget _buildGoalsProgressChart(GoalsProvider goalsProvider) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Goals Progress Overview',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          if (goalsProvider.activeGoals.isEmpty) ...[
+            _buildEmptyGoalsState(),
+          ] else ...[
+            _buildGoalsChart(goalsProvider.activeGoals),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGoalsChart(List<GoalModel> goals) {
+    return Column(
+      children: goals.take(4).map((goal) => _buildGoalProgressBar(goal)).toList(),
+    );
+  }
+
+  Widget _buildGoalProgressBar(GoalModel goal) {
+    final progress = goal.progress;
+    final color = _getGoalTypeColor(goal.type);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  goal.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                '${(progress * 100).round()}%',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.white.withOpacity(0.2),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+              minHeight: 6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActiveGoalsSection(GoalsProvider goalsProvider) {
+    final activeGoals = goalsProvider.activeGoals;
+
+    if (activeGoals.isEmpty) {
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.2)),
+        ),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.flag_outlined,
+              color: Colors.white,
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'No active goals yet',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Create your first goal to start tracking progress',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.7),
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => Navigator.pushNamed(context, '/goals'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFD700),
+                foregroundColor: Colors.black,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text('Create Goal'),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Active Goals',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 120,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: activeGoals.length,
+              itemBuilder: (context, index) {
+                final goal = activeGoals[index];
+                return _buildActiveGoalCard(goal);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActiveGoalCard(GoalModel goal) {
+    final color = _getGoalTypeColor(goal.type);
+    final icon = _getGoalTypeIcon(goal.type);
+
+    return Container(
+      width: 140,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const Spacer(),
+              Text(
+                '${(goal.progress * 100).round()}%',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            goal.title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const Spacer(),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: goal.progress,
+              backgroundColor: Colors.white.withOpacity(0.2),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+              minHeight: 4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyGoalsState() {
     return Column(
       children: [
+        Icon(
+          Icons.flag_outlined,
+          color: Colors.white.withOpacity(0.5),
+          size: 32,
+        ),
+        const SizedBox(height: 12),
         Text(
-          value,
+          'No goals to track yet',
           style: TextStyle(
-            color: color,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 14,
           ),
         ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.6),
-            fontSize: 10,
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: () => Navigator.pushNamed(context, '/goals'),
+          child: const Text(
+            'Create your first goal',
+            style: TextStyle(
+              color: Color(0xFFFFD700),
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
     );
   }
 
+  // ============================================================================
+  // ✅ MÉTODOS DE UTILIDAD PARA GOALS
+  // ============================================================================
+
+  Color _getGoalTypeColor(GoalType type) {
+    switch (type) {
+      case GoalType.consistency:
+        return const Color(0xFF4ECDC4);
+      case GoalType.mood:
+        return const Color(0xFFFFD700);
+      case GoalType.positiveMoments:
+        return const Color(0xFF45B7D1);
+      case GoalType.stressReduction:
+        return const Color(0xFF96CEB4);
+    }
+  }
+
+  IconData _getGoalTypeIcon(GoalType type) {
+    switch (type) {
+      case GoalType.consistency:
+        return Icons.timeline;
+      case GoalType.mood:
+        return Icons.sentiment_satisfied;
+      case GoalType.positiveMoments:
+        return Icons.star;
+      case GoalType.stressReduction:
+        return Icons.spa;
+    }
+  }
+
+  // ============================================================================
+  // MÉTODOS EXISTENTES (MANTENER IGUAL)
+  // ============================================================================
+
   Widget _buildModernHeader(OptimizedUserModel user) {
     return SlideTransition(
       position: _slideAnimation,
-      child: Row(
-        children: [
-          // Profile picture con animación
-          ScaleTransition(
-            scale: _profilePictureAnimation,
-            child: GestureDetector(
-              onTap: () {
-                Navigator.pushNamed(context, '/profile');
-              },
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            children: [
+              // Profile picture con animación
+              ScaleTransition(
+                scale: _profilePictureAnimation,
+                child: ProfilePictureWidget(
+                  user: user,
+                  size: 50,
+                  onTap: () => Navigator.pushNamed(context, '/profile'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Info del usuario
+              Expanded(
+                child: SlideTransition(
+                  position: _welcomeTextAnimation,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '¡Hola, ${user.name}!',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        _getGreetingMessage(),
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFFFD700).withOpacity(0.3),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
+                ),
+              ),
+              // Notificaciones
+              AnimatedBuilder(
+                animation: _pulseAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _pulseAnimation.value,
+                    child: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.notifications_outlined,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
-                  ],
-                ),
-                padding: const EdgeInsets.all(2),
-                child: Container(
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white,
-                  ),
-                  child: ClipOval(
-                    child: _buildAvatarContent(user),
-                  ),
-                ),
+                  );
+                },
               ),
-            ),
+            ],
           ),
-          const SizedBox(width: 16),
-          // Usuario info (como imagen 3)
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  user.name,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                Text(
-                  'Welcome back',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.white.withOpacity(0.7),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Ícono de configuración
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFD700).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: const Color(0xFFFFD700).withOpacity(0.3),
-              ),
-            ),
-            child: IconButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/profile');
-              },
-              icon: const Icon(
-                Icons.settings_outlined,
-                color: Color(0xFFFFD700),
-                size: 24,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildWelcomeMessage(OptimizedUserModel user) {
     return SlideTransition(
-      position: _welcomeTextAnimation,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Welcome back, ${user.name}',
-            style: const TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.2)),
           ),
-          const SizedBox(height: 8),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    '✨',
+                    style: TextStyle(fontSize: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'How are you feeling today?',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Take a moment to check in with yourself and track your progress.',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingContent() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          const CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+          ),
+          const SizedBox(height: 20),
           Text(
-            "Based on your data, we've curated some recommendations for you.",
+            'Loading your data...',
             style: TextStyle(
+              color: Colors.white.withOpacity(0.8),
               fontSize: 16,
-              color: Colors.white.withOpacity(0.7),
-              height: 1.4,
             ),
           ),
         ],
@@ -464,69 +798,59 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   }
 
   Widget _buildHybridMetricsCards(OptimizedAnalyticsProvider analytics, OptimizedMomentsProvider moments) {
-    final basicStats = analytics.analytics['basic_stats'] as Map<String, dynamic>?;
-    final streakData = analytics.analytics['streak_data'] as Map<String, dynamic>?;
-
-    // Usar los métodos reales disponibles
-    final todayMomentsCount = moments.todayCount;
-    final totalMomentsCount = moments.totalCount;
-    final currentStreak = streakData?['current_streak'] as int? ?? 0;
-    final avgMood = basicStats?['avg_mood'] as double? ?? 0.0;
-    final wellbeingScore = (avgMood * 10).round();
-
-    return FadeTransition(
-      opacity: _cardsAnimation,
-      child: Row(
-        children: [
-          // Card principal (inspirado en imagen 1 - Today's)
-          Expanded(
-            child: _buildMainMetricCard(
-              title: "Today's",
-              value: todayMomentsCount.toString().padLeft(5, '0'),
-              subtitle: "${DateTime.now().hour} am ${(avgMood * 1.5).toStringAsFixed(1)}cM",
-              gradient: const LinearGradient(
-                colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+    return ScaleTransition(
+      scale: _cardsAnimation,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 20),
+        child: Row(
+          children: [
+            Expanded(
+              child: _buildMetricCard(
+                title: 'Daily Streak',
+                value: _getStreakValue(analytics),
+                subtitle: 'days in a row',
+                gradient: const [Color(0xFF667eea), Color(0xFF764ba2)],
+                icon: Icons.local_fire_department,
+                hasChart: true,
               ),
-              hasChart: true,
-              hasIndicator: true,
             ),
-          ),
-          const SizedBox(width: 16),
-          // Card secundario (inspirado en imagen 1 - Daily Insights)
-          Expanded(
-            child: _buildMainMetricCard(
-              title: "Wellbeing",
-              value: "$wellbeingScore%",
-              subtitle: "${DateTime.now().hour} am, ${currentStreak}st",
-              gradient: const LinearGradient(
-                colors: [Color(0xFF2D3748), Color(0xFF4A5568)],
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildMetricCard(
+                title: 'Mood Score',
+                value: _getMoodValue(analytics),
+                subtitle: 'today\'s average',
+                gradient: const [Color(0xFF11998e), Color(0xFF38ef7d)],
+                icon: Icons.sentiment_satisfied,
+                hasChart: true,
               ),
-              hasPlayButton: true,
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildMainMetricCard({
+  Widget _buildMetricCard({
     required String title,
     required String value,
     required String subtitle,
-    required LinearGradient gradient,
+    required List<Color> gradient,
+    required IconData icon,
     bool hasChart = false,
-    bool hasPlayButton = false,
-    bool hasIndicator = false,
   }) {
     return Container(
-      height: 160,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: gradient,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradient,
+        ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: gradient.first.withOpacity(0.3),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -535,47 +859,14 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              if (hasChart) const Icon(Icons.arrow_back, color: Colors.white, size: 20),
-              if (hasChart) const SizedBox(width: 8),
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const Spacer(),
-              if (hasIndicator) _buildDotsIndicator(),
-              if (hasPlayButton)
-                AnimatedBuilder(
-                  animation: _pulseAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _pulseAnimation.value,
-                      child: Container(
-                        width: 30,
-                        height: 30,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
-                    );
-                  },
-                ),
+              Icon(icon, color: Colors.white, size: 24),
+              if (hasChart) _buildDotsIndicator(),
             ],
           ),
-          const Spacer(),
-          // Value
+          const SizedBox(height: 16),
           Text(
             value,
             style: const TextStyle(
@@ -594,7 +885,6 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           ),
           if (hasChart) ...[
             const SizedBox(height: 8),
-            // Mini gráfico simplificado
             Container(
               height: 2,
               decoration: BoxDecoration(
@@ -650,76 +940,51 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     final avgMood = basicStats?['avg_mood'] as double? ?? 0.0;
     final totalEntries = basicStats?['total_entries'] as int? ?? 0;
 
-    return FadeTransition(
-      opacity: _cardsAnimation,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Weekly Progress',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Text(
-                  'Weekly Progress',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  'View Details',
-                  style: TextStyle(
-                    color: const Color(0xFFFFD700),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            // Gráfico mejorado con datos reales
-            _buildAdvancedChart(moodTrends),
-            const SizedBox(height: 24),
-            // Métricas de progreso con datos reales
-            Row(
-              children: [
-                Expanded(
-                  child: _buildProgressMetric(currentStreak.toString(), 'Days Streak'),
-                ),
-                Expanded(
-                  child: _buildProgressMetric('${avgMood.toStringAsFixed(1)}', 'Avg. Mood'),
-                ),
-                Expanded(
-                  child: _buildProgressMetric(totalEntries.toString(), 'Total Entries'),
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildProgressMetric(currentStreak.toString(), 'Day Streak'),
+              ),
+              Expanded(
+                child: _buildProgressMetric(avgMood.toStringAsFixed(1), 'Avg Mood'),
+              ),
+              Expanded(
+                child: _buildProgressMetric(totalEntries.toString(), 'Entries'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildMoodChart(moodTrends),
+        ],
       ),
     );
   }
 
-  Widget _buildAdvancedChart(List<dynamic> moodTrends) {
+  Widget _buildMoodChart(List<dynamic> moodTrends) {
     if (moodTrends.isEmpty) {
-      return _buildSimpleChart(); // Fallback al gráfico simple
+      return _buildSimpleChart();
     }
 
-    // Tomar los últimos 7 días de datos
     final last7Days = moodTrends.take(7).toList();
     final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -729,7 +994,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
         crossAxisAlignment: CrossAxisAlignment.end,
         children: List.generate(7, (index) {
           final dayData = index < last7Days.length ? last7Days[index] : null;
-          final moodScore = (dayData?['mood_score'] as num?)?.toDouble() ?? 0.0;          final normalizedHeight = moodScore / 10.0; // Normalizar de 0-10 a 0-1
+          final moodScore = (dayData?['mood_score'] as num?)?.toDouble() ?? 0.0;
+          final normalizedHeight = moodScore / 10.0;
 
           return Expanded(
             child: _buildChartBar(
@@ -821,432 +1087,166 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   Widget _buildMoodTracker(OptimizedAnalyticsProvider analytics) {
     final basicStats = analytics.analytics['basic_stats'] as Map<String, dynamic>?;
     final moodTrends = analytics.analytics['mood_trends'] as List<dynamic>? ?? [];
-    final avgMood = basicStats?['avg_mood'] as double? ?? 7.5;
-
-    String moodMessage;
-    Color moodColor;
-    if (avgMood >= 8.0) {
-      moodMessage = "Your mood has been excellent this week!";
-      moodColor = const Color(0xFF4ECDC4);
-    } else if (avgMood >= 6.0) {
-      moodMessage = "Your mood has been generally positive this week!";
-      moodColor = const Color(0xFFFFD700);
-    } else if (avgMood >= 4.0) {
-      moodMessage = "Your mood has been stable this week.";
-      moodColor = const Color(0xFFFFA500);
-    } else {
-      moodMessage = "Consider some self-care practices this week.";
-      moodColor = const Color(0xFFFF6B6B);
-    }
-
-    return FadeTransition(
-      opacity: _cardsAnimation,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header con promedio de mood
-            Row(
-              children: [
-                const Text(
-                  'Mood Tracker',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const Spacer(),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: moodColor.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: moodColor.withOpacity(0.4)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: moodColor,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        avgMood.toStringAsFixed(1),
-                        style: TextStyle(
-                          color: moodColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            // Gráfico de mood con línea y puntos
-            _buildMoodChart(moodTrends),
-
-            const SizedBox(height: 16),
-
-            // Días de la semana
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-                  .asMap()
-                  .entries
-                  .map((entry) {
-                final index = entry.key;
-                final day = entry.value;
-                final isToday = index == DateTime.now().weekday - 1;
-
-                return Text(
-                  day,
-                  style: TextStyle(
-                    color: isToday
-                        ? const Color(0xFFFFD700)
-                        : Colors.white.withOpacity(0.6),
-                    fontSize: 12,
-                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                  ),
-                );
-              })
-                  .toList(),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Mensaje de mood con icono
-            Row(
-              children: [
-                Icon(
-                  _getMoodIcon(avgMood),
-                  color: moodColor,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    moodMessage,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // Leyenda de colores
-            _buildMoodLegend(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  IconData _getMoodIcon(double mood) {
-    if (mood >= 8.0) return Icons.sentiment_very_satisfied;
-    if (mood >= 6.0) return Icons.sentiment_satisfied;
-    if (mood >= 4.0) return Icons.sentiment_neutral;
-    return Icons.sentiment_dissatisfied;
-  }
-
-  Widget _buildMoodLegend() {
-    return Row(
-      children: [
-        _buildLegendItem('Excellent', const Color(0xFF4ECDC4)),
-        const SizedBox(width: 16),
-        _buildLegendItem('Good', const Color(0xFFFFD700)),
-        const SizedBox(width: 16),
-        _buildLegendItem('Fair', const Color(0xFFFFA500)),
-        const SizedBox(width: 16),
-        _buildLegendItem('Low', const Color(0xFFFF6B6B)),
-      ],
-    );
-  }
-
-  Widget _buildLegendItem(String label, Color color) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 8,
-          height: 8,
-          decoration: BoxDecoration(
-            color: color,
-            shape: BoxShape.circle,
-          ),
-        ),
-        const SizedBox(width: 4),
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withOpacity(0.6),
-            fontSize: 10,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMoodChart(List<dynamic> moodTrends) {
-    // Preparar datos para los últimos 7 días
-    final List<double> moodData = [];
-    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-    if (moodTrends.isNotEmpty) {
-      // Usar datos reales (tomar últimos 7 días)
-      final last7Days = moodTrends.take(7).toList().reversed.toList();
-      for (int i = 0; i < 7; i++) {
-        if (i < last7Days.length) {
-          final dayData = last7Days[i];
-          final moodScore = (dayData?['mood_score'] as num?)?.toDouble() ?? 0.5;          moodData.add(moodScore);
-        } else {
-          // Rellenar con datos promedio si no hay suficientes datos
-          moodData.add(5.0 + (math.Random().nextDouble() * 3.0));
-        }
-      }
-    } else {
-      // Datos de ejemplo si no hay datos reales
-      moodData.addAll([4.5, 6.2, 7.8, 8.5, 6.1, 5.9, 7.3]);
-    }
+    final avgMood = basicStats?['avg_mood'] as double? ?? 0.0;
 
     return Container(
-      height: 120,
-      child: Stack(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Gráfico principal
-          CustomPaint(
-            size: const Size(double.infinity, 120),
-            painter: MoodChartPainter(moodData),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Mood Tracker',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                '${avgMood.toStringAsFixed(1)}/10',
+                style: const TextStyle(
+                  color: Color(0xFFFFD700),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
-          // Indicadores de max/min mood
-          Positioned(
-            top: 8,
-            right: 8,
-            child: _buildMoodIndicators(moodData),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildMoodIcon('😢', 'Very Bad', avgMood >= 1 && avgMood < 3),
+              _buildMoodIcon('😔', 'Bad', avgMood >= 3 && avgMood < 5),
+              _buildMoodIcon('😐', 'Neutral', avgMood >= 5 && avgMood < 7),
+              _buildMoodIcon('🙂', 'Good', avgMood >= 7 && avgMood < 9),
+              _buildMoodIcon('😊', 'Great', avgMood >= 9),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMoodIndicators(List<double> moodData) {
-    if (moodData.isEmpty) return const SizedBox.shrink();
-
-    final maxMood = moodData.reduce(math.max);
-    final minMood = moodData.reduce(math.min);
-
+  Widget _buildMoodIcon(String emoji, String label, bool isActive) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.trending_up,
-              color: const Color(0xFF4ECDC4),
-              size: 16,
+        Container(
+          width: 50,
+          height: 50,
+          decoration: BoxDecoration(
+            color: isActive
+                ? const Color(0xFFFFD700).withOpacity(0.3)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(
+              color: isActive
+                  ? const Color(0xFFFFD700)
+                  : Colors.white.withOpacity(0.3),
+              width: 2,
             ),
-            const SizedBox(width: 4),
-            Text(
-              maxMood.toStringAsFixed(1),
-              style: const TextStyle(
-                color: Color(0xFF4ECDC4),
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
+          ),
+          child: Center(
+            child: Text(
+              emoji,
+              style: const TextStyle(fontSize: 24),
             ),
-          ],
+          ),
         ),
-        const SizedBox(height: 4),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.trending_down,
-              color: const Color(0xFFFF6B6B),
-              size: 16,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              minMood.toStringAsFixed(1),
-              style: const TextStyle(
-                color: Color(0xFFFF6B6B),
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: isActive
+                ? Colors.white
+                : Colors.white.withOpacity(0.6),
+            fontSize: 12,
+            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+          ),
         ),
       ],
     );
   }
 
   Widget _buildTodayTasks(OptimizedMomentsProvider moments) {
-    // Usar los getters reales disponibles
-    final todayMomentsCount = moments.todayCount;
-    final positiveMomentsCount = moments.positiveCount;
-    final totalMomentsCount = moments.totalCount;
+    final todayCount = moments.todayCount;
+    final totalCount = moments.totalCount;
 
-    // Generar tareas basadas en momentos del día
-    final tasks = <Map<String, dynamic>>[
-      {
-        'icon': Icons.self_improvement,
-        'title': 'Morning meditation',
-        'duration': '10 min',
-        'color': const Color(0xFFFFD700),
-        'completed': todayMomentsCount > 2,
-      },
-      {
-        'icon': Icons.book,
-        'title': 'Gratitude journal',
-        'duration': '15 min',
-        'color': const Color(0xFF4ECDC4),
-        'completed': todayMomentsCount > 5,
-      },
-      {
-        'icon': Icons.directions_walk,
-        'title': 'Mindful walk',
-        'duration': '20 min',
-        'color': const Color(0xFF45B7D1),
-        'completed': positiveMomentsCount > 3,
-      },
-    ];
-
-    return FadeTransition(
-      opacity: _cardsAnimation,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          const Text(
+            'Today\'s Activity',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
           Row(
             children: [
-              const Text(
-                "Today's tasks",
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+              const Icon(
+                Icons.today,
+                color: Color(0xFF4ECDC4),
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$todayCount moments logged today',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      '$totalCount total moments recorded',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFFFD700).withOpacity(0.2),
+                  color: const Color(0xFF4ECDC4).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  '$todayMomentsCount moments today',
+                  todayCount > 0 ? 'Active' : 'Start Today',
                   style: const TextStyle(
-                    color: Color(0xFFFFD700),
+                    color: Color(0xFF4ECDC4),
                     fontSize: 12,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          ...tasks.map((task) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildTaskCard(
-              icon: task['icon'] as IconData,
-              title: task['title'] as String,
-              duration: task['duration'] as String,
-              color: task['color'] as Color,
-              completed: task['completed'] as bool,
-            ),
-          )),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTaskCard({
-    required IconData icon,
-    required String title,
-    required String duration,
-    required Color color,
-    bool completed = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: completed
-              ? color.withOpacity(0.5)
-              : Colors.white.withOpacity(0.1),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(completed ? 0.3 : 0.2),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(
-              completed ? Icons.check : icon,
-              color: color,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    decoration: completed ? TextDecoration.lineThrough : null,
-                  ),
-                ),
-                Text(
-                  duration,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.6),
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            completed ? Icons.check_circle : Icons.arrow_forward_ios,
-            color: completed ? color : Colors.white,
-            size: 16,
           ),
         ],
       ),
@@ -1254,136 +1254,62 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   }
 
   Widget _buildPersonalizedRecommendations(OptimizedAnalyticsProvider analytics) {
-    final basicStats = analytics.analytics['basic_stats'] as Map<String, dynamic>?;
-    final avgStress = basicStats?['avg_stress'] as double? ?? 5.0;
-    final avgEnergy = basicStats?['avg_energy'] as double? ?? 5.0;
+    final recommendations = analytics.getTopRecommendations();
 
-    // Recomendaciones basadas en métricas reales
-    final recommendations = <Map<String, dynamic>>[];
-
-    if (avgStress > 6.0) {
-      recommendations.add({
-        'title': 'Stress Relief',
-        'subtitle': 'Your stress levels are elevated. Try these techniques.',
-        'color': const Color(0xFFE8D5C4),
-        'icon': Icons.spa,
-      });
-    }
-
-    if (avgEnergy < 5.0) {
-      recommendations.add({
-        'title': 'Energy Boost',
-        'subtitle': 'Quick exercises to boost your energy levels.',
-        'color': const Color(0xFFF4E4BC),
-        'icon': Icons.flash_on,
-      });
-    }
-
-    // Recomendación por defecto
-    recommendations.add({
-      'title': 'Mindful Moments',
-      'subtitle': 'Quick exercises for daily mindfulness.',
-      'color': const Color(0xFFF4E4BC),
-      'icon': Icons.self_improvement,
-    });
-
-    return FadeTransition(
-      opacity: _cardsAnimation,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Recommended for you',
+            'Recommended for You',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
-          SizedBox(
-            height: 200,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: recommendations.length,
-              separatorBuilder: (context, index) => const SizedBox(width: 16),
-              itemBuilder: (context, index) {
-                final rec = recommendations[index];
-                return _buildRecommendationCard(
-                  title: rec['title'] as String,
-                  subtitle: rec['subtitle'] as String,
-                  color: rec['color'] as Color,
-                  icon: rec['icon'] as IconData,
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecommendationCard({
-    required String title,
-    required String subtitle,
-    required Color color,
-    required IconData icon,
-  }) {
-    return Container(
-      width: 180,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 60,
-            height: 60,
+          ...recommendations.take(3).map((rec) => Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.white.withOpacity(0.05),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: const Color(0xFF8B4513),
-              size: 28,
+            child: Row(
+              children: [
+                Text(
+                  rec['emoji'] ?? '💡',
+                  style: const TextStyle(fontSize: 20),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    rec['title'] ?? '',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const Spacer(),
-          Text(
-            title,
-            style: const TextStyle(
-              color: Color(0xFF2D2D2D),
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: const Color(0xFF2D2D2D).withOpacity(0.7),
-              fontSize: 14,
-            ),
-          ),
+          )),
         ],
       ),
     );
   }
 
   Widget _buildFeaturedPrograms() {
-    return FadeTransition(
-      opacity: _cardsAnimation,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1391,95 +1317,71 @@ class _HomeScreenV2State extends State<HomeScreenV2>
             'Featured Programs',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 20,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 16),
-          _buildProgramCard(
-            title: 'Journey to Inner Peace',
-            subtitle: 'A comprehensive program for emotional well-being.',
-            isNew: true,
-            color: const Color(0xFFF4E4BC),
-          ),
-          const SizedBox(height: 16),
-          _buildProgramCard(
-            title: 'Daily Gratitude Practice',
-            subtitle: 'Cultivate a positive mindset with daily gratitude exercises.',
-            color: const Color(0xFFE8D5C4),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgramCard({
-    required String title,
-    required String subtitle,
-    required Color color,
-    bool isNew = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          Container(
+            height: 120,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
               children: [
-                if (isNew)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFD700),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      'NEW',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                if (isNew) const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                _buildProgramCard(
+                  'Mindfulness',
+                  'Daily meditation practice',
+                  Icons.self_improvement,
+                  const Color(0xFF667eea),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 14,
-                  ),
+                _buildProgramCard(
+                  'Gratitude',
+                  'Practice thankfulness',
+                  Icons.favorite,
+                  const Color(0xFF11998e),
+                ),
+                _buildProgramCard(
+                  'Sleep Better',
+                  'Improve your rest',
+                  Icons.bedtime,
+                  const Color(0xFF764ba2),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 16),
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(12),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgramCard(String title, String description, IconData icon, Color color) {
+    return Container(
+      width: 140,
+      margin: const EdgeInsets.only(right: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
             ),
-            child: const Icon(
-              Icons.spa,
-              color: Color(0xFF8B4513),
-              size: 28,
+          ),
+          const SizedBox(height: 4),
+          Text(
+            description,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 12,
             ),
           ),
         ],
@@ -1487,213 +1389,26 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  Widget _buildLoadingContent() {
-    return Column(
-      children: List.generate(5, (index) => Padding(
-        padding: const EdgeInsets.only(bottom: 16),
-        child: Container(
-          height: 120,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
-            ),
-          ),
-        ),
-      )),
-    );
+  // ============================================================================
+  // MÉTODOS DE UTILIDAD
+  // ============================================================================
+
+  String _getGreetingMessage() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning! ☀️';
+    if (hour < 18) return 'Good afternoon! 🌤️';
+    return 'Good evening! 🌙';
   }
 
-  Widget _buildAvatarContent(OptimizedUserModel user) {
-    if (user.hasProfilePicture) {
-      return Image.file(
-        File(user.profilePicturePath!),
-        fit: BoxFit.cover,
-        width: 46,
-        height: 46,
-        errorBuilder: (context, error, stackTrace) {
-          return _buildEmojiAvatar(user.avatarEmoji);
-        },
-      );
-    } else {
-      return _buildEmojiAvatar(user.avatarEmoji);
-    }
+  String _getStreakValue(OptimizedAnalyticsProvider analytics) {
+    final streakData = analytics.analytics['streak_data'] as Map<String, dynamic>?;
+    final currentStreak = streakData?['current_streak'] as int? ?? 0;
+    return currentStreak.toString();
   }
 
-  Widget _buildEmojiAvatar(String emoji) {
-    return Container(
-      width: 46,
-      height: 46,
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        gradient: LinearGradient(
-          colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-        ),
-      ),
-      child: Center(
-        child: Text(
-          emoji,
-          style: const TextStyle(fontSize: 24),
-        ),
-      ),
-    );
+  String _getMoodValue(OptimizedAnalyticsProvider analytics) {
+    final basicStats = analytics.analytics['basic_stats'] as Map<String, dynamic>?;
+    final avgMood = basicStats?['avg_mood'] as double? ?? 0.0;
+    return avgMood.toStringAsFixed(1);
   }
-}
-
-// ============================================================================
-// CUSTOM PAINTER PARA EL MOOD CHART
-// ============================================================================
-
-class MoodChartPainter extends CustomPainter {
-  final List<double> moodData;
-
-  MoodChartPainter(this.moodData);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (moodData.isEmpty) return;
-
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 3.0;
-
-    final pointPaint = Paint()
-      ..style = PaintingStyle.fill;
-
-    final gradientPaint = Paint()
-      ..shader = const LinearGradient(
-        colors: [Color(0xFF4ECDC4), Color(0xFF44A08D)],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-    paint.shader = gradientPaint.shader;
-
-    // Calcular posiciones de los puntos
-    final points = <Offset>[];
-    final double stepX = size.width / (moodData.length - 1);
-
-    for (int i = 0; i < moodData.length; i++) {
-      final double x = i * stepX;
-      // Normalizar mood data (0-10) a altura del canvas
-      final double normalizedMood = moodData[i] / 10.0;
-      final double y = size.height - (normalizedMood * size.height * 0.8) - (size.height * 0.1);
-      points.add(Offset(x, y));
-    }
-
-    // Dibujar área bajo la curva (relleno gradient)
-    if (points.length > 1) {
-      final areaPath = Path();
-      areaPath.moveTo(points[0].dx, size.height);
-      areaPath.lineTo(points[0].dx, points[0].dy);
-
-      for (int i = 1; i < points.length; i++) {
-        final currentPoint = points[i];
-        final previousPoint = points[i - 1];
-        final controlPointX = previousPoint.dx + (currentPoint.dx - previousPoint.dx) / 2;
-
-        areaPath.quadraticBezierTo(
-          controlPointX, previousPoint.dy,
-          currentPoint.dx, currentPoint.dy,
-        );
-      }
-
-      areaPath.lineTo(points.last.dx, size.height);
-      areaPath.close();
-
-      final areaPaint = Paint()
-        ..shader = LinearGradient(
-          colors: [
-            const Color(0xFF4ECDC4).withOpacity(0.3),
-            const Color(0xFF4ECDC4).withOpacity(0.1),
-          ],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
-
-      canvas.drawPath(areaPath, areaPaint);
-    }
-
-    // Dibujar línea principal
-    if (points.length > 1) {
-      final path = Path();
-      path.moveTo(points[0].dx, points[0].dy);
-
-      for (int i = 1; i < points.length; i++) {
-        // Crear curva suave entre puntos
-        final currentPoint = points[i];
-        final previousPoint = points[i - 1];
-
-        final controlPointX = previousPoint.dx + (currentPoint.dx - previousPoint.dx) / 2;
-
-        path.quadraticBezierTo(
-          controlPointX, previousPoint.dy,
-          currentPoint.dx, currentPoint.dy,
-        );
-      }
-
-      canvas.drawPath(path, paint);
-    }
-
-    // Dibujar líneas de referencia horizontales
-    final referencePaint = Paint()
-      ..color = Colors.white.withOpacity(0.1)
-      ..strokeWidth = 1.0;
-
-    // Línea de referencia en el medio (mood 5)
-    final midY = size.height - (0.5 * size.height * 0.8) - (size.height * 0.1);
-    canvas.drawLine(
-      Offset(0, midY),
-      Offset(size.width, midY),
-      referencePaint,
-    );
-
-    // Línea de referencia superior (mood 8)
-    final highY = size.height - (0.8 * size.height * 0.8) - (size.height * 0.1);
-    canvas.drawLine(
-      Offset(0, highY),
-      Offset(size.width, highY),
-      referencePaint,
-    );
-
-    // Dibujar puntos
-    for (int i = 0; i < points.length; i++) {
-      final point = points[i];
-      final moodValue = moodData[i];
-
-      // Color del punto basado en el valor del mood
-      Color pointColor;
-      if (moodValue >= 8.0) {
-        pointColor = const Color(0xFF4ECDC4); // Excelente
-      } else if (moodValue >= 6.0) {
-        pointColor = const Color(0xFFFFD700); // Bueno
-      } else if (moodValue >= 4.0) {
-        pointColor = const Color(0xFFFFA500); // Regular
-      } else {
-        pointColor = const Color(0xFFFF6B6B); // Necesita atención
-      }
-
-      // Círculo exterior (sombra)
-      pointPaint.color = Colors.black.withOpacity(0.3);
-      canvas.drawCircle(point + const Offset(1, 1), 7, pointPaint);
-
-      // Círculo principal
-      pointPaint.color = pointColor;
-      canvas.drawCircle(point, 6, pointPaint);
-
-      // Círculo interior (brillo)
-      pointPaint.color = Colors.white.withOpacity(0.9);
-      canvas.drawCircle(point, 3, pointPaint);
-
-      // Punto central
-      pointPaint.color = pointColor;
-      canvas.drawCircle(point, 1.5, pointPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
