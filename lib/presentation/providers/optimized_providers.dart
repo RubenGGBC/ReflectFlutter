@@ -3,8 +3,11 @@
 // AUTH PROVIDER ACTUALIZADO CON SOPORTE PARA FOTOS DE PERFIL
 // ============================================================================
 
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import '../../data/models/goal_model.dart';
 
 import '../../data/services/optimized_database_service.dart';
 import '../../data/services/image_picker_service.dart'; // ✅ NUEVO IMPORT
@@ -1676,5 +1679,563 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
   void _clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+}
+// lib/presentation/providers/goals_provider.dart
+// ============================================================================
+// GOALS PROVIDER - GESTIÓN COMPLETA DE OBJETIVOS CON AUTO-TRACKING
+// ============================================================================
+
+
+
+class GoalsProvider with ChangeNotifier {
+  final OptimizedDatabaseService _databaseService;
+  final Logger _logger = Logger();
+
+  List<GoalModel> _goals = [];
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  GoalsProvider(this._databaseService);
+
+  // Getters principales
+  List<GoalModel> get goals => List.unmodifiable(_goals);
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+
+  // Getters específicos
+  List<GoalModel> get activeGoals =>
+      _goals.where((goal) => goal.status == GoalStatus.active).toList();
+
+  List<GoalModel> get completedGoals =>
+      _goals.where((goal) => goal.status == GoalStatus.completed).toList();
+
+  List<GoalModel> get archivedGoals =>
+      _goals.where((goal) => goal.status == GoalStatus.archived).toList();
+
+  // Métricas agregadas
+  double get averageProgress {
+    if (activeGoals.isEmpty) return 0.0;
+    final totalProgress = activeGoals.fold<double>(
+      0.0,
+          (sum, goal) => sum + goal.progress,
+    );
+    return totalProgress / activeGoals.length;
+  }
+
+  int get totalGoalsCount => _goals.length;
+
+  Map<GoalType, int> get goalsByType {
+    final Map<GoalType, int> result = {};
+    for (final goal in _goals) {
+      result[goal.type] = (result[goal.type] ?? 0) + 1;
+    }
+    return result;
+  }
+
+  /// Cargar objetivos del usuario
+  Future<void> loadUserGoals(int userId) async {
+    _logger.d('🎯 Cargando objetivos para usuario: $userId');
+    _setLoading(true);
+    _clearError();
+
+    try {
+      _goals = await _databaseService.getUserGoals(userId);
+      _logger.i('✅ Cargados ${_goals.length} objetivos');
+    } catch (e) {
+      _logger.e('❌ Error cargando objetivos: $e');
+      _setError('Error cargando objetivos');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Crear nuevo objetivo
+  Future<bool> createGoal({
+    required int userId,
+    required String title,
+    required String description,
+    required String type,
+    required double targetValue,
+  }) async {
+    _logger.i('🎯 Creando objetivo: $title');
+    _setLoading(true);
+    _clearError();
+
+    try {
+      // Convertir string a enum
+      final goalType = _parseGoalType(type);
+
+      final goal = GoalModel(
+        userId: userId,
+        title: title,
+        description: description,
+        type: goalType,
+        targetValue: targetValue,
+        createdAt: DateTime.now(),
+      );
+
+      final goalId = await _databaseService.createGoal(goal);
+
+      if (goalId != null) {
+        final savedGoal = goal.copyWith(id: goalId);
+        _goals.insert(0, savedGoal);
+
+        _logger.i('✅ Objetivo creado exitosamente: $title');
+        notifyListeners();
+        return true;
+      } else {
+        _setError('No se pudo crear el objetivo');
+        return false;
+      }
+    } catch (e) {
+      _logger.e('❌ Error creando objetivo: $e');
+      _setError('Error creando objetivo');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Actualizar objetivo existente
+  Future<bool> updateGoal(
+      int goalId, {
+        String? title,
+        String? description,
+        String? type,
+        double? targetValue,
+        double? currentValue,
+      }) async {
+    _logger.i('📝 Actualizando objetivo: $goalId');
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final goalIndex = _goals.indexWhere((g) => g.id == goalId);
+      if (goalIndex == -1) {
+        _setError('Objetivo no encontrado');
+        return false;
+      }
+
+      final existingGoal = _goals[goalIndex];
+      final updatedGoal = existingGoal.copyWith(
+        title: title,
+        description: description,
+        type: type != null ? _parseGoalType(type) : null,
+        targetValue: targetValue,
+        currentValue: currentValue,
+      );
+
+      final success = await _databaseService.updateGoal(updatedGoal);
+
+      if (success) {
+        _goals[goalIndex] = updatedGoal;
+        _logger.i('✅ Objetivo actualizado exitosamente');
+        notifyListeners();
+        return true;
+      } else {
+        _setError('No se pudo actualizar el objetivo');
+        return false;
+      }
+    } catch (e) {
+      _logger.e('❌ Error actualizando objetivo: $e');
+      _setError('Error actualizando objetivo');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Actualizar progreso de un objetivo
+  Future<bool> updateGoalProgress(int goalId, double newValue) async {
+    _logger.d('📊 Actualizando progreso objetivo $goalId: $newValue');
+
+    try {
+      final goalIndex = _goals.indexWhere((g) => g.id == goalId);
+      if (goalIndex == -1) return false;
+
+      final goal = _goals[goalIndex];
+      final updatedGoal = goal.copyWith(currentValue: newValue);
+
+      // Verificar si se completó automáticamente
+      if (updatedGoal.progress >= 1.0 && goal.status == GoalStatus.active) {
+        final completedGoal = updatedGoal.copyWith(
+          status: GoalStatus.completed,
+          completedAt: DateTime.now(),
+        );
+
+        final success = await _databaseService.updateGoal(completedGoal);
+        if (success) {
+          _goals[goalIndex] = completedGoal;
+          _logger.i('🎉 ¡Objetivo completado automáticamente!: ${goal.title}');
+        }
+      } else {
+        final success = await _databaseService.updateGoal(updatedGoal);
+        if (success) {
+          _goals[goalIndex] = updatedGoal;
+        }
+      }
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _logger.e('❌ Error actualizando progreso: $e');
+      return false;
+    }
+  }
+
+  /// Completar objetivo manualmente
+  Future<bool> completeGoal(int goalId) async {
+    _logger.i('✅ Completando objetivo: $goalId');
+
+    try {
+      final goalIndex = _goals.indexWhere((g) => g.id == goalId);
+      if (goalIndex == -1) return false;
+
+      final goal = _goals[goalIndex];
+      final completedGoal = goal.copyWith(
+        status: GoalStatus.completed,
+        completedAt: DateTime.now(),
+        currentValue: goal.targetValue, // Marcar como 100% completado
+      );
+
+      final success = await _databaseService.updateGoal(completedGoal);
+
+      if (success) {
+        _goals[goalIndex] = completedGoal;
+        _logger.i('🎉 Objetivo completado: ${goal.title}');
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _logger.e('❌ Error completando objetivo: $e');
+      return false;
+    }
+  }
+
+  /// Reactivar objetivo completado
+  Future<bool> reactivateGoal(int goalId) async {
+    _logger.i('🔄 Reactivando objetivo: $goalId');
+
+    try {
+      final goalIndex = _goals.indexWhere((g) => g.id == goalId);
+      if (goalIndex == -1) return false;
+
+      final goal = _goals[goalIndex];
+      final reactivatedGoal = goal.copyWith(
+        status: GoalStatus.active,
+        completedAt: null,
+      );
+
+      final success = await _databaseService.updateGoal(reactivatedGoal);
+
+      if (success) {
+        _goals[goalIndex] = reactivatedGoal;
+        _logger.i('🔄 Objetivo reactivado: ${goal.title}');
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _logger.e('❌ Error reactivando objetivo: $e');
+      return false;
+    }
+  }
+
+  /// Archivar objetivo
+  Future<bool> archiveGoal(int goalId) async {
+    _logger.i('📦 Archivando objetivo: $goalId');
+
+    try {
+      final goalIndex = _goals.indexWhere((g) => g.id == goalId);
+      if (goalIndex == -1) return false;
+
+      final goal = _goals[goalIndex];
+      final archivedGoal = goal.copyWith(status: GoalStatus.archived);
+
+      final success = await _databaseService.updateGoal(archivedGoal);
+
+      if (success) {
+        _goals[goalIndex] = archivedGoal;
+        _logger.i('📦 Objetivo archivado: ${goal.title}');
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _logger.e('❌ Error archivando objetivo: $e');
+      return false;
+    }
+  }
+
+  /// Eliminar objetivo
+  Future<bool> deleteGoal(int goalId) async {
+    _logger.i('🗑️ Eliminando objetivo: $goalId');
+
+    try {
+      final success = await _databaseService.deleteGoal(goalId);
+
+      if (success) {
+        _goals.removeWhere((g) => g.id == goalId);
+        _logger.i('🗑️ Objetivo eliminado exitosamente');
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _logger.e('❌ Error eliminando objetivo: $e');
+      return false;
+    }
+  }
+
+  /// Auto-actualizar progreso basado en datos del usuario
+  Future<void> updateGoalsProgress(int userId) async {
+    _logger.d('🔄 Auto-actualizando progreso de objetivos');
+
+    try {
+      for (final goal in activeGoals) {
+        double newProgress = 0.0;
+
+        switch (goal.type) {
+          case GoalType.consistency:
+            newProgress = await _calculateConsistencyProgress(userId, goal);
+            break;
+          case GoalType.mood:
+            newProgress = await _calculateMoodProgress(userId, goal);
+            break;
+          case GoalType.positiveMoments:
+            newProgress = await _calculatePositiveMomentsProgress(userId, goal);
+            break;
+          case GoalType.stressReduction:
+            newProgress = await _calculateStressReductionProgress(userId, goal);
+            break;
+        }
+
+        if (newProgress != goal.currentValue) {
+          await updateGoalProgress(goal.id!, newProgress);
+        }
+      }
+    } catch (e) {
+      _logger.e('❌ Error auto-actualizando progreso: $e');
+    }
+  }
+
+  /// Calcular progreso de consistencia (días consecutivos)
+  Future<double> _calculateConsistencyProgress(int userId, GoalModel goal) async {
+    try {
+      // Obtener datos de streak del analytics
+      final analytics = await _databaseService.getUserAnalytics(userId, days: 30);
+      final streakData = analytics['streak_data'] as Map<String, dynamic>?;
+      final currentStreak = streakData?['current_streak'] as int? ?? 0;
+
+      return currentStreak.toDouble();
+    } catch (e) {
+      _logger.e('Error calculando progreso de consistencia: $e');
+      return goal.currentValue;
+    }
+  }
+
+  /// Calcular progreso de mood (puntuación promedio)
+  Future<double> _calculateMoodProgress(int userId, GoalModel goal) async {
+    try {
+      final analytics = await _databaseService.getUserAnalytics(userId, days: 30);
+      final basicStats = analytics['basic_stats'] as Map<String, dynamic>?;
+      final avgMood = basicStats?['avg_mood'] as double? ?? 0.0;
+
+      // Convertir mood de 0-10 a valor de progreso
+      return avgMood;
+    } catch (e) {
+      _logger.e('Error calculando progreso de mood: $e');
+      return goal.currentValue;
+    }
+  }
+
+  /// Calcular progreso de momentos positivos
+  Future<double> _calculatePositiveMomentsProgress(int userId, GoalModel goal) async {
+    try {
+      // Obtener momentos positivos del último mes
+      final moments = await _databaseService.getInteractiveMoments(
+        userId: userId,
+        type: 'positive',
+        limit: 1000,
+      );
+
+      final positiveMomentsCount = moments.length;
+      return positiveMomentsCount.toDouble();
+    } catch (e) {
+      _logger.e('Error calculando progreso de momentos positivos: $e');
+      return goal.currentValue;
+    }
+  }
+
+  /// Calcular progreso de reducción de estrés
+  Future<double> _calculateStressReductionProgress(int userId, GoalModel goal) async {
+    try {
+      final analytics = await _databaseService.getUserAnalytics(userId, days: 30);
+      final basicStats = analytics['basic_stats'] as Map<String, dynamic>?;
+      final avgStress = basicStats?['avg_stress'] as double? ?? 5.0;
+
+      // Para reducción de estrés, menor valor = mejor progreso
+      // Convertir: si objetivo es reducir estrés a 3, y actual es 7, progreso sería bajo
+      final stressReduction = math.max(0, 10 - avgStress);
+      return stressReduction;
+    } catch (e) {
+      _logger.e('Error calculando progreso de reducción de estrés: $e');
+      return goal.currentValue;
+    }
+  }
+
+  /// Obtener objetivos por tipo específico
+  List<GoalModel> getGoalsByType(GoalType type) {
+    return _goals.where((goal) => goal.type == type).toList();
+  }
+
+  /// Obtener estadísticas de objetivos
+  Map<String, dynamic> getGoalsStatistics() {
+    final total = _goals.length;
+    final active = activeGoals.length;
+    final completed = completedGoals.length;
+    final archived = archivedGoals.length;
+
+    return {
+      'total': total,
+      'active': active,
+      'completed': completed,
+      'archived': archived,
+      'completion_rate': total > 0 ? completed / total : 0.0,
+      'average_progress': averageProgress,
+      'goals_by_type': goalsByType,
+    };
+  }
+
+  // Métodos privados de utilidad
+  GoalType _parseGoalType(String type) {
+    switch (type.toLowerCase()) {
+      case 'consistency':
+        return GoalType.consistency;
+      case 'mood':
+        return GoalType.mood;
+      case 'positivemoments':
+        return GoalType.positiveMoments;
+      case 'stressreduction':
+        return GoalType.stressReduction;
+      default:
+        return GoalType.consistency;
+    }
+  }
+
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void _setError(String error) {
+    _errorMessage = error;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+}
+
+// ============================================================================
+// EXTENSIÓN PARA EL OPTIMIZED DATABASE SERVICE - MÉTODOS DE GOALS
+// ============================================================================
+
+extension GoalsDatabase on OptimizedDatabaseService {
+
+  /// Obtener objetivos del usuario
+  Future<List<GoalModel>> getUserGoals(int userId) async {
+    try {
+      final db = await database;
+      final results = await db.query(
+        'user_goals',
+        where: 'user_id = ?',
+        whereArgs: [userId],
+        orderBy: 'created_at DESC',
+      );
+
+      return results.map((row) => GoalModel.fromDatabase(row)).toList();
+    } catch (e) {
+      throw Exception('Error obteniendo objetivos: $e');
+    }
+  }
+
+  /// Crear nuevo objetivo
+  Future<int?> createGoal(GoalModel goal) async {
+    try {
+      final db = await database;
+      return await db.insert('user_goals', goal.toDatabase());
+    } catch (e) {
+      throw Exception('Error creando objetivo: $e');
+    }
+  }
+
+  /// Actualizar objetivo
+  Future<bool> updateGoal(GoalModel goal) async {
+    try {
+      final db = await database;
+      final rowsAffected = await db.update(
+        'user_goals',
+        goal.toDatabase(),
+        where: 'id = ?',
+        whereArgs: [goal.id],
+      );
+      return rowsAffected > 0;
+    } catch (e) {
+      throw Exception('Error actualizando objetivo: $e');
+    }
+  }
+
+  /// Eliminar objetivo
+  Future<bool> deleteGoal(int goalId) async {
+    try {
+      final db = await database;
+      final rowsAffected = await db.delete(
+        'user_goals',
+        where: 'id = ?',
+        whereArgs: [goalId],
+      );
+      return rowsAffected > 0;
+    } catch (e) {
+      throw Exception('Error eliminando objetivo: $e');
+    }
+  }
+
+  /// Obtener objetivos por tipo
+  Future<List<GoalModel>> getGoalsByType(int userId, GoalType type) async {
+    try {
+      final db = await database;
+      final results = await db.query(
+        'user_goals',
+        where: 'user_id = ? AND type = ?',
+        whereArgs: [userId, type.toString()],
+        orderBy: 'created_at DESC',
+      );
+
+      return results.map((row) => GoalModel.fromDatabase(row)).toList();
+    } catch (e) {
+      throw Exception('Error obteniendo objetivos por tipo: $e');
+    }
+  }
+
+  /// Obtener objetivos por estado
+  Future<List<GoalModel>> getGoalsByStatus(int userId, GoalStatus status) async {
+    try {
+      final db = await database;
+      final results = await db.query(
+        'user_goals',
+        where: 'user_id = ? AND status = ?',
+        whereArgs: [userId, status.toString()],
+        orderBy: 'created_at DESC',
+      );
+
+      return results.map((row) => GoalModel.fromDatabase(row)).toList();
+    } catch (e) {
+      throw Exception('Error obteniendo objetivos por estado: $e');
+    }
   }
 }

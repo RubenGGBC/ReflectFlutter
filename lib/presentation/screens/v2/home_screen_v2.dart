@@ -1,6 +1,6 @@
-// lib/presentation/screens/v2/home_screen_v2.dart - CORRECTED VERSION
+// lib/presentation/screens/v2/home_screen_v2.dart - VERSIÓN FINAL OPTIMIZADA
 // ============================================================================
-// PANTALLA DE INICIO CORREGIDA CON FOTO DE PERFIL Y MENSAJE DE BIENVENIDA
+// PANTALLA DE INICIO HÍBRIDA INSPIRADA EN LAS IMÁGENES CON TODAS LAS MÉTRICAS
 // ============================================================================
 
 import 'dart:io';
@@ -18,7 +18,7 @@ import '../../../data/models/optimized_models.dart';
 import '../components/modern_design_system.dart';
 
 // Widgets personalizados
-import '../../widgets/profile_picture_widget.dart'; // ✅ NUEVO IMPORT
+import '../../widgets/profile_picture_widget.dart';
 
 class HomeScreenV2 extends StatefulWidget {
   const HomeScreenV2({super.key});
@@ -34,10 +34,15 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   late AnimationController _slideController;
   late AnimationController _profilePictureController;
   late AnimationController _welcomeTextController;
+  late AnimationController _cardsController;
+  late AnimationController _pulseController;
+
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _profilePictureAnimation;
   late Animation<Offset> _welcomeTextAnimation;
+  late Animation<double> _cardsAnimation;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
@@ -56,6 +61,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     _slideController.dispose();
     _profilePictureController.dispose();
     _welcomeTextController.dispose();
+    _cardsController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -74,6 +81,14 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
     _welcomeTextController = AnimationController(
       duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+    _cardsController = AnimationController(
+      duration: const Duration(milliseconds: 1400),
+      vsync: this,
+    );
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
 
@@ -104,8 +119,24 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       curve: Curves.easeOutBack,
     ));
 
+    _cardsAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _cardsController,
+        curve: Curves.easeOutBack,
+      ),
+    );
+
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _pulseController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
     // Secuencia de animaciones
     _fadeController.forward();
+    _pulseController.repeat(reverse: true);
+
     Future.delayed(const Duration(milliseconds: 200), () {
       if (mounted) {
         _slideController.forward();
@@ -117,6 +148,11 @@ class _HomeScreenV2State extends State<HomeScreenV2>
         _welcomeTextController.forward();
       }
     });
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        _cardsController.forward();
+      }
+    });
   }
 
   void _loadInitialData() {
@@ -124,14 +160,13 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     final user = authProvider.currentUser;
 
     if (user != null) {
-      // ✅ MÉTODOS CORREGIDOS - usando los que realmente existen
       try {
         final momentsProvider = context.read<OptimizedMomentsProvider>();
         final analyticsProvider = context.read<OptimizedAnalyticsProvider>();
 
-        // Cargar datos usando los métodos correctos del provider
-        momentsProvider.loadTodayMoments(user.id); // ✅ EXISTE
-        analyticsProvider.loadCompleteAnalytics(user.id, days: 7); // ✅ EXISTE
+        // Cargar datos completos
+        momentsProvider.loadTodayMoments(user.id);
+        analyticsProvider.loadCompleteAnalytics(user.id, days: 30);
       } catch (e) {
         debugPrint('Error loading initial data: $e');
       }
@@ -153,56 +188,75 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       );
     }
 
-    // ✅ MOSTRAR LOADING STATE SI ESTÁN CARGANDO DATOS
     final isLoadingData = momentsProvider.isLoading || analyticsProvider.isLoading;
 
     return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0B),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: ModernColors.primaryGradient,
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFF1A1A2E), // Azul oscuro
+              Color(0xFF16213E), // Azul medio
+              Color(0xFF0F3460), // Azul más claro
+            ],
           ),
         ),
         child: SafeArea(
           child: FadeTransition(
             opacity: _fadeAnimation,
-            child: SlideTransition(
-              position: _slideAnimation,
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  _loadInitialData();
-                },
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.all(ModernSpacing.lg),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // ✅ Header siempre visible (con foto de perfil y bienvenida)
-                      _buildWelcomeHeader(user),
-                      const SizedBox(height: ModernSpacing.xl),
+            child: RefreshIndicator(
+              onRefresh: () async {
+                _loadInitialData();
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 16,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header moderno (inspirado en imagen 3)
+                    _buildModernHeader(user),
+                    const SizedBox(height: 32),
 
-                      // ✅ Mostrar loading o contenido según el estado
-                      if (isLoadingData) ...[
-                        _buildLoadingContent(),
-                      ] else ...[
-                        _buildMomentsOverview(),
-                        const SizedBox(height: ModernSpacing.lg),
-                        _buildReflectionStatus(),
-                        const SizedBox(height: ModernSpacing.lg),
-                        _buildWellbeingMetrics(),
-                        const SizedBox(height: ModernSpacing.lg),
-                        _buildTodayInsights(),
-                        const SizedBox(height: ModernSpacing.lg),
-                      ],
+                    // Mensaje de bienvenida personalizado (inspirado en imagen 2)
+                    _buildWelcomeMessage(user),
+                    const SizedBox(height: 24),
 
-                      // ✅ Acciones rápidas siempre visibles
-                      _buildQuickActions(),
-                      const SizedBox(height: ModernSpacing.xl),
+                    // Contenido principal
+                    if (isLoadingData) ...[
+                      _buildLoadingContent(),
+                    ] else ...[
+                      // Métricas principales híbridas (inspirado en imagen 1)
+                      _buildHybridMetricsCards(analyticsProvider, momentsProvider),
+                      const SizedBox(height: 24),
+
+                      // Progreso semanal con gráfico (inspirado en imagen 3)
+                      _buildWeeklyProgressChart(analyticsProvider),
+                      const SizedBox(height: 24),
+
+                      // Tracker de humor (inspirado en imagen 3)
+                      _buildMoodTracker(analyticsProvider),
+                      const SizedBox(height: 24),
+
+                      // Tareas de hoy (inspirado en imagen 3)
+                      _buildTodayTasks(momentsProvider),
+                      const SizedBox(height: 24),
+
+                      // Recomendaciones personalizadas (inspirado en imagen 2)
+                      _buildPersonalizedRecommendations(analyticsProvider),
+                      const SizedBox(height: 24),
                     ],
-                  ),
+
+                    // Programas destacados (inspirado en imagen 2)
+                    _buildFeaturedPrograms(),
+                    const SizedBox(height: 100), // Espacio para el bottom nav
+                  ],
                 ),
               ),
             ),
@@ -212,65 +266,89 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  // ✅ NUEVO: Widget de estado de carga
-  Widget _buildLoadingContent() {
-    return Column(
-      children: [
-        // Loading cards con shimmer effect
-        Container(
-          height: 120,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+  Widget _buildMomentsStatsRow(OptimizedMomentsProvider moments) {
+    final todayCount = moments.todayCount;
+    final totalCount = moments.totalCount;
+    final positiveCount = moments.positiveCount;
+    final negativeCount = moments.negativeCount;
+
+    // Calcular ratio de momentos positivos
+    final positiveRatio = totalCount > 0 ? (positiveCount / totalCount) : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildMiniStat(
+                todayCount.toString(),
+                'Today',
+                const Color(0xFFFFD700)
             ),
           ),
-        ),
-        const SizedBox(height: ModernSpacing.lg),
-        Container(
-          height: 80,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
+          Container(
+            width: 1,
+            height: 20,
+            color: Colors.white.withOpacity(0.2),
+          ),
+          Expanded(
+            child: _buildMiniStat(
+                '${(positiveRatio * 100).round()}%',
+                'Positive',
+                const Color(0xFF4ECDC4)
+            ),
+          ),
+          Container(
+            width: 1,
+            height: 20,
+            color: Colors.white.withOpacity(0.2),
+          ),
+          Expanded(
+            child: _buildMiniStat(
+                totalCount.toString(),
+                'Total',
+                const Color(0xFF45B7D1)
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniStat(String value, String label, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            color: color,
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: ModernSpacing.lg),
-        Container(
-          height: 200,
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(16),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.6),
+            fontSize: 10,
           ),
         ),
       ],
     );
   }
 
-  // ✅ Header de bienvenida con foto de perfil
-  Widget _buildWelcomeHeader(OptimizedUserModel user) {
-    return Container(
-      padding: const EdgeInsets.all(ModernSpacing.lg),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
+  Widget _buildModernHeader(OptimizedUserModel user) {
+    return SlideTransition(
+      position: _slideAnimation,
       child: Row(
         children: [
-          // ✅ FOTO DE PERFIL CON ANIMACIÓN
+          // Profile picture con animación
           ScaleTransition(
             scale: _profilePictureAnimation,
             child: GestureDetector(
@@ -278,36 +356,27 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                 Navigator.pushNamed(context, '/profile');
               },
               child: Container(
-                width: 80,
-                height: 80,
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: const LinearGradient(
-                    colors: [
-                      Color(0xFF3B82F6), // Azul
-                      Color(0xFF8B5CF6), // Púrpura
-                      Color(0xFF10B981), // Verde
-                      Color(0xFFF59E0B), // Amarillo
-                      Color(0xFFEF4444), // Rojo
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      blurRadius: 10,
+                      color: const Color(0xFFFFD700).withOpacity(0.3),
+                      blurRadius: 12,
                       offset: const Offset(0, 4),
                     ),
                   ],
                 ),
-                padding: const EdgeInsets.all(4),
+                padding: const EdgeInsets.all(2),
                 child: Container(
                   decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     color: Colors.white,
                   ),
-                  padding: const EdgeInsets.all(2),
                   child: ClipOval(
                     child: _buildAvatarContent(user),
                   ),
@@ -315,94 +384,1136 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               ),
             ),
           ),
-          const SizedBox(width: ModernSpacing.md),
-          // ✅ MENSAJE DE BIENVENIDA CON ANIMACIÓN
+          const SizedBox(width: 16),
+          // Usuario info (como imagen 3)
           Expanded(
-            child: SlideTransition(
-              position: _welcomeTextAnimation,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Mensaje "Bienvenido"
-                  Text(
-                    'Bienvenido,',
-                    style: ModernTypography.bodyLarge.copyWith(
-                      color: Colors.white.withOpacity(0.9),
-                      fontWeight: FontWeight.w500,
-                    ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  user.name,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
-                  const SizedBox(height: 4),
-                  // Nombre del usuario
-                  Text(
-                    user.name,
-                    style: ModernTypography.headlineMedium.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black.withOpacity(0.2),
-                          offset: const Offset(0, 1),
-                          blurRadius: 2,
-                        ),
-                      ],
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  'Welcome back',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.7),
                   ),
-                  const SizedBox(height: 4),
-                  // Saludo contextual
-                  Row(
-                    children: [
-                      Text(
-                        _getGreeting(),
-                        style: ModernTypography.bodyMedium.copyWith(
-                          color: Colors.white.withOpacity(0.8),
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        _getGreetingEmoji(),
-                        style: const TextStyle(fontSize: 16),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-          // ✅ ICONO DE CONFIGURACIÓN
-          IconButton(
-            onPressed: () {
-              Navigator.pushNamed(context, '/profile');
-            },
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.settings_outlined,
-                color: Colors.white,
-                size: 20,
+          // Ícono de configuración
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFD700).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: const Color(0xFFFFD700).withOpacity(0.3),
               ),
             ),
-            tooltip: 'Configuración',
+            child: IconButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/profile');
+              },
+              icon: const Icon(
+                Icons.settings_outlined,
+                color: Color(0xFFFFD700),
+                size: 24,
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ✅ Método para mostrar contenido del avatar
+  Widget _buildWelcomeMessage(OptimizedUserModel user) {
+    return SlideTransition(
+      position: _welcomeTextAnimation,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Welcome back, ${user.name}',
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Based on your data, we've curated some recommendations for you.",
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.white.withOpacity(0.7),
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHybridMetricsCards(OptimizedAnalyticsProvider analytics, OptimizedMomentsProvider moments) {
+    final basicStats = analytics.analytics['basic_stats'] as Map<String, dynamic>?;
+    final streakData = analytics.analytics['streak_data'] as Map<String, dynamic>?;
+
+    // Usar los métodos reales disponibles
+    final todayMomentsCount = moments.todayCount;
+    final totalMomentsCount = moments.totalCount;
+    final currentStreak = streakData?['current_streak'] as int? ?? 0;
+    final avgMood = basicStats?['avg_mood'] as double? ?? 0.0;
+    final wellbeingScore = (avgMood * 10).round();
+
+    return FadeTransition(
+      opacity: _cardsAnimation,
+      child: Row(
+        children: [
+          // Card principal (inspirado en imagen 1 - Today's)
+          Expanded(
+            child: _buildMainMetricCard(
+              title: "Today's",
+              value: todayMomentsCount.toString().padLeft(5, '0'),
+              subtitle: "${DateTime.now().hour} am ${(avgMood * 1.5).toStringAsFixed(1)}cM",
+              gradient: const LinearGradient(
+                colors: [Color(0xFF667EEA), Color(0xFF764BA2)],
+              ),
+              hasChart: true,
+              hasIndicator: true,
+            ),
+          ),
+          const SizedBox(width: 16),
+          // Card secundario (inspirado en imagen 1 - Daily Insights)
+          Expanded(
+            child: _buildMainMetricCard(
+              title: "Wellbeing",
+              value: "$wellbeingScore%",
+              subtitle: "${DateTime.now().hour} am, ${currentStreak}st",
+              gradient: const LinearGradient(
+                colors: [Color(0xFF2D3748), Color(0xFF4A5568)],
+              ),
+              hasPlayButton: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainMetricCard({
+    required String title,
+    required String value,
+    required String subtitle,
+    required LinearGradient gradient,
+    bool hasChart = false,
+    bool hasPlayButton = false,
+    bool hasIndicator = false,
+  }) {
+    return Container(
+      height: 160,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header row
+          Row(
+            children: [
+              if (hasChart) const Icon(Icons.arrow_back, color: Colors.white, size: 20),
+              if (hasChart) const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+              if (hasIndicator) _buildDotsIndicator(),
+              if (hasPlayButton)
+                AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _pulseAnimation.value,
+                      child: Container(
+                        width: 30,
+                        height: 30,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.play_arrow,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+            ],
+          ),
+          const Spacer(),
+          // Value
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 36,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 14,
+            ),
+          ),
+          if (hasChart) ...[
+            const SizedBox(height: 8),
+            // Mini gráfico simplificado
+            Container(
+              height: 2,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(1),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDotsIndicator() {
+    return Row(
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.5),
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.5),
+            shape: BoxShape.circle,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWeeklyProgressChart(OptimizedAnalyticsProvider analytics) {
+    final basicStats = analytics.analytics['basic_stats'] as Map<String, dynamic>?;
+    final streakData = analytics.analytics['streak_data'] as Map<String, dynamic>?;
+    final moodTrends = analytics.analytics['mood_trends'] as List<dynamic>? ?? [];
+
+    final currentStreak = streakData?['current_streak'] as int? ?? 0;
+    final avgMood = basicStats?['avg_mood'] as double? ?? 0.0;
+    final totalEntries = basicStats?['total_entries'] as int? ?? 0;
+
+    return FadeTransition(
+      opacity: _cardsAnimation,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A2E),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'Weekly Progress',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  'View Details',
+                  style: TextStyle(
+                    color: const Color(0xFFFFD700),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            // Gráfico mejorado con datos reales
+            _buildAdvancedChart(moodTrends),
+            const SizedBox(height: 24),
+            // Métricas de progreso con datos reales
+            Row(
+              children: [
+                Expanded(
+                  child: _buildProgressMetric(currentStreak.toString(), 'Days Streak'),
+                ),
+                Expanded(
+                  child: _buildProgressMetric('${avgMood.toStringAsFixed(1)}', 'Avg. Mood'),
+                ),
+                Expanded(
+                  child: _buildProgressMetric(totalEntries.toString(), 'Total Entries'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdvancedChart(List<dynamic> moodTrends) {
+    if (moodTrends.isEmpty) {
+      return _buildSimpleChart(); // Fallback al gráfico simple
+    }
+
+    // Tomar los últimos 7 días de datos
+    final last7Days = moodTrends.take(7).toList();
+    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    return Container(
+      height: 80,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: List.generate(7, (index) {
+          final dayData = index < last7Days.length ? last7Days[index] : null;
+          final moodScore = (dayData?['mood_score'] as num?)?.toDouble() ?? 0.0;          final normalizedHeight = moodScore / 10.0; // Normalizar de 0-10 a 0-1
+
+          return Expanded(
+            child: _buildChartBar(
+              normalizedHeight.clamp(0.1, 1.0),
+              days[index],
+              isHighlighted: moodScore > 7.0,
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  Widget _buildSimpleChart() {
+    return Container(
+      height: 80,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(child: _buildChartBar(0.4, 'Mon')),
+          Expanded(child: _buildChartBar(0.6, 'Tue')),
+          Expanded(child: _buildChartBar(0.8, 'Wed')),
+          Expanded(child: _buildChartBar(0.9, 'Thu', isHighlighted: true)),
+          Expanded(child: _buildChartBar(1.0, 'Fri', isHighlighted: true)),
+          Expanded(child: _buildChartBar(0.3, 'Sat')),
+          Expanded(child: _buildChartBar(0.7, 'Sun')),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChartBar(double height, String day, {bool isHighlighted = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Container(
+            width: 8,
+            height: 60 * height,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: isHighlighted
+                    ? [const Color(0xFF4ECDC4), const Color(0xFF44A08D)]
+                    : [const Color(0xFFFFD700), const Color(0xFFFFA500)],
+              ),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            day,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressMetric(String value, String label) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Color(0xFFFFD700),
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.7),
+            fontSize: 12,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMoodTracker(OptimizedAnalyticsProvider analytics) {
+    final basicStats = analytics.analytics['basic_stats'] as Map<String, dynamic>?;
+    final moodTrends = analytics.analytics['mood_trends'] as List<dynamic>? ?? [];
+    final avgMood = basicStats?['avg_mood'] as double? ?? 7.5;
+
+    String moodMessage;
+    Color moodColor;
+    if (avgMood >= 8.0) {
+      moodMessage = "Your mood has been excellent this week!";
+      moodColor = const Color(0xFF4ECDC4);
+    } else if (avgMood >= 6.0) {
+      moodMessage = "Your mood has been generally positive this week!";
+      moodColor = const Color(0xFFFFD700);
+    } else if (avgMood >= 4.0) {
+      moodMessage = "Your mood has been stable this week.";
+      moodColor = const Color(0xFFFFA500);
+    } else {
+      moodMessage = "Consider some self-care practices this week.";
+      moodColor = const Color(0xFFFF6B6B);
+    }
+
+    return FadeTransition(
+      opacity: _cardsAnimation,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1A2E),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header con promedio de mood
+            Row(
+              children: [
+                const Text(
+                  'Mood Tracker',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: moodColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: moodColor.withOpacity(0.4)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: BoxDecoration(
+                          color: moodColor,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        avgMood.toStringAsFixed(1),
+                        style: TextStyle(
+                          color: moodColor,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Gráfico de mood con línea y puntos
+            _buildMoodChart(moodTrends),
+
+            const SizedBox(height: 16),
+
+            // Días de la semana
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                  .asMap()
+                  .entries
+                  .map((entry) {
+                final index = entry.key;
+                final day = entry.value;
+                final isToday = index == DateTime.now().weekday - 1;
+
+                return Text(
+                  day,
+                  style: TextStyle(
+                    color: isToday
+                        ? const Color(0xFFFFD700)
+                        : Colors.white.withOpacity(0.6),
+                    fontSize: 12,
+                    fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                  ),
+                );
+              })
+                  .toList(),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Mensaje de mood con icono
+            Row(
+              children: [
+                Icon(
+                  _getMoodIcon(avgMood),
+                  color: moodColor,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    moodMessage,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.8),
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Leyenda de colores
+            _buildMoodLegend(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  IconData _getMoodIcon(double mood) {
+    if (mood >= 8.0) return Icons.sentiment_very_satisfied;
+    if (mood >= 6.0) return Icons.sentiment_satisfied;
+    if (mood >= 4.0) return Icons.sentiment_neutral;
+    return Icons.sentiment_dissatisfied;
+  }
+
+  Widget _buildMoodLegend() {
+    return Row(
+      children: [
+        _buildLegendItem('Excellent', const Color(0xFF4ECDC4)),
+        const SizedBox(width: 16),
+        _buildLegendItem('Good', const Color(0xFFFFD700)),
+        const SizedBox(width: 16),
+        _buildLegendItem('Fair', const Color(0xFFFFA500)),
+        const SizedBox(width: 16),
+        _buildLegendItem('Low', const Color(0xFFFF6B6B)),
+      ],
+    );
+  }
+
+  Widget _buildLegendItem(String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+          ),
+        ),
+        const SizedBox(width: 4),
+        Text(
+          label,
+          style: TextStyle(
+            color: Colors.white.withOpacity(0.6),
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMoodChart(List<dynamic> moodTrends) {
+    // Preparar datos para los últimos 7 días
+    final List<double> moodData = [];
+    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    if (moodTrends.isNotEmpty) {
+      // Usar datos reales (tomar últimos 7 días)
+      final last7Days = moodTrends.take(7).toList().reversed.toList();
+      for (int i = 0; i < 7; i++) {
+        if (i < last7Days.length) {
+          final dayData = last7Days[i];
+          final moodScore = (dayData?['mood_score'] as num?)?.toDouble() ?? 0.5;          moodData.add(moodScore);
+        } else {
+          // Rellenar con datos promedio si no hay suficientes datos
+          moodData.add(5.0 + (math.Random().nextDouble() * 3.0));
+        }
+      }
+    } else {
+      // Datos de ejemplo si no hay datos reales
+      moodData.addAll([4.5, 6.2, 7.8, 8.5, 6.1, 5.9, 7.3]);
+    }
+
+    return Container(
+      height: 120,
+      child: Stack(
+        children: [
+          // Gráfico principal
+          CustomPaint(
+            size: const Size(double.infinity, 120),
+            painter: MoodChartPainter(moodData),
+          ),
+          // Indicadores de max/min mood
+          Positioned(
+            top: 8,
+            right: 8,
+            child: _buildMoodIndicators(moodData),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMoodIndicators(List<double> moodData) {
+    if (moodData.isEmpty) return const SizedBox.shrink();
+
+    final maxMood = moodData.reduce(math.max);
+    final minMood = moodData.reduce(math.min);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.trending_up,
+              color: const Color(0xFF4ECDC4),
+              size: 16,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              maxMood.toStringAsFixed(1),
+              style: const TextStyle(
+                color: Color(0xFF4ECDC4),
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.trending_down,
+              color: const Color(0xFFFF6B6B),
+              size: 16,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              minMood.toStringAsFixed(1),
+              style: const TextStyle(
+                color: Color(0xFFFF6B6B),
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTodayTasks(OptimizedMomentsProvider moments) {
+    // Usar los getters reales disponibles
+    final todayMomentsCount = moments.todayCount;
+    final positiveMomentsCount = moments.positiveCount;
+    final totalMomentsCount = moments.totalCount;
+
+    // Generar tareas basadas en momentos del día
+    final tasks = <Map<String, dynamic>>[
+      {
+        'icon': Icons.self_improvement,
+        'title': 'Morning meditation',
+        'duration': '10 min',
+        'color': const Color(0xFFFFD700),
+        'completed': todayMomentsCount > 2,
+      },
+      {
+        'icon': Icons.book,
+        'title': 'Gratitude journal',
+        'duration': '15 min',
+        'color': const Color(0xFF4ECDC4),
+        'completed': todayMomentsCount > 5,
+      },
+      {
+        'icon': Icons.directions_walk,
+        'title': 'Mindful walk',
+        'duration': '20 min',
+        'color': const Color(0xFF45B7D1),
+        'completed': positiveMomentsCount > 3,
+      },
+    ];
+
+    return FadeTransition(
+      opacity: _cardsAnimation,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text(
+                "Today's tasks",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFD700).withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '$todayMomentsCount moments today',
+                  style: const TextStyle(
+                    color: Color(0xFFFFD700),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...tasks.map((task) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildTaskCard(
+              icon: task['icon'] as IconData,
+              title: task['title'] as String,
+              duration: task['duration'] as String,
+              color: task['color'] as Color,
+              completed: task['completed'] as bool,
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTaskCard({
+    required IconData icon,
+    required String title,
+    required String duration,
+    required Color color,
+    bool completed = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A2E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: completed
+              ? color.withOpacity(0.5)
+              : Colors.white.withOpacity(0.1),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: color.withOpacity(completed ? 0.3 : 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              completed ? Icons.check : icon,
+              color: color,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    decoration: completed ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+                Text(
+                  duration,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.6),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            completed ? Icons.check_circle : Icons.arrow_forward_ios,
+            color: completed ? color : Colors.white,
+            size: 16,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPersonalizedRecommendations(OptimizedAnalyticsProvider analytics) {
+    final basicStats = analytics.analytics['basic_stats'] as Map<String, dynamic>?;
+    final avgStress = basicStats?['avg_stress'] as double? ?? 5.0;
+    final avgEnergy = basicStats?['avg_energy'] as double? ?? 5.0;
+
+    // Recomendaciones basadas en métricas reales
+    final recommendations = <Map<String, dynamic>>[];
+
+    if (avgStress > 6.0) {
+      recommendations.add({
+        'title': 'Stress Relief',
+        'subtitle': 'Your stress levels are elevated. Try these techniques.',
+        'color': const Color(0xFFE8D5C4),
+        'icon': Icons.spa,
+      });
+    }
+
+    if (avgEnergy < 5.0) {
+      recommendations.add({
+        'title': 'Energy Boost',
+        'subtitle': 'Quick exercises to boost your energy levels.',
+        'color': const Color(0xFFF4E4BC),
+        'icon': Icons.flash_on,
+      });
+    }
+
+    // Recomendación por defecto
+    recommendations.add({
+      'title': 'Mindful Moments',
+      'subtitle': 'Quick exercises for daily mindfulness.',
+      'color': const Color(0xFFF4E4BC),
+      'icon': Icons.self_improvement,
+    });
+
+    return FadeTransition(
+      opacity: _cardsAnimation,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Recommended for you',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 200,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: recommendations.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 16),
+              itemBuilder: (context, index) {
+                final rec = recommendations[index];
+                return _buildRecommendationCard(
+                  title: rec['title'] as String,
+                  subtitle: rec['subtitle'] as String,
+                  color: rec['color'] as Color,
+                  icon: rec['icon'] as IconData,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecommendationCard({
+    required String title,
+    required String subtitle,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Container(
+      width: 180,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: const Color(0xFF8B4513),
+              size: 28,
+            ),
+          ),
+          const Spacer(),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Color(0xFF2D2D2D),
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: const Color(0xFF2D2D2D).withOpacity(0.7),
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFeaturedPrograms() {
+    return FadeTransition(
+      opacity: _cardsAnimation,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Featured Programs',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildProgramCard(
+            title: 'Journey to Inner Peace',
+            subtitle: 'A comprehensive program for emotional well-being.',
+            isNew: true,
+            color: const Color(0xFFF4E4BC),
+          ),
+          const SizedBox(height: 16),
+          _buildProgramCard(
+            title: 'Daily Gratitude Practice',
+            subtitle: 'Cultivate a positive mindset with daily gratitude exercises.',
+            color: const Color(0xFFE8D5C4),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgramCard({
+    required String title,
+    required String subtitle,
+    required Color color,
+    bool isNew = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A1A2E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isNew)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFD700),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'NEW',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                if (isNew) const SizedBox(height: 8),
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(
+              Icons.spa,
+              color: Color(0xFF8B4513),
+              size: 28,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLoadingContent() {
+    return Column(
+      children: List.generate(5, (index) => Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Container(
+          height: 120,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+            ),
+          ),
+        ),
+      )),
+    );
+  }
+
   Widget _buildAvatarContent(OptimizedUserModel user) {
-    // Si tiene foto de perfil y el archivo existe
     if (user.hasProfilePicture) {
       return Image.file(
         File(user.profilePicturePath!),
         fit: BoxFit.cover,
-        width: 74,
-        height: 74,
+        width: 46,
+        height: 46,
         errorBuilder: (context, error, stackTrace) {
           return _buildEmojiAvatar(user.avatarEmoji);
         },
@@ -414,599 +1525,175 @@ class _HomeScreenV2State extends State<HomeScreenV2>
 
   Widget _buildEmojiAvatar(String emoji) {
     return Container(
-      width: 74,
-      height: 74,
+      width: 46,
+      height: 46,
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
-          colors: ModernColors.primaryGradient,
+          colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
         ),
       ),
       child: Center(
         child: Text(
           emoji,
-          style: const TextStyle(fontSize: 32),
+          style: const TextStyle(fontSize: 24),
         ),
       ),
     );
   }
+}
 
-  Widget _buildMomentsOverview() {
-    // ✅ USANDO DATOS REALES DEL PROVIDER
-    final momentsProvider = context.watch<OptimizedMomentsProvider>();
-    final todayMoments = momentsProvider.todayMoments;
+// ============================================================================
+// CUSTOM PAINTER PARA EL MOOD CHART
+// ============================================================================
 
-    final positiveMoments = todayMoments.where((m) => m.type == 'positive').length;
-    final negativeMoments = todayMoments.where((m) => m.type == 'negative').length;
-    final neutralMoments = todayMoments.where((m) => m.type == 'neutral').length;
-    final totalMoments = todayMoments.length;
+class MoodChartPainter extends CustomPainter {
+  final List<double> moodData;
 
-    return ModernCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ModernColors.accentBlue.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  color: ModernColors.accentBlue,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: ModernSpacing.sm),
-              Text(
-                'Momentos de hoy',
-                style: ModernTypography.titleMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '$totalMoments total',
-                style: ModernTypography.bodySmall.copyWith(
-                  color: ModernColors.onSurface.withOpacity(0.6),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: ModernSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: _buildMomentCard(
-                  icon: Icons.sentiment_very_satisfied,
-                  label: 'Positivos',
-                  count: positiveMoments,
-                  color: ModernColors.success,
-                ),
-              ),
-              const SizedBox(width: ModernSpacing.sm),
-              Expanded(
-                child: _buildMomentCard(
-                  icon: Icons.sentiment_neutral,
-                  label: 'Neutrales',
-                  count: neutralMoments,
-                  color: ModernColors.accentBlue,
-                ),
-              ),
-              const SizedBox(width: ModernSpacing.sm),
-              Expanded(
-                child: _buildMomentCard(
-                  icon: Icons.sentiment_dissatisfied,
-                  label: 'Negativos',
-                  count: negativeMoments,
-                  color: ModernColors.warning,
-                ),
-              ),
-            ],
-          ),
-          if (totalMoments == 0) ...[
-            const SizedBox(height: ModernSpacing.md),
-            Container(
-              padding: const EdgeInsets.all(ModernSpacing.md),
-              decoration: BoxDecoration(
-                color: ModernColors.surface.withOpacity(0.5),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: Colors.grey.withOpacity(0.2),
-                ),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.lightbulb_outline,
-                    color: ModernColors.accentYellow,
-                    size: 20,
-                  ),
-                  const SizedBox(width: ModernSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      'Registra tu primer momento del día',
-                      style: ModernTypography.bodyMedium.copyWith(
-                        color: ModernColors.onSurface.withOpacity(0.8),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+  MoodChartPainter(this.moodData);
 
-  Widget _buildMomentCard({
-    required IconData icon,
-    required String label,
-    required int count,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(ModernSpacing.sm),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: ModernSpacing.xs),
-          Text(
-            count.toString(),
-            style: ModernTypography.headlineSmall.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            label,
-            style: ModernTypography.caption.copyWith(
-              color: color,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (moodData.isEmpty) return;
 
-  Widget _buildReflectionStatus() {
-    final hasReflection = false; // Simulamos estado
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3.0;
 
-    return ModernCard(
-      child: InkWell(
-        onTap: hasReflection ? null : () {
-          // Navigator.pushNamed(context, '/daily-review');
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: const EdgeInsets.all(ModernSpacing.md),
-          child: Row(
-            children: [
-              Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: hasReflection
-                      ? ModernColors.success.withOpacity(0.2)
-                      : ModernColors.warning.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  hasReflection ? Icons.check_circle : Icons.edit_note,
-                  color: hasReflection ? ModernColors.success : ModernColors.warning,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: ModernSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      hasReflection ? 'Reflexión completada' : 'Reflexión pendiente',
-                      style: ModernTypography.titleMedium.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      hasReflection
-                          ? 'Excelente trabajo registrando tu día 🎉'
-                          : 'Dedica unos minutos a reflexionar sobre tu día',
-                      style: ModernTypography.bodyMedium.copyWith(
-                        color: ModernColors.onSurface.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!hasReflection)
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: ModernColors.warning.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.arrow_forward_ios,
-                    color: ModernColors.warning,
-                    size: 16,
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+    final pointPaint = Paint()
+      ..style = PaintingStyle.fill;
 
-  Widget _buildWellbeingMetrics() {
-    // ✅ USANDO DATOS REALES DEL ANALYTICS PROVIDER
-    final analyticsProvider = context.watch<OptimizedAnalyticsProvider>();
-    final wellbeingScore = analyticsProvider.wellbeingScore.toDouble(); // Convertir de int a double
+    final gradientPaint = Paint()
+      ..shader = const LinearGradient(
+        colors: [Color(0xFF4ECDC4), Color(0xFF44A08D)],
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
-    return ModernCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: ModernColors.accentGreen.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Icon(
-                  Icons.analytics,
-                  color: ModernColors.accentGreen,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: ModernSpacing.sm),
-              Text(
-                'Bienestar General',
-                style: ModernTypography.titleMedium.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: ModernSpacing.lg),
-          Center(
-            child: SizedBox(
-              width: 140,
-              height: 140,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Círculo de fondo
-                  SizedBox(
-                    width: 140,
-                    height: 140,
-                    child: CircularProgressIndicator(
-                      value: 1.0,
-                      strokeWidth: 10,
-                      backgroundColor: ModernColors.surface,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        ModernColors.surface,
-                      ),
-                    ),
-                  ),
-                  // Círculo de progreso animado
-                  SizedBox(
-                    width: 140,
-                    height: 140,
-                    child: TweenAnimationBuilder<double>(
-                      duration: const Duration(milliseconds: 1500),
-                      tween: Tween(begin: 0.0, end: wellbeingScore / 10),
-                      curve: Curves.easeOutCubic,
-                      builder: (context, value, child) {
-                        return CircularProgressIndicator(
-                          value: value,
-                          strokeWidth: 10,
-                          backgroundColor: Colors.transparent,
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            _getWellbeingColor(wellbeingScore),
-                          ),
-                          strokeCap: StrokeCap.round,
-                        );
-                      },
-                    ),
-                  ),
-                  // Contenido central
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      TweenAnimationBuilder<double>(
-                        duration: const Duration(milliseconds: 1500),
-                        tween: Tween(begin: 0.0, end: wellbeingScore),
-                        curve: Curves.easeOutCubic,
-                        builder: (context, value, child) {
-                          return Text(
-                            value.toStringAsFixed(1),
-                            style: ModernTypography.headlineLarge.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: _getWellbeingColor(wellbeingScore),
-                            ),
-                          );
-                        },
-                      ),
-                      Text(
-                        '/10',
-                        style: ModernTypography.bodyMedium.copyWith(
-                          color: ModernColors.onSurface.withOpacity(0.6),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: ModernSpacing.md),
-          Container(
-            padding: const EdgeInsets.all(ModernSpacing.md),
-            decoration: BoxDecoration(
-              color: _getWellbeingColor(wellbeingScore).withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              _getWellbeingDescription(wellbeingScore),
-              style: ModernTypography.bodyMedium.copyWith(
-                color: _getWellbeingColor(wellbeingScore),
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    paint.shader = gradientPaint.shader;
 
-  Widget _buildTodayInsights() {
-    // ✅ USANDO DATOS REALES DEL ANALYTICS PROVIDER
-    final analyticsProvider = context.watch<OptimizedAnalyticsProvider>();
+    // Calcular posiciones de los puntos
+    final points = <Offset>[];
+    final double stepX = size.width / (moodData.length - 1);
 
-    try {
-      final insights = analyticsProvider.getInsights();
-      final highlightedInsights = analyticsProvider.getHighlightedInsights();
+    for (int i = 0; i < moodData.length; i++) {
+      final double x = i * stepX;
+      // Normalizar mood data (0-10) a altura del canvas
+      final double normalizedMood = moodData[i] / 10.0;
+      final double y = size.height - (normalizedMood * size.height * 0.8) - (size.height * 0.1);
+      points.add(Offset(x, y));
+    }
 
-      // Combinar insights normales y destacados, tomar los primeros 3
-      final allInsights = [...highlightedInsights, ...insights];
-      final displayInsights = allInsights.take(3).map((insight) => insight['text'] ?? '').where((text) => text.isNotEmpty).toList();
+    // Dibujar área bajo la curva (relleno gradient)
+    if (points.length > 1) {
+      final areaPath = Path();
+      areaPath.moveTo(points[0].dx, size.height);
+      areaPath.lineTo(points[0].dx, points[0].dy);
 
-      if (displayInsights.isEmpty) {
-        return const SizedBox.shrink();
+      for (int i = 1; i < points.length; i++) {
+        final currentPoint = points[i];
+        final previousPoint = points[i - 1];
+        final controlPointX = previousPoint.dx + (currentPoint.dx - previousPoint.dx) / 2;
+
+        areaPath.quadraticBezierTo(
+          controlPointX, previousPoint.dy,
+          currentPoint.dx, currentPoint.dy,
+        );
       }
 
-      return ModernCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: ModernColors.accentYellow.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.lightbulb,
-                    color: ModernColors.accentYellow,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: ModernSpacing.sm),
-                Text(
-                  'Insights del día',
-                  style: ModernTypography.titleMedium.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: ModernSpacing.md),
-            ...displayInsights.map((insight) => Padding(
-              padding: const EdgeInsets.only(bottom: ModernSpacing.sm),
-              child: Container(
-                padding: const EdgeInsets.all(ModernSpacing.sm),
-                decoration: BoxDecoration(
-                  color: ModernColors.accentYellow.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: ModernColors.accentYellow.withOpacity(0.2),
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      margin: const EdgeInsets.only(top: 8),
-                      decoration: const BoxDecoration(
-                        color: ModernColors.accentYellow,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: ModernSpacing.sm),
-                    Expanded(
-                      child: Text(
-                        insight,
-                        style: ModernTypography.bodyMedium.copyWith(
-                          color: ModernColors.onSurface.withOpacity(0.8),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )).toList(),
+      areaPath.lineTo(points.last.dx, size.height);
+      areaPath.close();
+
+      final areaPaint = Paint()
+        ..shader = LinearGradient(
+          colors: [
+            const Color(0xFF4ECDC4).withOpacity(0.3),
+            const Color(0xFF4ECDC4).withOpacity(0.1),
           ],
-        ),
-      );
-    } catch (e) {
-      // Si hay error con analytics, mostrar insights genéricos
-      debugPrint('Error loading insights: $e');
-      return const SizedBox.shrink();
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+      canvas.drawPath(areaPath, areaPaint);
+    }
+
+    // Dibujar línea principal
+    if (points.length > 1) {
+      final path = Path();
+      path.moveTo(points[0].dx, points[0].dy);
+
+      for (int i = 1; i < points.length; i++) {
+        // Crear curva suave entre puntos
+        final currentPoint = points[i];
+        final previousPoint = points[i - 1];
+
+        final controlPointX = previousPoint.dx + (currentPoint.dx - previousPoint.dx) / 2;
+
+        path.quadraticBezierTo(
+          controlPointX, previousPoint.dy,
+          currentPoint.dx, currentPoint.dy,
+        );
+      }
+
+      canvas.drawPath(path, paint);
+    }
+
+    // Dibujar líneas de referencia horizontales
+    final referencePaint = Paint()
+      ..color = Colors.white.withOpacity(0.1)
+      ..strokeWidth = 1.0;
+
+    // Línea de referencia en el medio (mood 5)
+    final midY = size.height - (0.5 * size.height * 0.8) - (size.height * 0.1);
+    canvas.drawLine(
+      Offset(0, midY),
+      Offset(size.width, midY),
+      referencePaint,
+    );
+
+    // Línea de referencia superior (mood 8)
+    final highY = size.height - (0.8 * size.height * 0.8) - (size.height * 0.1);
+    canvas.drawLine(
+      Offset(0, highY),
+      Offset(size.width, highY),
+      referencePaint,
+    );
+
+    // Dibujar puntos
+    for (int i = 0; i < points.length; i++) {
+      final point = points[i];
+      final moodValue = moodData[i];
+
+      // Color del punto basado en el valor del mood
+      Color pointColor;
+      if (moodValue >= 8.0) {
+        pointColor = const Color(0xFF4ECDC4); // Excelente
+      } else if (moodValue >= 6.0) {
+        pointColor = const Color(0xFFFFD700); // Bueno
+      } else if (moodValue >= 4.0) {
+        pointColor = const Color(0xFFFFA500); // Regular
+      } else {
+        pointColor = const Color(0xFFFF6B6B); // Necesita atención
+      }
+
+      // Círculo exterior (sombra)
+      pointPaint.color = Colors.black.withOpacity(0.3);
+      canvas.drawCircle(point + const Offset(1, 1), 7, pointPaint);
+
+      // Círculo principal
+      pointPaint.color = pointColor;
+      canvas.drawCircle(point, 6, pointPaint);
+
+      // Círculo interior (brillo)
+      pointPaint.color = Colors.white.withOpacity(0.9);
+      canvas.drawCircle(point, 3, pointPaint);
+
+      // Punto central
+      pointPaint.color = pointColor;
+      canvas.drawCircle(point, 1.5, pointPaint);
     }
   }
 
-  Widget _buildQuickActions() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Acciones rápidas',
-          style: ModernTypography.titleMedium.copyWith(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: ModernSpacing.md),
-        GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: 2,
-          crossAxisSpacing: ModernSpacing.md,
-          mainAxisSpacing: ModernSpacing.md,
-          childAspectRatio: 2.2,
-          children: [
-            _buildActionButton(
-              title: 'Nuevo Momento',
-              icon: Icons.add_circle_outline,
-              gradient: ModernColors.positiveGradient,
-              onPressed: () {
-                // Navigator.pushNamed(context, '/moments');
-              },
-            ),
-            _buildActionButton(
-              title: 'Reflexión',
-              icon: Icons.edit_note,
-              gradient: ModernColors.warningGradient,
-              onPressed: () {
-                // Navigator.pushNamed(context, '/daily-review');
-              },
-            ),
-            _buildActionButton(
-              title: 'Analytics',
-              icon: Icons.analytics,
-              gradient: ModernColors.neutralGradient,
-              onPressed: () {
-                // Navigator.pushNamed(context, '/analytics');
-              },
-            ),
-            _buildActionButton(
-              title: 'Mi Perfil',
-              icon: Icons.person_outline,
-              gradient: [
-                ModernColors.surface.withOpacity(0.3),
-                ModernColors.surface.withOpacity(0.1),
-              ],
-              onPressed: () {
-                Navigator.pushNamed(context, '/profile');
-              },
-            ),
-          ],
-        )
-      ],
-    );
-  }
-
-  Widget _buildActionButton({
-    required String title,
-    required IconData icon,
-    required List<Color> gradient,
-    required VoidCallback onPressed,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(16),
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: gradient,
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.2),
-              width: 1,
-            ),
-          ),
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 28,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  title,
-                  style: ModernTypography.bodyMedium.copyWith(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // Métodos auxiliares
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Buenos días';
-    if (hour < 18) return 'Buenas tardes';
-    return 'Buenas noches';
-  }
-
-  String _getGreetingEmoji() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return '☀️';
-    if (hour < 18) return '🌤️';
-    return '🌙';
-  }
-
-  Color _getWellbeingColor(double score) {
-    if (score >= 8) return ModernColors.success;
-    if (score >= 6) return ModernColors.accentBlue;
-    if (score >= 4) return ModernColors.warning;
-    return ModernColors.error;
-  }
-
-  String _getWellbeingDescription(double score) {
-    if (score >= 8) return 'Te sientes muy bien hoy, ¡sigue así! 🌟';
-    if (score >= 6) return 'Tu bienestar está en buen camino 💪';
-    if (score >= 4) return 'Día promedio, siempre se puede mejorar 📈';
-    return 'Considera dedicar tiempo al autocuidado 💝';
-  }
+  @override
+  bool shouldRepaint(CustomPainter oldDelegate) => true;
 }
