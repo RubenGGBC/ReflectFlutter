@@ -1,19 +1,18 @@
+// lib/presentation/providers/optimized_providers.dart - UPDATED WITH PROFILE PICTURE
 // ============================================================================
-// presentation/providers/optimized_providers.dart - PROVIDERS OPTIMIZADOS
+// AUTH PROVIDER ACTUALIZADO CON SOPORTE PARA FOTOS DE PERFIL
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
 
 import '../../data/services/optimized_database_service.dart';
+import '../../data/services/image_picker_service.dart'; // ✅ NUEVO IMPORT
 import '../../data/models/optimized_models.dart';
-
-// ============================================================================
-// AUTH PROVIDER OPTIMIZADO
-// ============================================================================
 
 class OptimizedAuthProvider with ChangeNotifier {
   final OptimizedDatabaseService _databaseService;
+  final ImagePickerService _imagePickerService = ImagePickerService(); // ✅ NUEVO
   final Logger _logger = Logger();
 
   OptimizedUserModel? _currentUser;
@@ -30,6 +29,139 @@ class OptimizedAuthProvider with ChangeNotifier {
   bool get isLoggedIn => _currentUser != null;
   bool get isInitialized => _isInitialized;
 
+  // ✅ MÉTODO ACTUALIZADO PARA REGISTRO CON FOTO
+  Future<bool> register({
+    required String email,
+    required String password,
+    required String name,
+    String avatarEmoji = '🧘‍♀️',
+    String? profilePicturePath, // ✅ NUEVO PARÁMETRO
+    String bio = '',
+  }) async {
+    _logger.i('📝 Registrando usuario: $email');
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final user = await _databaseService.createUser(
+        email: email,
+        password: password,
+        name: name,
+        avatarEmoji: avatarEmoji,
+        profilePicturePath: profilePicturePath, // ✅ NUEVO
+        bio: bio,
+      );
+
+      if (user != null) {
+        _currentUser = user;
+        _logger.i('✅ Usuario registrado exitosamente: ${user.name}');
+        notifyListeners();
+        return true;
+      } else {
+        _setError('No se pudo crear el usuario');
+        return false;
+      }
+    } catch (e) {
+      _logger.e('❌ Error en registro: $e');
+      _setError('Error durante el registro');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ✅ MÉTODO ACTUALIZADO PARA ACTUALIZAR PERFIL CON FOTO
+  Future<bool> updateProfile({
+    String? name,
+    String? bio,
+    String? avatarEmoji,
+    String? profilePicturePath, // ✅ NUEVO PARÁMETRO
+  }) async {
+    if (_currentUser == null) return false;
+
+    _logger.i('📝 Actualizando perfil del usuario: ${_currentUser!.name}');
+    _setLoading(true);
+    _clearError();
+
+    try {
+      // Si hay una nueva imagen y ya existe una anterior, eliminar la anterior
+      if (profilePicturePath != null &&
+          _currentUser!.profilePicturePath != null &&
+          _currentUser!.profilePicturePath != profilePicturePath) {
+        await _imagePickerService.deleteProfilePicture(_currentUser!.profilePicturePath);
+      }
+
+      final success = await _databaseService.updateUserProfile(
+        userId: _currentUser!.id,
+        name: name,
+        bio: bio,
+        avatarEmoji: avatarEmoji,
+        profilePicturePath: profilePicturePath, // ✅ NUEVO
+      );
+
+      if (success) {
+        _currentUser = _currentUser!.copyWith(
+          name: name,
+          bio: bio,
+          avatarEmoji: avatarEmoji,
+          profilePicturePath: profilePicturePath, // ✅ NUEVO
+        );
+        _logger.i('✅ Perfil actualizado exitosamente');
+        notifyListeners();
+        return true;
+      } else {
+        _setError('No se pudo actualizar el perfil');
+        return false;
+      }
+    } catch (e) {
+      _logger.e('❌ Error actualizando perfil: $e');
+      _setError('Error durante la actualización');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ✅ NUEVO: Método para seleccionar foto de perfil
+  Future<String?> selectProfilePicture(BuildContext context) async {
+    try {
+      _logger.i('📸 Iniciando selección de foto de perfil');
+      final imagePath = await _imagePickerService.showImageSourceDialog(context);
+
+      if (imagePath != null) {
+        _logger.i('✅ Foto de perfil seleccionada: $imagePath');
+      } else {
+        _logger.i('❌ Selección de foto cancelada por el usuario');
+      }
+
+      return imagePath;
+    } catch (e) {
+      _logger.e('❌ Error seleccionando foto de perfil: $e');
+      _setError('Error al seleccionar la imagen');
+      return null;
+    }
+  }
+
+  // ✅ NUEVO: Método para actualizar solo la foto de perfil
+  Future<bool> updateProfilePicture(String imagePath) async {
+    if (_currentUser == null) return false;
+
+    return await updateProfile(profilePicturePath: imagePath);
+  }
+
+  // ✅ NUEVO: Método para eliminar foto de perfil
+  Future<bool> removeProfilePicture() async {
+    if (_currentUser == null || _currentUser!.profilePicturePath == null) return false;
+
+    try {
+      await _imagePickerService.deleteProfilePicture(_currentUser!.profilePicturePath);
+      return await updateProfile(profilePicturePath: ''); // String vacío para eliminar
+    } catch (e) {
+      _logger.e('❌ Error eliminando foto de perfil: $e');
+      return false;
+    }
+  }
+
   /// Inicializar provider
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -38,10 +170,6 @@ class OptimizedAuthProvider with ChangeNotifier {
     _setLoading(true);
 
     try {
-      // Verificar sesión guardada aquí si implementas SessionService
-      // final hasSession = await _sessionService.hasActiveSession();
-      // if (hasSession) { ... }
-
       _isInitialized = true;
       _logger.i('✅ AuthProvider inicializado');
     } catch (e) {
@@ -50,9 +178,9 @@ class OptimizedAuthProvider with ChangeNotifier {
     } finally {
       _setLoading(false);
     }
-  }// ... dentro de la clase OptimizedAuthProvider
+  }
 
-  /// ✅ NUEVO: Iniciar sesión como desarrollador
+  /// Iniciar sesión como desarrollador
   Future<bool> loginAsDeveloper() async {
     _logger.i('🚀 Iniciando sesión como desarrollador...');
     _setLoading(true);
@@ -73,45 +201,6 @@ class OptimizedAuthProvider with ChangeNotifier {
     } catch (e) {
       _logger.e('❌ Error en login de desarrollador: $e');
       _setError('Error fatal en el modo desarrollador');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Registrar nuevo usuario
-  Future<bool> register({
-    required String email,
-    required String password,
-    required String name,
-    String avatarEmoji = '🧘‍♀️',
-    String bio = '',
-  }) async {
-    _logger.i('📝 Registrando usuario: $email');
-    _setLoading(true);
-    _clearError();
-
-    try {
-      final user = await _databaseService.createUser(
-        email: email,
-        password: password,
-        name: name,
-        avatarEmoji: avatarEmoji,
-        bio: bio,
-      );
-
-      if (user != null) {
-        _currentUser = user;
-        _logger.i('✅ Usuario registrado exitosamente: ${user.name}');
-        notifyListeners();
-        return true;
-      } else {
-        _setError('No se pudo crear el usuario');
-        return false;
-      }
-    } catch (e) {
-      _logger.e('❌ Error en registro: $e');
-      _setError('Error durante el registro');
       return false;
     } finally {
       _setLoading(false);
@@ -153,36 +242,7 @@ class OptimizedAuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Actualizar perfil de usuario
-  Future<bool> updateProfile({
-    String? name,
-    String? bio,
-    String? avatarEmoji,
-  }) async {
-    if (_currentUser == null) return false;
-
-    _setLoading(true);
-    try {
-      final updatedUser = _currentUser!.copyWith(
-        name: name,
-        bio: bio,
-        avatarEmoji: avatarEmoji,
-      );
-
-      // Aquí implementarías el método updateUser en el database service
-      // final success = await _databaseService.updateUser(updatedUser);
-
-      _currentUser = updatedUser;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _logger.e('❌ Error actualizando perfil: $e');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
+  // Métodos privados
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();
@@ -195,7 +255,6 @@ class OptimizedAuthProvider with ChangeNotifier {
 
   void _clearError() {
     _errorMessage = null;
-    notifyListeners();
   }
 }
 

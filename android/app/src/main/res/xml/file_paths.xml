@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- android/app/src/main/res/xml/file_paths.xml -->
+<paths>
+    <!-- ✅ RUTAS PARA IMAGE PICKER -->
+
+    <!-- Directorio externo de la aplicación -->
+    <external-path
+        name="external_files"
+        path="." />
+
+    <!-- Directorio de cache externo -->
+    <external-cache-path
+        name="external_cache"
+        path="." />
+
+    <!-- Directorio interno de archivos -->
+    <files-path
+        name="files"
+        path="." />
+
+    <!-- Directorio de cache interno -->
+    <cache-path
+        name="cache"
+        path="." />
+
+    <!-- Directorio de archivos externos de la aplicación -->
+    <external-files-path
+        name="external_application_files"
+        path="." />
+</paths>

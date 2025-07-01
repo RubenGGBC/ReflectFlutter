@@ -736,12 +736,16 @@ class DatabaseService {
     }
   }
 
-  Future<bool> updateUserProfile(int userId, {String? name, String? avatarEmoji, String? bio, Map<String, dynamic>? preferences}) async {
+  Future<bool> updateUserProfile(int userId, {String? name, String? avatarEmoji,String? profilePicturePath, // ✅ NUEVO PARÁMETRO
+    String? bio, Map<String, dynamic>? preferences}) async {
     try {
       final db = await database;
       final List<String> updateFields = [];
       final List<dynamic> values = [];
       if (name != null) { updateFields.add('name = ?'); values.add(name); }
+      if (profilePicturePath != null) {
+        updateFields.add('profile_picture_path = ?'); values.add(profilePicturePath);
+      }
       if (avatarEmoji != null) { updateFields.add('avatar_emoji = ?'); values.add(avatarEmoji); }
       if (bio != null) { updateFields.add('bio = ?'); values.add(bio); }
       if (preferences != null) { updateFields.add('preferences = ?'); values.add(json.encode(preferences)); }

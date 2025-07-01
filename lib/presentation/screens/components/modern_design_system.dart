@@ -1,20 +1,17 @@
-// ============================================================================
 // lib/presentation/screens/components/modern_design_system.dart
-// VERSIÓN COMPLETA CORREGIDA CON TODAS LAS PROPIEDADES FALTANTES - GRADIENT FIXED
-// ============================================================================
 
 import 'package:flutter/material.dart';
 
 // ============================================================================
-// 🎨 COLORES MODERNOS - VERSIÓN COMPLETA
+// 🎨 COLORES MODERNOS - VERSIÓN COMPLETA Y CORREGIDA
 // ============================================================================
-
 class ModernColors {
   // ✅ COLORES PRINCIPALES
   static const Color accentBlue = Color(0xFF3B82F6);
   static const Color accentPurple = Color(0xFF764ba2);
   static const Color accentGreen = Color(0xFF10B981);
   static const Color accentOrange = Color(0xFFF97316);
+  static const Color accentYellow = Color(0xFFF59E0B); // ✅ AÑADIDO
 
   // ✅ BACKGROUNDS
   static const Color darkPrimary = Color(0xFF0a0e27);
@@ -26,6 +23,8 @@ class ModernColors {
   static const Color glassPrimary = Color(0x1AFFFFFF);
   static const Color glassSecondary = Color(0x0DFFFFFF);
   static const Color glassSurface = Color(0x1AFFFFFF);
+  static const Color surface = surfaceDark; // ✅ AÑADIDO (alias)
+  static const Color onSurface = Colors.white; // ✅ AÑADIDO (alias)
 
   // ✅ BORDERS
   static const Color borderPrimary = Color(0x33FFFFFF);
@@ -41,6 +40,7 @@ class ModernColors {
   static const Color warning = Color(0xFFF59E0B);
   static const Color error = Color(0xFFEF4444);
   static const Color info = Color(0xFF3B82F6);
+  static const Color primary = accentBlue; // ✅ AÑADIDO (alias)
 
   // ✅ GRADIENTES PRINCIPALES
   static const List<Color> primaryGradient = [Color(0xFF667eea), Color(0xFF764ba2)];
@@ -61,9 +61,19 @@ class ModernColors {
 }
 
 // ============================================================================
+// ♊️ GRADIENTES GEMINI
+// ============================================================================
+class GeminiGradients {
+  static const List<Color> background = [Color(0xFF131314), Color(0xFF000000)];
+  static const List<Color> header = [Color(0xFF4A4E69), Color(0xFF22223B)];
+  static const List<Color> card = [Color(0xFF22223B), Color(0xFF131314)];
+  static const List<Color> accent = [Color(0xFF8E9BFF), Color(0xFF5A67D8)];
+}
+
+
+// ============================================================================
 // 📏 SPACING Y RADIOS
 // ============================================================================
-
 class ModernSpacing {
   static const double xs = 4.0;
   static const double sm = 8.0;
@@ -82,114 +92,45 @@ class ModernSpacing {
 // ============================================================================
 // 🎭 SOMBRAS MODERNAS
 // ============================================================================
-
 class ModernShadows {
   static const List<BoxShadow> glass = [
-    BoxShadow(
-      color: Color(0x1A000000),
-      blurRadius: 20,
-      offset: Offset(0, 8),
-    ),
-    BoxShadow(
-      color: Color(0x0D000000),
-      blurRadius: 6,
-      offset: Offset(0, 2),
-    ),
+    BoxShadow(color: Color(0x1A000000), blurRadius: 20, offset: Offset(0, 8)),
+    BoxShadow(color: Color(0x0D000000), blurRadius: 6, offset: Offset(0, 2)),
   ];
-
   static const List<BoxShadow> card = [
-    BoxShadow(
-      color: Color(0x1A000000),
-      blurRadius: 15,
-      offset: Offset(0, 5),
-    ),
+    BoxShadow(color: Color(0x1A000000), blurRadius: 15, offset: Offset(0, 5)),
   ];
-
   static const List<BoxShadow> floating = [
-    BoxShadow(
-      color: Color(0x33000000),
-      blurRadius: 25,
-      offset: Offset(0, 15),
-    ),
+    BoxShadow(color: Color(0x33000000), blurRadius: 25, offset: Offset(0, 15)),
   ];
-
   static const List<BoxShadow> inner = [
-    BoxShadow(
-      color: Color(0x1A000000),
-      blurRadius: 8,
-      offset: Offset(0, 2),
-      spreadRadius: -2,
-    ),
+    BoxShadow(color: Color(0x1A000000), blurRadius: 8, offset: Offset(0, 2), spreadRadius: -2),
   ];
 }
 
 // ============================================================================
-// 📝 TIPOGRAFÍA MODERNA
+// 📝 TIPOGRAFÍA MODERNA - CORREGIDA Y EXPANDIDA
 // ============================================================================
-
 class ModernTypography {
-  static const TextStyle heading1 = TextStyle(
-    fontSize: 32,
-    fontWeight: FontWeight.bold,
-    color: ModernColors.textPrimary,
-    height: 1.2,
-  );
+  static const TextStyle heading1 = TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: ModernColors.textPrimary, height: 1.2);
+  static const TextStyle heading2 = TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: ModernColors.textPrimary, height: 1.3);
+  static const TextStyle heading3 = TextStyle(fontSize: 20, fontWeight: FontWeight.w600, color: ModernColors.textPrimary, height: 1.4);
+  static const TextStyle heading4 = TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: ModernColors.textPrimary, height: 1.4);
 
-  static const TextStyle heading2 = TextStyle(
-    fontSize: 24,
-    fontWeight: FontWeight.w600,
-    color: ModernColors.textPrimary,
-    height: 1.3,
-  );
+  // ✅ AÑADIDOS PARA COMPATIBILIDAD
+  static const TextStyle headlineLarge = heading1;
+  static const TextStyle headlineMedium = heading2;
+  static const TextStyle headlineSmall = heading3;
+  static const TextStyle titleMedium = heading4;
+  static const TextStyle labelMedium = bodyMedium;
 
-  static const TextStyle heading3 = TextStyle(
-    fontSize: 20,
-    fontWeight: FontWeight.w600,
-    color: ModernColors.textPrimary,
-    height: 1.4,
-  );
 
-  static const TextStyle heading4 = TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.w600,
-    color: ModernColors.textPrimary,
-    height: 1.4,
-  );
-
-  static const TextStyle bodyLarge = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w400,
-    color: ModernColors.textPrimary,
-    height: 1.5,
-  );
-
-  static const TextStyle bodyMedium = TextStyle(
-    fontSize: 14,
-    fontWeight: FontWeight.w400,
-    color: ModernColors.textSecondary,
-    height: 1.4,
-  );
-
-  static const TextStyle bodySmall = TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w400,
-    color: ModernColors.textHint,
-    height: 1.3,
-  );
-
-  static const TextStyle button = TextStyle(
-    fontSize: 16,
-    fontWeight: FontWeight.w600,
-    color: ModernColors.textPrimary,
-  );
-
-  static const TextStyle caption = TextStyle(
-    fontSize: 12,
-    fontWeight: FontWeight.w500,
-    color: ModernColors.textSecondary,
-  );
+  static const TextStyle bodyLarge = TextStyle(fontSize: 16, fontWeight: FontWeight.w400, color: ModernColors.textPrimary, height: 1.5);
+  static const TextStyle bodyMedium = TextStyle(fontSize: 14, fontWeight: FontWeight.w400, color: ModernColors.textSecondary, height: 1.4);
+  static const TextStyle bodySmall = TextStyle(fontSize: 12, fontWeight: FontWeight.w400, color: ModernColors.textHint, height: 1.3);
+  static const TextStyle button = TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: ModernColors.textPrimary);
+  static const TextStyle caption = TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: ModernColors.textSecondary);
 }
-
 // ============================================================================
 // 🎬 ANIMACIONES COMPLETAS
 // ============================================================================

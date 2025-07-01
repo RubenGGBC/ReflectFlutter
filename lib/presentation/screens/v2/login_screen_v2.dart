@@ -1,10 +1,11 @@
+// lib/presentation/screens/v2/login_screen_v2.dart - UPDATED WITH PROFILE PICTURE
 // ============================================================================
-// presentation/screens/v2/login_screen_v2.dart - ACTUALIZADA Y CORREGIDA
+// PANTALLA DE REGISTRO ACTUALIZADA CON FOTO DE PERFIL
 // ============================================================================
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:ui';
 
 // Providers optimizados
 import '../../providers/optimized_providers.dart';
@@ -22,22 +23,23 @@ class LoginScreenV2 extends StatefulWidget {
 class _LoginScreenV2State extends State<LoginScreenV2>
     with TickerProviderStateMixin {
 
-  // Controladores de texto
+  // Controladores
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
 
-  // Estado
+  // Estado de la UI
   bool _isLogin = true;
   bool _obscurePassword = true;
   String? _errorMessage;
+  String? _selectedProfilePicture; // ✅ NUEVO: Ruta de imagen seleccionada
 
-  // Controladores de animación
-  late AnimationController _fadeController;
+  // Animaciones
   late AnimationController _slideController;
-  late Animation<double> _fadeAnimation;
+  late AnimationController _fadeController;
   late Animation<Offset> _slideAnimation;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
@@ -50,29 +52,20 @@ class _LoginScreenV2State extends State<LoginScreenV2>
     _emailController.dispose();
     _passwordController.dispose();
     _nameController.dispose();
-    _fadeController.dispose();
     _slideController.dispose();
+    _fadeController.dispose();
     super.dispose();
   }
 
   void _setupAnimations() {
-    _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _fadeController,
-      curve: Curves.easeIn,
-    ));
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
@@ -82,9 +75,17 @@ class _LoginScreenV2State extends State<LoginScreenV2>
       curve: Curves.easeOutBack,
     ));
 
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeIn,
+    ));
+
     _fadeController.forward();
     Future.delayed(const Duration(milliseconds: 200), () {
-      _slideController.forward();
+      if (mounted) _slideController.forward();
     });
   }
 
@@ -96,10 +97,7 @@ class _LoginScreenV2State extends State<LoginScreenV2>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              ModernColors.darkPrimary,
-              ModernColors.darkSecondary,
-            ],
+            colors: ModernColors.primaryGradient,
           ),
         ),
         child: SafeArea(
@@ -107,33 +105,28 @@ class _LoginScreenV2State extends State<LoginScreenV2>
             opacity: _fadeAnimation,
             child: SlideTransition(
               position: _slideAnimation,
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(ModernSpacing.lg),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildHeader(),
-                      const SizedBox(height: ModernSpacing.xl),
-                      _buildForm(),
-                      const SizedBox(height: ModernSpacing.lg),
-                      _buildSubmitButton(),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(ModernSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: ModernSpacing.xxl),
+                    _buildHeader(),
+                    const SizedBox(height: ModernSpacing.xxl),
+                    _buildForm(),
+                    const SizedBox(height: ModernSpacing.lg),
+                    if (_errorMessage != null) ...[
+                      _buildErrorMessage(),
                       const SizedBox(height: ModernSpacing.md),
-                      _buildToggleButton(),
-                      const SizedBox(height: ModernSpacing.sm),
-
-                      // ✅ NUEVO BOTÓN PARA DESARROLLADOR
-                      _buildDeveloperLoginButton(),
-
-                      if (_errorMessage != null) ...[
-                        const SizedBox(height: ModernSpacing.md),
-                        _buildErrorMessage(),
-                      ],
-                      const SizedBox(height: ModernSpacing.lg),
-                      _buildFooter(),
                     ],
-                  ),
+                    _buildSubmitButton(),
+                    const SizedBox(height: ModernSpacing.md),
+                    _buildToggleButton(),
+                    const SizedBox(height: ModernSpacing.sm),
+                    _buildDeveloperLoginButton(),
+                    const SizedBox(height: ModernSpacing.lg),
+                    _buildFooter(),
+                  ],
                 ),
               ),
             ),
@@ -147,63 +140,32 @@ class _LoginScreenV2State extends State<LoginScreenV2>
     return Column(
       children: [
         Container(
-          width: 120,
-          height: 120,
+          width: 80,
+          height: 80,
           decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.2),
             shape: BoxShape.circle,
-            // FIX: Correctly use LinearGradient for the gradient property
-            gradient: const LinearGradient(colors: ModernColors.primaryGradient),
-            boxShadow: [
-              BoxShadow(
-                color: ModernColors.primaryGradient.first.withOpacity(0.3),
-                blurRadius: 20,
-                spreadRadius: 5,
-              ),
-            ],
           ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(60),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.2),
-                    width: 1,
-                  ),
-                ),
-                child: const Icon(
-                  Icons.psychology,
-                  size: 60,
-                  color: Colors.white,
-                ),
-              ),
-            ),
+          child: const Icon(
+            Icons.self_improvement,
+            size: 40,
+            color: Colors.white,
           ),
         ),
-        const SizedBox(height: ModernSpacing.lg),
+        const SizedBox(height: ModernSpacing.md),
         Text(
-          'Reflect',
-          // FIX: Use ModernTypography and fix shader creation
-          style: ModernTypography.heading1.copyWith(
-            fontSize: 42,
-            fontWeight: FontWeight.bold,
-            foreground: Paint()
-              ..shader = const LinearGradient(
-                colors: ModernColors.primaryGradient,
-              ).createShader(const Rect.fromLTWH(0, 0, 200, 70)),
-            letterSpacing: 3,
-          ),
+          _isLogin ? 'Bienvenido de vuelta' : 'Únete a nosotros',
+          style: ModernTypography.headlineLarge.copyWith(color: Colors.white),
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: ModernSpacing.sm),
         Text(
           _isLogin
-              ? 'Bienvenido de vuelta a tu espacio'
-              : 'Comienza tu viaje de autoconocimiento',
-          // FIX: Use ModernTypography
-          style: ModernTypography.bodyLarge.copyWith(color: ModernColors.textSecondary),
+              ? 'Inicia sesión para continuar tu viaje'
+              : 'Crea tu cuenta y comienza tu transformación',
+          style: ModernTypography.bodyLarge.copyWith(
+            color: Colors.white.withOpacity(0.9),
+          ),
           textAlign: TextAlign.center,
         ),
       ],
@@ -211,19 +173,23 @@ class _LoginScreenV2State extends State<LoginScreenV2>
   }
 
   Widget _buildForm() {
-    return Form(
-      key: _formKey,
-      child: ModernCard(
-        blur: false,
-        backgroundColor: ModernColors.surfaceDark.withOpacity(0.5),
+    return ModernCard(
+      padding: const EdgeInsets.all(ModernSpacing.lg),
+      child: Form(
+        key: _formKey,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // ✅ NUEVO: Selector de foto de perfil para registro
+            if (!_isLogin) ...[
+              _buildProfilePictureSelector(),
+              const SizedBox(height: ModernSpacing.md),
+            ],
             if (!_isLogin) ...[
               ModernTextField(
                 controller: _nameController,
                 labelText: 'Nombre completo',
                 prefixIcon: Icons.person_outline,
-                keyboardType: TextInputType.name,
                 validator: (value) => value!.isEmpty ? 'Ingresa tu nombre' : null,
               ),
               const SizedBox(height: ModernSpacing.md),
@@ -261,9 +227,94 @@ class _LoginScreenV2State extends State<LoginScreenV2>
     );
   }
 
+  // ✅ NUEVO: Widget para seleccionar foto de perfil
+  Widget _buildProfilePictureSelector() {
+    return Column(
+      children: [
+        Text(
+          'Foto de perfil (opcional)',
+          style: ModernTypography.labelMedium.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: ModernSpacing.sm),
+        GestureDetector(
+          onTap: _selectProfilePicture,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: ModernColors.surface,
+              border: Border.all(
+                color: ModernColors.primary.withOpacity(0.3),
+                width: 2,
+              ),
+            ),
+            child: _selectedProfilePicture != null
+                ? ClipOval(
+              child: Image.file(
+                File(_selectedProfilePicture!),
+                fit: BoxFit.cover,
+                width: 100,
+                height: 100,
+              ),
+            )
+                : Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.add_a_photo,
+                  size: 32,
+                  color: ModernColors.primary.withOpacity(0.7),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Agregar foto',
+                  style: ModernTypography.caption.copyWith(
+                    color: ModernColors.primary.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_selectedProfilePicture != null) ...[
+          const SizedBox(height: ModernSpacing.sm),
+          TextButton.icon(
+            onPressed: () => setState(() => _selectedProfilePicture = null),
+            icon: const Icon(Icons.delete_outline, size: 16),
+            label: const Text('Quitar foto'),
+            style: TextButton.styleFrom(
+              foregroundColor: ModernColors.error,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  // ✅ NUEVO: Método para seleccionar foto de perfil
+  Future<void> _selectProfilePicture() async {
+    try {
+      final authProvider = context.read<OptimizedAuthProvider>();
+      final imagePath = await authProvider.selectProfilePicture(context);
+
+      if (imagePath != null) {
+        setState(() {
+          _selectedProfilePicture = imagePath;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'Error al seleccionar la imagen';
+        });
+      }
+    }
+  }
 
   Widget _buildSubmitButton() {
-    // We get the provider but we only use it to get the loading state
     final authProvider = context.watch<OptimizedAuthProvider>();
 
     return ModernButton(
@@ -282,6 +333,7 @@ class _LoginScreenV2State extends State<LoginScreenV2>
         setState(() {
           _isLogin = !_isLogin;
           _errorMessage = null;
+          _selectedProfilePicture = null; // ✅ NUEVO: Limpiar foto al cambiar modo
           _formKey.currentState?.reset();
         });
       },
@@ -289,7 +341,6 @@ class _LoginScreenV2State extends State<LoginScreenV2>
         text: TextSpan(
           text: _isLogin
               ? '¿No tienes cuenta? '
-          // FIX: Use ModernTypography
               : '¿Ya tienes cuenta? ',
           style: ModernTypography.bodyMedium,
           children: [
@@ -306,7 +357,6 @@ class _LoginScreenV2State extends State<LoginScreenV2>
     );
   }
 
-  // ✅ MÉTODO PARA EL NUEVO BOTÓN
   Widget _buildDeveloperLoginButton() {
     final authProvider = context.watch<OptimizedAuthProvider>();
 
@@ -353,22 +403,18 @@ class _LoginScreenV2State extends State<LoginScreenV2>
   Widget _buildFooter() {
     return Text(
       'Al continuar, aceptas nuestros Términos de Servicio y Política de Privacidad.',
-      // FIX: Use ModernTypography
       style: ModernTypography.caption,
       textAlign: TextAlign.center,
     );
   }
 
   Future<void> _handleSubmit() async {
-    // First, clear any previous error messages
     setState(() => _errorMessage = null);
 
-    // Validate the form
     if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
 
-    // Use the provider to handle the logic
     try {
       final authProvider = context.read<OptimizedAuthProvider>();
       bool success = false;
@@ -379,26 +425,26 @@ class _LoginScreenV2State extends State<LoginScreenV2>
           _passwordController.text,
         );
       } else {
+        // ✅ NUEVO: Incluir foto de perfil en el registro
         success = await authProvider.register(
           email: _emailController.text.trim(),
           password: _passwordController.text,
           name: _nameController.text.trim(),
+          profilePicturePath: _selectedProfilePicture, // ✅ NUEVO
         );
       }
 
       if (success && mounted) {
         Navigator.of(context).pushReplacementNamed('/main');
       } else if (mounted) {
-        // If it fails, the provider's errorMessage will be updated.
-        // The Consumer/watch will rebuild the UI to show the error.
         setState(() {
-          _errorMessage = authProvider.errorMessage;
+          _errorMessage = authProvider.errorMessage ?? 'Error desconocido';
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = 'Error inesperado. Inténtalo de nuevo.';
+          _errorMessage = 'Error durante ${_isLogin ? 'el login' : 'el registro'}';
         });
       }
     }

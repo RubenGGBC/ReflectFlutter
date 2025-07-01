@@ -18,8 +18,8 @@ import 'package:flutter/foundation.dart';
 import '../models/optimized_models.dart';
 
 class OptimizedDatabaseService {
-  static const String _databaseName = 'reflect_optimized.db';
-  static const int _databaseVersion = 2;
+  static const String _databaseName = 'reflect_optimized2.db';
+  static const int _databaseVersion = 3;
 
   static Database? _database;
   static final OptimizedDatabaseService _instance = OptimizedDatabaseService._internal();
@@ -104,6 +104,7 @@ class OptimizedDatabaseService {
         password_hash TEXT NOT NULL,
         name TEXT NOT NULL,
         avatar_emoji TEXT DEFAULT '🧘‍♀️',
+        profile_picture_path TEXT, 
         bio TEXT,
         created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
         is_active BOOLEAN DEFAULT 1
@@ -155,6 +156,7 @@ class OptimizedDatabaseService {
             password_hash TEXT NOT NULL,
             name TEXT NOT NULL,
             avatar_emoji TEXT DEFAULT '🧘‍♀️',
+            profile_picture_path TEXT, 
             bio TEXT,
             preferences TEXT DEFAULT '{}',
             created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
@@ -306,6 +308,7 @@ class OptimizedDatabaseService {
     required String password,
     required String name,
     String avatarEmoji = '🧘‍♀️',
+    String? profilePicturePath,
     String bio = '',
   }) async {
     try {
@@ -317,6 +320,7 @@ class OptimizedDatabaseService {
         'password_hash': passwordHash,
         'name': name.trim(),
         'avatar_emoji': avatarEmoji,
+        'profile_picture_path': profilePicturePath,
         'bio': bio,
       });
 
@@ -327,6 +331,7 @@ class OptimizedDatabaseService {
         email: email,
         name: name,
         avatarEmoji: avatarEmoji,
+        profilePicturePath: profilePicturePath,
         bio: bio,
         createdAt: DateTime.now(),
         lastLogin: null,
@@ -366,6 +371,40 @@ class OptimizedDatabaseService {
     } catch (e) {
       _logger.e('❌ Error en autenticación: $e');
       return null;
+    }
+  }
+  Future<bool> updateUserProfile({
+    required int userId,
+    String? name,
+    String? bio,
+    String? avatarEmoji,
+    String? profilePicturePath, // ✅ NUEVO PARÁMETRO
+  }) async {
+    try {
+      final db = await database;
+      final Map<String, dynamic> updates = {};
+
+      if (name != null) updates['name'] = name.trim();
+      if (bio != null) updates['bio'] = bio;
+      if (avatarEmoji != null) updates['avatar_emoji'] = avatarEmoji;
+      if (profilePicturePath != null) {
+        updates['profile_picture_path'] = profilePicturePath; // ✅ NUEVO
+      }
+
+      if (updates.isEmpty) return true;
+
+      final rowsAffected = await db.update(
+        'users',
+        updates,
+        where: 'id = ?',
+        whereArgs: [userId],
+      );
+
+      _logger.i('✅ Perfil actualizado para usuario ID: $userId');
+      return rowsAffected > 0;
+    } catch (e) {
+      _logger.e('❌ Error actualizando perfil: $e');
+      return false;
     }
   }
 

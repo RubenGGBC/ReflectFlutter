@@ -28,6 +28,7 @@ dependencies:
 
   onnxruntime: ^1.4.1
   ffi: ^2.1.0
+  image_picker: ^1.0.4
 
   flutter_local_notifications: ^17.2.2
   timezone: ^0.9.4
@@ -42,4 +43,3 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-

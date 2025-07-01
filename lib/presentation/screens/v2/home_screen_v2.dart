@@ -1,14 +1,15 @@
+// lib/presentation/screens/v2/home_screen_v2.dart - CORRECTED VERSION
 // ============================================================================
-// presentation/screens/v2/home_screen_v2_enhanced.dart - VERSIÓN CORREGIDA
+// PANTALLA DE INICIO CORREGIDA CON FOTO DE PERFIL Y MENSAJE DE BIENVENIDA
 // ============================================================================
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
 
 // Providers optimizados
 import '../../providers/optimized_providers.dart';
-import '../../providers/theme_provider.dart';
 
 // Modelos
 import '../../../data/models/optimized_models.dart';
@@ -16,85 +17,46 @@ import '../../../data/models/optimized_models.dart';
 // Componentes modernos
 import '../components/modern_design_system.dart';
 
-// Funciones de diálogos
-void showQuickMomentDialog(BuildContext context) {
-  // Implementar o crear un diálogo simple por ahora
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Momento Rápido'),
-      content: const Text('Función próximamente'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('OK'),
-        ),
-      ],
-    ),
-  );
-}
-
-void showMeditationDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Meditación'),
-      content: const Text('Función próximamente'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('OK'),
-        ),
-      ],
-    ),
-  );
-}
-
-void showGratitudeDialog(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Gratitud'),
-      content: const Text('Función próximamente'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('OK'),
-        ),
-      ],
-    ),
-  );
-}
+// Widgets personalizados
+import '../../widgets/profile_picture_widget.dart'; // ✅ NUEVO IMPORT
 
 class HomeScreenV2 extends StatefulWidget {
   const HomeScreenV2({super.key});
 
   @override
-  State<HomeScreenV2> createState() => _HomeScreenV2EnhancedState();
+  State<HomeScreenV2> createState() => _HomeScreenV2State();
 }
 
-class _HomeScreenV2EnhancedState extends State<HomeScreenV2>
+class _HomeScreenV2State extends State<HomeScreenV2>
     with TickerProviderStateMixin {
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
-  late AnimationController _pulseController;
-  late AnimationController _rotationController;
+  late AnimationController _profilePictureController;
+  late AnimationController _welcomeTextController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  late Animation<double> _pulseAnimation;
-  late Animation<double> _rotationAnimation;
+  late Animation<double> _profilePictureAnimation;
+  late Animation<Offset> _welcomeTextAnimation;
 
   @override
   void initState() {
     super.initState();
     _setupAnimations();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _loadUserData();
+        _loadInitialData();
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    _profilePictureController.dispose();
+    _welcomeTextController.dispose();
+    super.dispose();
   }
 
   void _setupAnimations() {
@@ -102,354 +64,472 @@ class _HomeScreenV2EnhancedState extends State<HomeScreenV2>
       duration: const Duration(milliseconds: 800),
       vsync: this,
     );
-
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-
-    _pulseController = AnimationController(
-      duration: const Duration(seconds: 2),
+    _profilePictureController = AnimationController(
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-
-    _rotationController = AnimationController(
-      duration: const Duration(seconds: 10),
+    _welcomeTextController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeIn),
     );
 
     _slideAnimation = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeOutBack,
+    ));
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.1).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    _profilePictureAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _profilePictureController,
+        curve: Curves.elasticOut,
+      ),
     );
 
-    _rotationAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _rotationController, curve: Curves.linear),
-    );
+    _welcomeTextAnimation = Tween<Offset>(
+      begin: const Offset(-0.5, 0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _welcomeTextController,
+      curve: Curves.easeOutBack,
+    ));
 
+    // Secuencia de animaciones
     _fadeController.forward();
-    _slideController.forward();
-    _pulseController.repeat(reverse: true);
-    _rotationController.repeat();
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) {
+        _slideController.forward();
+        _profilePictureController.forward();
+      }
+    });
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _welcomeTextController.forward();
+      }
+    });
   }
 
-  void _loadUserData() {
-    final authProvider = Provider.of<OptimizedAuthProvider>(context, listen: false);
-    final entriesProvider = Provider.of<OptimizedDailyEntriesProvider>(context, listen: false);
-    final momentsProvider = Provider.of<OptimizedMomentsProvider>(context, listen: false);
-    final analyticsProvider = Provider.of<OptimizedAnalyticsProvider>(context, listen: false);
+  void _loadInitialData() {
+    final authProvider = context.read<OptimizedAuthProvider>();
+    final user = authProvider.currentUser;
 
-    if (authProvider.currentUser != null) {
-      final userId = authProvider.currentUser!.id;
-      entriesProvider.loadEntries(userId, limitDays: 1);
-      momentsProvider.loadTodayMoments(userId);
-      analyticsProvider.loadCompleteAnalytics(userId, days: 30);
+    if (user != null) {
+      // ✅ MÉTODOS CORREGIDOS - usando los que realmente existen
+      try {
+        final momentsProvider = context.read<OptimizedMomentsProvider>();
+        final analyticsProvider = context.read<OptimizedAnalyticsProvider>();
+
+        // Cargar datos usando los métodos correctos del provider
+        momentsProvider.loadTodayMoments(user.id); // ✅ EXISTE
+        analyticsProvider.loadCompleteAnalytics(user.id, days: 7); // ✅ EXISTE
+      } catch (e) {
+        debugPrint('Error loading initial data: $e');
+      }
     }
   }
 
   @override
-  void dispose() {
-    _fadeController.dispose();
-    _slideController.dispose();
-    _pulseController.dispose();
-    _rotationController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final authProvider = context.watch<OptimizedAuthProvider>();
+    final momentsProvider = context.watch<OptimizedMomentsProvider>();
+    final analyticsProvider = context.watch<OptimizedAnalyticsProvider>();
+    final user = authProvider.currentUser;
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text('Error: Usuario no encontrado.'),
+        ),
+      );
+    }
+
+    // ✅ MOSTRAR LOADING STATE SI ESTÁN CARGANDO DATOS
+    final isLoadingData = momentsProvider.isLoading || analyticsProvider.isLoading;
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0F172A),
-              Color(0xFF1E293B),
-              Color(0xFF334155),
-            ],
+            colors: ModernColors.primaryGradient,
           ),
         ),
-        child: Consumer4<OptimizedAuthProvider, OptimizedDailyEntriesProvider,
-            OptimizedMomentsProvider, OptimizedAnalyticsProvider>(
-          builder: (context, authProvider, entriesProvider, momentsProvider, analyticsProvider, child) {
-            final user = authProvider.currentUser;
+        child: SafeArea(
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: SlideTransition(
+              position: _slideAnimation,
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  _loadInitialData();
+                },
+                child: SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(ModernSpacing.lg),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ✅ Header siempre visible (con foto de perfil y bienvenida)
+                      _buildWelcomeHeader(user),
+                      const SizedBox(height: ModernSpacing.xl),
 
-            if (user == null) {
-              return _buildLoadingState();
-            }
+                      // ✅ Mostrar loading o contenido según el estado
+                      if (isLoadingData) ...[
+                        _buildLoadingContent(),
+                      ] else ...[
+                        _buildMomentsOverview(),
+                        const SizedBox(height: ModernSpacing.lg),
+                        _buildReflectionStatus(),
+                        const SizedBox(height: ModernSpacing.lg),
+                        _buildWellbeingMetrics(),
+                        const SizedBox(height: ModernSpacing.lg),
+                        _buildTodayInsights(),
+                        const SizedBox(height: ModernSpacing.lg),
+                      ],
 
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: SlideTransition(
-                position: _slideAnimation,
-                child: _buildMainContent(user, entriesProvider, momentsProvider, analyticsProvider),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedBuilder(
-            animation: _rotationAnimation,
-            builder: (context, child) {
-              return Transform.rotate(
-                angle: _rotationAnimation.value * 2 * math.pi,
-                child: Container(
-                  width: 60,
-                  height: 60,
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-                    ),
-                    shape: BoxShape.circle,
+                      // ✅ Acciones rápidas siempre visibles
+                      _buildQuickActions(),
+                      const SizedBox(height: ModernSpacing.xl),
+                    ],
                   ),
-                  child: const Icon(Icons.auto_awesome, color: Colors.white, size: 30),
                 ),
-              );
-            },
+              ),
+            ),
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'Preparando tu espacio de bienestar...',
-            style: TextStyle(color: Colors.white70, fontSize: 16),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildMainContent(
-      OptimizedUserModel user,
-      OptimizedDailyEntriesProvider entriesProvider,
-      OptimizedMomentsProvider momentsProvider,
-      OptimizedAnalyticsProvider analyticsProvider,
-      ) {
-    return CustomScrollView(
-      slivers: [
-        // Header personalizado con predicciones
-        _buildPersonalizedHeaderWithPrediction(user, analyticsProvider),
-
-        // Contenido principal
-        SliverPadding(
-          padding: const EdgeInsets.all(20),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              const SizedBox(height: 20),
-
-              // Quick Actions para acciones rápidas
-              _buildQuickActionsSection(momentsProvider),
-              const SizedBox(height: 24),
-
-              // Predicción de bienestar con IA
-              _buildWellbeingPredictionSection(analyticsProvider),
-              const SizedBox(height: 24),
-
-              // Calendario de mood en miniatura
-              _buildMoodCalendarSection(analyticsProvider),
-              const SizedBox(height: 24),
-
-              // Hábitos saludables en círculo
-              _buildHealthyHabitsRadial(analyticsProvider),
-              const SizedBox(height: 24),
-
-              // Challenges personalizados
-              _buildPersonalizedChallenges(analyticsProvider),
-              const SizedBox(height: 24),
-
-              // Comparación semanal
-              _buildWeeklyComparison(analyticsProvider),
-              const SizedBox(height: 24),
-
-              // Momentos del día (versión compacta)
-              _buildCompactTodayMoments(momentsProvider),
-              const SizedBox(height: 24),
-
-              // Recomendaciones personalizadas IA
-              _buildPersonalizedRecommendations(analyticsProvider),
-              const SizedBox(height: 24),
-
-              // Mini gráfico de tendencias
-              _buildMiniTrendChart(analyticsProvider),
-              const SizedBox(height: 100), // Espacio para navegación
-            ]),
+  // ✅ NUEVO: Widget de estado de carga
+  Widget _buildLoadingContent() {
+    return Column(
+      children: [
+        // Loading cards con shimmer effect
+        Container(
+          height: 120,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          ),
+        ),
+        const SizedBox(height: ModernSpacing.lg),
+        Container(
+          height: 80,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        const SizedBox(height: ModernSpacing.lg),
+        Container(
+          height: 200,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildPersonalizedHeaderWithPrediction(OptimizedUserModel user, OptimizedAnalyticsProvider analyticsProvider) {
-    final currentHour = DateTime.now().hour;
-    String greeting;
-    IconData greetingIcon;
-
-    if (currentHour < 12) {
-      greeting = '¡Buenos días';
-      greetingIcon = Icons.wb_sunny;
-    } else if (currentHour < 18) {
-      greeting = '¡Buenas tardes';
-      greetingIcon = Icons.wb_sunny_outlined;
-    } else {
-      greeting = '¡Buenas noches';
-      greetingIcon = Icons.nightlight_outlined;
-    }
-
-    // Obtener predicción usando el provider
-    final wellbeingStatus = analyticsProvider.getWellbeingStatus();
-    final score = wellbeingStatus['score'] as int? ?? 5;
-
-    // Predicción basada en score actual
-    final predictionData = _getPredictionData(score);
-
-    return SliverToBoxAdapter(
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
-        child: Column(
-          children: [
-            // Header principal
-            Row(
-              children: [
-                // Avatar del usuario con pulso
-                AnimatedBuilder(
-                  animation: _pulseAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _pulseAnimation.value,
-                      child: Container(
-                        width: 70,
-                        height: 70,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
-                          ),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: const Color(0xFF3B82F6).withOpacity(0.3),
-                              blurRadius: 20,
-                              spreadRadius: 2,
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Text(
-                            user.avatarEmoji,
-                            style: const TextStyle(fontSize: 30),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
-                const SizedBox(width: 16),
-
-                // Mensaje de bienvenida
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(greetingIcon, color: Colors.amber, size: 20),
-                          const SizedBox(width: 8),
-                          Text(
-                            '$greeting,',
-                            style: const TextStyle(
-                              color: Colors.white70,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        user.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+  // ✅ Header de bienvenida con foto de perfil
+  Widget _buildWelcomeHeader(OptimizedUserModel user) {
+    return Container(
+      padding: const EdgeInsets.all(ModernSpacing.lg),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // ✅ FOTO DE PERFIL CON ANIMACIÓN
+          ScaleTransition(
+            scale: _profilePictureAnimation,
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, '/profile');
+              },
+              child: Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF3B82F6), // Azul
+                      Color(0xFF8B5CF6), // Púrpura
+                      Color(0xFF10B981), // Verde
+                      Color(0xFFF59E0B), // Amarillo
+                      Color(0xFFEF4444), // Rojo
                     ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Predicción del día
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    predictionData['color'].withOpacity(0.15),
-                    predictionData['color'].withOpacity(0.05),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
                 ),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: predictionData['color'].withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  Text(
-                    predictionData['emoji'],
-                    style: const TextStyle(fontSize: 24),
+                padding: const EdgeInsets.all(4),
+                child: Container(
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Predicción para hoy',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
-                            fontSize: 12,
-                          ),
-                        ),
-                        Text(
-                          predictionData['message'],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
+                  padding: const EdgeInsets.all(2),
+                  child: ClipOval(
+                    child: _buildAvatarContent(user),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: ModernSpacing.md),
+          // ✅ MENSAJE DE BIENVENIDA CON ANIMACIÓN
+          Expanded(
+            child: SlideTransition(
+              position: _welcomeTextAnimation,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Mensaje "Bienvenido"
+                  Text(
+                    'Bienvenido,',
+                    style: ModernTypography.bodyLarge.copyWith(
+                      color: Colors.white.withOpacity(0.9),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  // Nombre del usuario
+                  Text(
+                    user.name,
+                    style: ModernTypography.headlineMedium.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black.withOpacity(0.2),
+                          offset: const Offset(0, 1),
+                          blurRadius: 2,
                         ),
                       ],
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: predictionData['color'].withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                  const SizedBox(height: 4),
+                  // Saludo contextual
+                  Row(
+                    children: [
+                      Text(
+                        _getGreeting(),
+                        style: ModernTypography.bodyMedium.copyWith(
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        _getGreetingEmoji(),
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          // ✅ ICONO DE CONFIGURACIÓN
+          IconButton(
+            onPressed: () {
+              Navigator.pushNamed(context, '/profile');
+            },
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.settings_outlined,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            tooltip: 'Configuración',
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ Método para mostrar contenido del avatar
+  Widget _buildAvatarContent(OptimizedUserModel user) {
+    // Si tiene foto de perfil y el archivo existe
+    if (user.hasProfilePicture) {
+      return Image.file(
+        File(user.profilePicturePath!),
+        fit: BoxFit.cover,
+        width: 74,
+        height: 74,
+        errorBuilder: (context, error, stackTrace) {
+          return _buildEmojiAvatar(user.avatarEmoji);
+        },
+      );
+    } else {
+      return _buildEmojiAvatar(user.avatarEmoji);
+    }
+  }
+
+  Widget _buildEmojiAvatar(String emoji) {
+    return Container(
+      width: 74,
+      height: 74,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: LinearGradient(
+          colors: ModernColors.primaryGradient,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          emoji,
+          style: const TextStyle(fontSize: 32),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMomentsOverview() {
+    // ✅ USANDO DATOS REALES DEL PROVIDER
+    final momentsProvider = context.watch<OptimizedMomentsProvider>();
+    final todayMoments = momentsProvider.todayMoments;
+
+    final positiveMoments = todayMoments.where((m) => m.type == 'positive').length;
+    final negativeMoments = todayMoments.where((m) => m.type == 'negative').length;
+    final neutralMoments = todayMoments.where((m) => m.type == 'neutral').length;
+    final totalMoments = todayMoments.length;
+
+    return ModernCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: ModernColors.accentBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.auto_awesome,
+                  color: ModernColors.accentBlue,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: ModernSpacing.sm),
+              Text(
+                'Momentos de hoy',
+                style: ModernTypography.titleMedium.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '$totalMoments total',
+                style: ModernTypography.bodySmall.copyWith(
+                  color: ModernColors.onSurface.withOpacity(0.6),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: ModernSpacing.md),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMomentCard(
+                  icon: Icons.sentiment_very_satisfied,
+                  label: 'Positivos',
+                  count: positiveMoments,
+                  color: ModernColors.success,
+                ),
+              ),
+              const SizedBox(width: ModernSpacing.sm),
+              Expanded(
+                child: _buildMomentCard(
+                  icon: Icons.sentiment_neutral,
+                  label: 'Neutrales',
+                  count: neutralMoments,
+                  color: ModernColors.accentBlue,
+                ),
+              ),
+              const SizedBox(width: ModernSpacing.sm),
+              Expanded(
+                child: _buildMomentCard(
+                  icon: Icons.sentiment_dissatisfied,
+                  label: 'Negativos',
+                  count: negativeMoments,
+                  color: ModernColors.warning,
+                ),
+              ),
+            ],
+          ),
+          if (totalMoments == 0) ...[
+            const SizedBox(height: ModernSpacing.md),
+            Container(
+              padding: const EdgeInsets.all(ModernSpacing.md),
+              decoration: BoxDecoration(
+                color: ModernColors.surface.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.grey.withOpacity(0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.lightbulb_outline,
+                    color: ModernColors.accentYellow,
+                    size: 20,
+                  ),
+                  const SizedBox(width: ModernSpacing.sm),
+                  Expanded(
                     child: Text(
-                      '${predictionData['confidence']}%',
-                      style: TextStyle(
-                        color: predictionData['color'],
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                      'Registra tu primer momento del día',
+                      style: ModernTypography.bodyMedium.copyWith(
+                        color: ModernColors.onSurface.withOpacity(0.8),
                       ),
                     ),
                   ),
@@ -457,646 +537,128 @@ class _HomeScreenV2EnhancedState extends State<HomeScreenV2>
               ),
             ),
           ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildQuickActionsSection(OptimizedMomentsProvider momentsProvider) {
+  Widget _buildMomentCard({
+    required IconData icon,
+    required String label,
+    required int count,
+    required Color color,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(ModernSpacing.sm),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withOpacity(0.1),
-            Colors.white.withOpacity(0.05),
-          ],
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.flash_on,
-                  color: Color(0xFF3B82F6),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Acciones rápidas',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: ModernSpacing.xs),
+          Text(
+            count.toString(),
+            style: ModernTypography.headlineSmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-
-          const SizedBox(height: 16),
-
-          // Grid de acciones rápidas
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 4,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.0,
-            children: [
-              _buildQuickActionCard(
-                icon: Icons.add_reaction,
-                label: 'Momento',
-                color: Colors.purple,
-                onTap: () => showQuickMomentDialog(context),
-              ),
-              _buildQuickActionCard(
-                icon: Icons.self_improvement,
-                label: 'Meditar',
-                color: Colors.blue,
-                onTap: () => showMeditationDialog(context),
-              ),
-              _buildQuickActionCard(
-                icon: Icons.fitness_center,
-                label: 'Ejercicio',
-                color: Colors.green,
-                onTap: () => _logExercise(),
-              ),
-              _buildQuickActionCard(
-                icon: Icons.favorite,
-                label: 'Gratitud',
-                color: Colors.pink,
-                onTap: () => showGratitudeDialog(context),
-              ),
-            ],
+          Text(
+            label,
+            style: ModernTypography.caption.copyWith(
+              color: color,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildQuickActionCard({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              color.withOpacity(0.2),
-              color.withOpacity(0.1),
-            ],
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 10,
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget _buildReflectionStatus() {
+    final hasReflection = false; // Simulamos estado
 
-  Widget _buildWellbeingPredictionSection(OptimizedAnalyticsProvider analyticsProvider) {
-    final wellbeingStatus = analyticsProvider.getWellbeingStatus();
-    final score = wellbeingStatus['score'] as int? ?? 5;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF8B5CF6).withOpacity(0.1),
-            const Color(0xFF3B82F6).withOpacity(0.1),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF8B5CF6).withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return ModernCard(
+      child: InkWell(
+        onTap: hasReflection ? null : () {
+          // Navigator.pushNamed(context, '/daily-review');
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(ModernSpacing.md),
+          child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(8),
+                width: 50,
+                height: 50,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF8B5CF6).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
+                  color: hasReflection
+                      ? ModernColors.success.withOpacity(0.2)
+                      : ModernColors.warning.withOpacity(0.2),
+                  shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.psychology,
-                  color: Color(0xFF8B5CF6),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Análisis IA',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                child: Icon(
+                  hasReflection ? Icons.check_circle : Icons.edit_note,
+                  color: hasReflection ? ModernColors.success : ModernColors.warning,
+                  size: 28,
                 ),
               ),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  'Beta',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          Row(
-            children: [
-              // Medidor circular de bienestar
-              SizedBox(
-                width: 80,
-                height: 80,
-                child: Stack(
-                  children: [
-                    Center(
-                      child: SizedBox(
-                        width: 70,
-                        height: 70,
-                        child: CircularProgressIndicator(
-                          value: score / 10,
-                          strokeWidth: 6,
-                          backgroundColor: Colors.white.withOpacity(0.1),
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            _getWellbeingColor(score.toDouble()),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: Text(
-                        score.toString(),
-                        style: TextStyle(
-                          color: _getWellbeingColor(score.toDouble()),
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 16),
-
-              // Información del análisis
+              const SizedBox(width: ModernSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Estado actual',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      wellbeingStatus['level'] as String? ?? 'Sin datos',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 12,
-                        height: 1.3,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.trending_up,
-                          color: _getWellbeingColor(score.toDouble()),
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Análisis en tiempo real',
-                          style: TextStyle(
-                            color: _getWellbeingColor(score.toDouble()),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMoodCalendarSection(OptimizedAnalyticsProvider analyticsProvider) {
-    final chartData = analyticsProvider.getMoodChartData();
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withOpacity(0.1),
-            Colors.white.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.calendar_today,
-                  color: Color(0xFFF59E0B),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Últimos días',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Grid de días
-          SizedBox(
-            height: 100,
-            child: GridView.builder(
-              scrollDirection: Axis.horizontal,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                childAspectRatio: 1.0,
-                mainAxisSpacing: 8,
-                crossAxisSpacing: 8,
-              ),
-              itemCount: math.min(chartData.length, 14),
-              itemBuilder: (context, index) {
-                final day = chartData[index];
-                return _buildCalendarDayCard(day);
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCalendarDayCard(Map<String, dynamic> day) {
-    final mood = (day['mood'] as num?)?.toDouble() ?? 5.0;
-    final emoji = mood >= 7 ? '😊' : mood >= 5 ? '😐' : '😔';
-    final color = mood >= 7 ? Colors.green : mood >= 5 ? Colors.blue : Colors.orange;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            emoji,
-            style: const TextStyle(fontSize: 16),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            mood.toStringAsFixed(1),
-            style: TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHealthyHabitsRadial(OptimizedAnalyticsProvider analyticsProvider) {
-    final dashboardData = analyticsProvider.getDashboardSummary();
-    final totalEntries = (dashboardData['total_entries'] as num?)?.toInt() ?? 0;
-    final weeklyProgress = math.min((totalEntries / 30).clamp(0.0, 1.0), 1.0);
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF10B981).withOpacity(0.1),
-            const Color(0xFF059669).withOpacity(0.1),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.health_and_safety,
-                  color: Color(0xFF10B981),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Hábitos saludables',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          Center(
-            child: SizedBox(
-              width: 120,
-              height: 120,
-              child: Stack(
-                children: [
-                  // Círculo de progreso principal
-                  Center(
-                    child: SizedBox(
-                      width: 100,
-                      height: 100,
-                      child: CircularProgressIndicator(
-                        value: weeklyProgress,
-                        strokeWidth: 8,
-                        backgroundColor: Colors.white.withOpacity(0.1),
-                        valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF10B981)),
-                      ),
-                    ),
-                  ),
-
-                  // Puntuación central
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          '${(weeklyProgress * 100).round()}%',
-                          style: const TextStyle(
-                            color: Color(0xFF10B981),
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Actividad',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPersonalizedChallenges(OptimizedAnalyticsProvider analyticsProvider) {
-    final streakData = analyticsProvider.getStreakData();
-    final currentStreak = (streakData['current'] as num?)?.toInt() ?? 0;
-
-    // Challenge simulado basado en datos reales
-    if (currentStreak >= 7) {
-      return const SizedBox.shrink(); // No mostrar si ya tiene buena racha
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFFEC4899).withOpacity(0.1),
-            const Color(0xFF8B5CF6).withOpacity(0.1),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFEC4899).withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEC4899).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.emoji_events,
-                  color: Color(0xFFEC4899),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Desafío personal',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Text('🔥', style: TextStyle(fontSize: 20)),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Racha Semanal',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            'Completa 7 días seguidos registrando tu bienestar',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      '$currentStreak/7',
-                      style: const TextStyle(
-                        color: Color(0xFFEC4899),
-                        fontSize: 12,
+                      hasReflection ? 'Reflexión completada' : 'Reflexión pendiente',
+                      style: ModernTypography.titleMedium.copyWith(
                         fontWeight: FontWeight.bold,
                       ),
                     ),
+                    const SizedBox(height: 2),
+                    Text(
+                      hasReflection
+                          ? 'Excelente trabajo registrando tu día 🎉'
+                          : 'Dedica unos minutos a reflexionar sobre tu día',
+                      style: ModernTypography.bodyMedium.copyWith(
+                        color: ModernColors.onSurface.withOpacity(0.7),
+                      ),
+                    ),
                   ],
                 ),
-
-                const SizedBox(height: 8),
-
-                // Barra de progreso
+              ),
+              if (!hasReflection)
                 Container(
-                  height: 6,
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(3),
+                    color: ModernColors.warning.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  child: FractionallySizedBox(
-                    alignment: Alignment.centerLeft,
-                    widthFactor: (currentStreak / 7.0).clamp(0.0, 1.0),
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0xFFEC4899), Color(0xFF8B5CF6)],
-                        ),
-                        borderRadius: BorderRadius.all(Radius.circular(3)),
-                      ),
-                    ),
+                  child: const Icon(
+                    Icons.arrow_forward_ios,
+                    color: ModernColors.warning,
+                    size: 16,
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  Widget _buildWeeklyComparison(OptimizedAnalyticsProvider analyticsProvider) {
-    final wellbeingStatus = analyticsProvider.getWellbeingStatus();
-    final currentMood = (wellbeingStatus['mood'] as num?)?.toDouble() ?? 5.0;
+  Widget _buildWellbeingMetrics() {
+    // ✅ USANDO DATOS REALES DEL ANALYTICS PROVIDER
+    final analyticsProvider = context.watch<OptimizedAnalyticsProvider>();
+    final wellbeingScore = analyticsProvider.wellbeingScore.toDouble(); // Convertir de int a double
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withOpacity(0.1),
-            Colors.white.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
+    return ModernCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1105,483 +667,346 @@ class _HomeScreenV2EnhancedState extends State<HomeScreenV2>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
+                  color: ModernColors.accentGreen.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
-                  Icons.compare_arrows,
-                  color: Color(0xFF3B82F6),
+                  Icons.analytics,
+                  color: ModernColors.accentGreen,
                   size: 20,
                 ),
               ),
-              const SizedBox(width: 12),
-              const Text(
-                'Progreso semanal',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
+              const SizedBox(width: ModernSpacing.sm),
+              Text(
+                'Bienestar General',
+                style: ModernTypography.titleMedium.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ],
           ),
-
-          const SizedBox(height: 16),
-
-          Row(
-            children: [
-              _buildComparisonMetric(
-                'Ánimo',
-                currentMood >= 6 ? 0.5 : -0.3, // Simulado
-                Icons.mood,
-              ),
-              _buildComparisonMetric(
-                'Energía',
-                0.2, // Simulado
-                Icons.battery_charging_full,
-              ),
-              _buildComparisonMetric(
-                'Estrés',
-                -0.4, // Simulado (negativo es bueno para estrés)
-                Icons.thermostat,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildComparisonMetric(String label, double change, IconData icon) {
-    final isPositive = change > 0;
-    final color = isPositive ? Colors.green : change < 0 ? Colors.red : Colors.grey;
-
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.3)),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 16),
-            const SizedBox(height: 4),
-            Text(
-              '${isPositive ? '+' : ''}${change.toStringAsFixed(1)}',
-              style: TextStyle(
-                color: color,
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              label,
-              style: TextStyle(
-                color: color.withOpacity(0.8),
-                fontSize: 10,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCompactTodayMoments(OptimizedMomentsProvider momentsProvider) {
-    final todayMoments = momentsProvider.todayMoments;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withOpacity(0.1),
-            Colors.white.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF8B5CF6).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.auto_awesome,
-                  color: Color(0xFF8B5CF6),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Momentos de hoy',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Spacer(),
-              if (todayMoments.isNotEmpty)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF8B5CF6).withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    '${todayMoments.length}',
-                    style: const TextStyle(
-                      color: Color(0xFF8B5CF6),
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-
-          const SizedBox(height: 12),
-
-          if (todayMoments.isEmpty)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Row(
+          const SizedBox(height: ModernSpacing.lg),
+          Center(
+            child: SizedBox(
+              width: 140,
+              height: 140,
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  const Text('➕', style: TextStyle(fontSize: 20)),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Registra tu primer momento del día',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
-                        fontSize: 13,
+                  // Círculo de fondo
+                  SizedBox(
+                    width: 140,
+                    height: 140,
+                    child: CircularProgressIndicator(
+                      value: 1.0,
+                      strokeWidth: 10,
+                      backgroundColor: ModernColors.surface,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        ModernColors.surface,
                       ),
                     ),
                   ),
-                ],
-              ),
-            )
-          else
-            ...todayMoments.take(3).map((moment) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: (moment.type == 'positive' ? Colors.green : Colors.orange).withOpacity(0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      moment.emoji,
-                      style: const TextStyle(fontSize: 12),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      moment.text,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 12,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  // Círculo de progreso animado
+                  SizedBox(
+                    width: 140,
+                    height: 140,
+                    child: TweenAnimationBuilder<double>(
+                      duration: const Duration(milliseconds: 1500),
+                      tween: Tween(begin: 0.0, end: wellbeingScore / 10),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, child) {
+                        return CircularProgressIndicator(
+                          value: value,
+                          strokeWidth: 10,
+                          backgroundColor: Colors.transparent,
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            _getWellbeingColor(wellbeingScore),
+                          ),
+                          strokeCap: StrokeCap.round,
+                        );
+                      },
                     ),
                   ),
-                  Text(
-                    '${moment.timestamp.hour}:${moment.timestamp.minute.toString().padLeft(2, '0')}',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.5),
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
-              ),
-            )).toList(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPersonalizedRecommendations(OptimizedAnalyticsProvider analyticsProvider) {
-    final stressAlerts = analyticsProvider.getStressAlerts();
-    final requiresAttention = stressAlerts['requires_attention'] as bool? ?? false;
-
-    if (!requiresAttention) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF06B6D4).withOpacity(0.1),
-            const Color(0xFF3B82F6).withOpacity(0.1),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF06B6D4).withOpacity(0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF06B6D4).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.lightbulb,
-                  color: Color(0xFF06B6D4),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Recomendación IA',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.orange.withOpacity(0.3)),
-            ),
-            child: Row(
-              children: [
-                const Text('🧘‍♀️', style: TextStyle(fontSize: 20)),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  // Contenido central
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text(
-                        'Sesión de Mindfulness',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      TweenAnimationBuilder<double>(
+                        duration: const Duration(milliseconds: 1500),
+                        tween: Tween(begin: 0.0, end: wellbeingScore),
+                        curve: Curves.easeOutCubic,
+                        builder: (context, value, child) {
+                          return Text(
+                            value.toStringAsFixed(1),
+                            style: ModernTypography.headlineLarge.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: _getWellbeingColor(wellbeingScore),
+                            ),
+                          );
+                        },
                       ),
                       Text(
-                        'Tus niveles de estrés necesitan atención. Dedica 10 minutos a la meditación.',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
-                          fontSize: 12,
+                        '/10',
+                        style: ModernTypography.bodyMedium.copyWith(
+                          color: ModernColors.onSurface.withOpacity(0.6),
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: ModernSpacing.md),
+          Container(
+            padding: const EdgeInsets.all(ModernSpacing.md),
+            decoration: BoxDecoration(
+              color: _getWellbeingColor(wellbeingScore).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              _getWellbeingDescription(wellbeingScore),
+              style: ModernTypography.bodyMedium.copyWith(
+                color: _getWellbeingColor(wellbeingScore),
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTodayInsights() {
+    // ✅ USANDO DATOS REALES DEL ANALYTICS PROVIDER
+    final analyticsProvider = context.watch<OptimizedAnalyticsProvider>();
+
+    try {
+      final insights = analyticsProvider.getInsights();
+      final highlightedInsights = analyticsProvider.getHighlightedInsights();
+
+      // Combinar insights normales y destacados, tomar los primeros 3
+      final allInsights = [...highlightedInsights, ...insights];
+      final displayInsights = allInsights.take(3).map((insight) => insight['text'] ?? '').where((text) => text.isNotEmpty).toList();
+
+      if (displayInsights.isEmpty) {
+        return const SizedBox.shrink();
+      }
+
+      return ModernCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: ModernColors.accentYellow.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.lightbulb,
+                    color: ModernColors.accentYellow,
+                    size: 20,
+                  ),
                 ),
-                Column(
+                const SizedBox(width: ModernSpacing.sm),
+                Text(
+                  'Insights del día',
+                  style: ModernTypography.titleMedium.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: ModernSpacing.md),
+            ...displayInsights.map((insight) => Padding(
+              padding: const EdgeInsets.only(bottom: ModernSpacing.sm),
+              child: Container(
+                padding: const EdgeInsets.all(ModernSpacing.sm),
+                decoration: BoxDecoration(
+                  color: ModernColors.accentYellow.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: ModernColors.accentYellow.withOpacity(0.2),
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(8),
+                      width: 6,
+                      height: 6,
+                      margin: const EdgeInsets.only(top: 8),
+                      decoration: const BoxDecoration(
+                        color: ModernColors.accentYellow,
+                        shape: BoxShape.circle,
                       ),
-                      child: const Text(
-                        '10 min',
-                        style: TextStyle(
-                          color: Colors.orange,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
+                    ),
+                    const SizedBox(width: ModernSpacing.sm),
+                    Expanded(
+                      child: Text(
+                        insight,
+                        style: ModernTypography.bodyMedium.copyWith(
+                          color: ModernColors.onSurface.withOpacity(0.8),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Icon(
-                      Icons.arrow_forward_ios,
-                      color: Colors.orange.withOpacity(0.6),
-                      size: 12,
-                    ),
                   ],
+                ),
+              ),
+            )).toList(),
+          ],
+        ),
+      );
+    } catch (e) {
+      // Si hay error con analytics, mostrar insights genéricos
+      debugPrint('Error loading insights: $e');
+      return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildQuickActions() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Acciones rápidas',
+          style: ModernTypography.titleMedium.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: ModernSpacing.md),
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          crossAxisSpacing: ModernSpacing.md,
+          mainAxisSpacing: ModernSpacing.md,
+          childAspectRatio: 2.2,
+          children: [
+            _buildActionButton(
+              title: 'Nuevo Momento',
+              icon: Icons.add_circle_outline,
+              gradient: ModernColors.positiveGradient,
+              onPressed: () {
+                // Navigator.pushNamed(context, '/moments');
+              },
+            ),
+            _buildActionButton(
+              title: 'Reflexión',
+              icon: Icons.edit_note,
+              gradient: ModernColors.warningGradient,
+              onPressed: () {
+                // Navigator.pushNamed(context, '/daily-review');
+              },
+            ),
+            _buildActionButton(
+              title: 'Analytics',
+              icon: Icons.analytics,
+              gradient: ModernColors.neutralGradient,
+              onPressed: () {
+                // Navigator.pushNamed(context, '/analytics');
+              },
+            ),
+            _buildActionButton(
+              title: 'Mi Perfil',
+              icon: Icons.person_outline,
+              gradient: [
+                ModernColors.surface.withOpacity(0.3),
+                ModernColors.surface.withOpacity(0.1),
+              ],
+              onPressed: () {
+                Navigator.pushNamed(context, '/profile');
+              },
+            ),
+          ],
+        )
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required String title,
+    required IconData icon,
+    required List<Color> gradient,
+    required VoidCallback onPressed,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradient,
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  color: Colors.white,
+                  size: 28,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  title,
+                  style: ModernTypography.bodyMedium.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMiniTrendChart(OptimizedAnalyticsProvider analyticsProvider) {
-    final chartData = analyticsProvider.getMoodChartData();
-
-    if (chartData.length < 3) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withOpacity(0.1),
-            Colors.white.withOpacity(0.05),
-          ],
         ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.trending_up,
-                  color: Color(0xFF10B981),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'Tendencia semanal',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          // Mini gráfico de líneas simplificado
-          SizedBox(
-            height: 60,
-            child: CustomPaint(
-              painter: MiniTrendPainter(chartData.take(7).toList()),
-              child: Container(),
-            ),
-          ),
-        ],
       ),
     );
   }
 
-  // Métodos auxiliares corregidos
-  Map<String, dynamic> _getPredictionData(int score) {
-    if (score >= 7) {
-      return {
-        'emoji': '📈',
-        'color': Colors.green,
-        'message': 'Tu bienestar está en tendencia positiva',
-        'confidence': 75,
-      };
-    } else if (score >= 5) {
-      return {
-        'emoji': '📊',
-        'color': Colors.blue,
-        'message': 'Tu bienestar se mantiene equilibrado',
-        'confidence': 65,
-      };
-    } else {
-      return {
-        'emoji': '📉',
-        'color': Colors.orange,
-        'message': 'Dedica tiempo extra al autocuidado hoy',
-        'confidence': 70,
-      };
-    }
+  // Métodos auxiliares
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Buenos días';
+    if (hour < 18) return 'Buenas tardes';
+    return 'Buenas noches';
+  }
+
+  String _getGreetingEmoji() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return '☀️';
+    if (hour < 18) return '🌤️';
+    return '🌙';
   }
 
   Color _getWellbeingColor(double score) {
-    if (score >= 8) return Colors.green;
-    if (score >= 6) return Colors.blue;
-    if (score >= 4) return Colors.orange;
-    return Colors.red;
+    if (score >= 8) return ModernColors.success;
+    if (score >= 6) return ModernColors.accentBlue;
+    if (score >= 4) return ModernColors.warning;
+    return ModernColors.error;
   }
 
-  // Métodos de acción para los quick actions
-  void _logExercise() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Función de ejercicio próximamente'),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+  String _getWellbeingDescription(double score) {
+    if (score >= 8) return 'Te sientes muy bien hoy, ¡sigue así! 🌟';
+    if (score >= 6) return 'Tu bienestar está en buen camino 💪';
+    if (score >= 4) return 'Día promedio, siempre se puede mejorar 📈';
+    return 'Considera dedicar tiempo al autocuidado 💝';
   }
-}
-
-// Painter personalizado para el mini gráfico de tendencias
-class MiniTrendPainter extends CustomPainter {
-  final List<Map<String, dynamic>> data;
-
-  MiniTrendPainter(this.data);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (data.isEmpty) return;
-
-    final paint = Paint()
-      ..color = const Color(0xFF10B981)
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke;
-
-    final path = Path();
-
-    for (int i = 0; i < data.length; i++) {
-      final mood = (data[i]['mood'] as num?)?.toDouble() ?? 5.0;
-      final x = (i / (data.length - 1)) * size.width;
-      final y = size.height - (mood / 10) * size.height;
-
-      if (i == 0) {
-        path.moveTo(x, y);
-      } else {
-        path.lineTo(x, y);
-      }
-    }
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }
