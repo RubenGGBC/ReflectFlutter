@@ -1,19 +1,21 @@
+// lib/presentation/providers/optimized_providers.dart - UPDATED WITH PROFILE PICTURE
 // ============================================================================
-// presentation/providers/optimized_providers.dart - PROVIDERS OPTIMIZADOS
+// AUTH PROVIDER ACTUALIZADO CON SOPORTE PARA FOTOS DE PERFIL
 // ============================================================================
+
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:logger/logger.dart';
+import '../../data/models/goal_model.dart';
 
 import '../../data/services/optimized_database_service.dart';
+import '../../data/services/image_picker_service.dart'; // ✅ NUEVO IMPORT
 import '../../data/models/optimized_models.dart';
-
-// ============================================================================
-// AUTH PROVIDER OPTIMIZADO
-// ============================================================================
 
 class OptimizedAuthProvider with ChangeNotifier {
   final OptimizedDatabaseService _databaseService;
+  final ImagePickerService _imagePickerService = ImagePickerService(); // ✅ NUEVO
   final Logger _logger = Logger();
 
   OptimizedUserModel? _currentUser;
@@ -30,6 +32,139 @@ class OptimizedAuthProvider with ChangeNotifier {
   bool get isLoggedIn => _currentUser != null;
   bool get isInitialized => _isInitialized;
 
+  // ✅ MÉTODO ACTUALIZADO PARA REGISTRO CON FOTO
+  Future<bool> register({
+    required String email,
+    required String password,
+    required String name,
+    String avatarEmoji = '🧘‍♀️',
+    String? profilePicturePath, // ✅ NUEVO PARÁMETRO
+    String bio = '',
+  }) async {
+    _logger.i('📝 Registrando usuario: $email');
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final user = await _databaseService.createUser(
+        email: email,
+        password: password,
+        name: name,
+        avatarEmoji: avatarEmoji,
+        profilePicturePath: profilePicturePath, // ✅ NUEVO
+        bio: bio,
+      );
+
+      if (user != null) {
+        _currentUser = user;
+        _logger.i('✅ Usuario registrado exitosamente: ${user.name}');
+        notifyListeners();
+        return true;
+      } else {
+        _setError('No se pudo crear el usuario');
+        return false;
+      }
+    } catch (e) {
+      _logger.e('❌ Error en registro: $e');
+      _setError('Error durante el registro');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ✅ MÉTODO ACTUALIZADO PARA ACTUALIZAR PERFIL CON FOTO
+  Future<bool> updateProfile({
+    String? name,
+    String? bio,
+    String? avatarEmoji,
+    String? profilePicturePath, // ✅ NUEVO PARÁMETRO
+  }) async {
+    if (_currentUser == null) return false;
+
+    _logger.i('📝 Actualizando perfil del usuario: ${_currentUser!.name}');
+    _setLoading(true);
+    _clearError();
+
+    try {
+      // Si hay una nueva imagen y ya existe una anterior, eliminar la anterior
+      if (profilePicturePath != null &&
+          _currentUser!.profilePicturePath != null &&
+          _currentUser!.profilePicturePath != profilePicturePath) {
+        await _imagePickerService.deleteProfilePicture(_currentUser!.profilePicturePath);
+      }
+
+      final success = await _databaseService.updateUserProfile(
+        userId: _currentUser!.id,
+        name: name,
+        bio: bio,
+        avatarEmoji: avatarEmoji,
+        profilePicturePath: profilePicturePath, // ✅ NUEVO
+      );
+
+      if (success) {
+        _currentUser = _currentUser!.copyWith(
+          name: name,
+          bio: bio,
+          avatarEmoji: avatarEmoji,
+          profilePicturePath: profilePicturePath, // ✅ NUEVO
+        );
+        _logger.i('✅ Perfil actualizado exitosamente');
+        notifyListeners();
+        return true;
+      } else {
+        _setError('No se pudo actualizar el perfil');
+        return false;
+      }
+    } catch (e) {
+      _logger.e('❌ Error actualizando perfil: $e');
+      _setError('Error durante la actualización');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ✅ NUEVO: Método para seleccionar foto de perfil
+  Future<String?> selectProfilePicture(BuildContext context) async {
+    try {
+      _logger.i('📸 Iniciando selección de foto de perfil');
+      final imagePath = await _imagePickerService.showImageSourceDialog(context);
+
+      if (imagePath != null) {
+        _logger.i('✅ Foto de perfil seleccionada: $imagePath');
+      } else {
+        _logger.i('❌ Selección de foto cancelada por el usuario');
+      }
+
+      return imagePath;
+    } catch (e) {
+      _logger.e('❌ Error seleccionando foto de perfil: $e');
+      _setError('Error al seleccionar la imagen');
+      return null;
+    }
+  }
+
+  // ✅ NUEVO: Método para actualizar solo la foto de perfil
+  Future<bool> updateProfilePicture(String imagePath) async {
+    if (_currentUser == null) return false;
+
+    return await updateProfile(profilePicturePath: imagePath);
+  }
+
+  // ✅ NUEVO: Método para eliminar foto de perfil
+  Future<bool> removeProfilePicture() async {
+    if (_currentUser == null || _currentUser!.profilePicturePath == null) return false;
+
+    try {
+      await _imagePickerService.deleteProfilePicture(_currentUser!.profilePicturePath);
+      return await updateProfile(profilePicturePath: ''); // String vacío para eliminar
+    } catch (e) {
+      _logger.e('❌ Error eliminando foto de perfil: $e');
+      return false;
+    }
+  }
+
   /// Inicializar provider
   Future<void> initialize() async {
     if (_isInitialized) return;
@@ -38,10 +173,6 @@ class OptimizedAuthProvider with ChangeNotifier {
     _setLoading(true);
 
     try {
-      // Verificar sesión guardada aquí si implementas SessionService
-      // final hasSession = await _sessionService.hasActiveSession();
-      // if (hasSession) { ... }
-
       _isInitialized = true;
       _logger.i('✅ AuthProvider inicializado');
     } catch (e) {
@@ -50,9 +181,9 @@ class OptimizedAuthProvider with ChangeNotifier {
     } finally {
       _setLoading(false);
     }
-  }// ... dentro de la clase OptimizedAuthProvider
+  }
 
-  /// ✅ NUEVO: Iniciar sesión como desarrollador
+  /// Iniciar sesión como desarrollador
   Future<bool> loginAsDeveloper() async {
     _logger.i('🚀 Iniciando sesión como desarrollador...');
     _setLoading(true);
@@ -73,45 +204,6 @@ class OptimizedAuthProvider with ChangeNotifier {
     } catch (e) {
       _logger.e('❌ Error en login de desarrollador: $e');
       _setError('Error fatal en el modo desarrollador');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Registrar nuevo usuario
-  Future<bool> register({
-    required String email,
-    required String password,
-    required String name,
-    String avatarEmoji = '🧘‍♀️',
-    String bio = '',
-  }) async {
-    _logger.i('📝 Registrando usuario: $email');
-    _setLoading(true);
-    _clearError();
-
-    try {
-      final user = await _databaseService.createUser(
-        email: email,
-        password: password,
-        name: name,
-        avatarEmoji: avatarEmoji,
-        bio: bio,
-      );
-
-      if (user != null) {
-        _currentUser = user;
-        _logger.i('✅ Usuario registrado exitosamente: ${user.name}');
-        notifyListeners();
-        return true;
-      } else {
-        _setError('No se pudo crear el usuario');
-        return false;
-      }
-    } catch (e) {
-      _logger.e('❌ Error en registro: $e');
-      _setError('Error durante el registro');
       return false;
     } finally {
       _setLoading(false);
@@ -153,36 +245,7 @@ class OptimizedAuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// Actualizar perfil de usuario
-  Future<bool> updateProfile({
-    String? name,
-    String? bio,
-    String? avatarEmoji,
-  }) async {
-    if (_currentUser == null) return false;
-
-    _setLoading(true);
-    try {
-      final updatedUser = _currentUser!.copyWith(
-        name: name,
-        bio: bio,
-        avatarEmoji: avatarEmoji,
-      );
-
-      // Aquí implementarías el método updateUser en el database service
-      // final success = await _databaseService.updateUser(updatedUser);
-
-      _currentUser = updatedUser;
-      notifyListeners();
-      return true;
-    } catch (e) {
-      _logger.e('❌ Error actualizando perfil: $e');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
+  // Métodos privados
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();
@@ -195,7 +258,6 @@ class OptimizedAuthProvider with ChangeNotifier {
 
   void _clearError() {
     _errorMessage = null;
-    notifyListeners();
   }
 }
 
@@ -825,6 +887,363 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
 
     return insights;
   }
+  // ============================================================================
+// presentation/providers/analytics_extensions.dart - NUEVAS FUNCIONALIDADES
+// ============================================================================
+
+// Métodos adicionales para el OptimizedAnalyticsProvider
+// Agregar estos métodos al provider existente
+
+  /// Predicción de bienestar para los próximos días basada en patrones
+  Map<String, dynamic> getWellbeingPrediction() {
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+    final moodTrends = _analytics['mood_trends'] as List? ?? [];
+
+    if (basicStats == null || moodTrends.isEmpty) {
+      return {
+        'prediction': 'neutral',
+        'confidence': 0.0,
+        'trend': 'stable',
+        'recommendation': 'Registra más días para obtener predicciones',
+        'predicted_score': 5.0,
+      };
+    }
+
+    final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
+    final avgEnergy = basicStats['avg_energy'] as double? ?? 5.0;
+    final avgStress = basicStats['avg_stress'] as double? ?? 5.0;
+
+    // Análisis de tendencia de los últimos 7 días
+    final recentTrends = moodTrends.take(7).toList();
+    double trendDirection = 0.0;
+
+    if (recentTrends.length >= 3) {
+      final recent = recentTrends.take(3).map((t) => t['mood_score'] as double? ?? 5.0).toList();
+      final older = recentTrends.skip(3).map((t) => t['mood_score'] as double? ?? 5.0).toList();
+
+      if (older.isNotEmpty) {
+        final recentAvg = recent.reduce((a, b) => a + b) / recent.length;
+        final olderAvg = older.reduce((a, b) => a + b) / older.length;
+        trendDirection = recentAvg - olderAvg;
+      }
+    }
+
+    // Predicción basada en patrones
+    final predictedScore = (avgMood + (trendDirection * 0.5)).clamp(1.0, 10.0);
+    final confidence = (recentTrends.length / 7.0).clamp(0.0, 1.0);
+
+    String prediction, trend, recommendation;
+
+    if (trendDirection > 0.5) {
+      prediction = 'improving';
+      trend = 'ascending';
+      recommendation = 'Continúa con tus hábitos actuales';
+    } else if (trendDirection < -0.5) {
+      prediction = 'declining';
+      trend = 'descending';
+      recommendation = 'Considera dedicar tiempo al autocuidado';
+    } else {
+      prediction = 'stable';
+      trend = 'stable';
+      recommendation = 'Mantén el equilibrio actual';
+    }
+
+    return {
+      'prediction': prediction,
+      'confidence': confidence,
+      'trend': trend,
+      'recommendation': recommendation,
+      'predicted_score': predictedScore,
+      'current_score': avgMood,
+    };
+  }
+
+  /// Análisis de hábitos saludables basado en registros
+  Map<String, dynamic> getHealthyHabitsAnalysis() {
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+
+    if (basicStats == null) {
+      return {
+        'sleep_score': 0.0,
+        'exercise_score': 0.0,
+        'meditation_score': 0.0,
+        'social_score': 0.0,
+        'overall_score': 0.0,
+        'recommendations': ['Registra más días para análisis de hábitos'],
+      };
+    }
+
+    final avgSleep = basicStats['avg_sleep_quality'] as double? ?? 5.0;
+    final avgPhysical = basicStats['avg_physical_activity'] as double? ?? 5.0;
+    final avgMeditation = basicStats['avg_meditation_minutes'] as double? ?? 0.0;
+    final avgSocial = basicStats['avg_social_interaction'] as double? ?? 5.0;
+
+    // Normalizar puntuaciones a 0-1
+    final sleepScore = (avgSleep / 10.0).clamp(0.0, 1.0);
+    final exerciseScore = (avgPhysical / 10.0).clamp(0.0, 1.0);
+    final meditationScore = (avgMeditation / 30.0).clamp(0.0, 1.0); // 30 min = máximo
+    final socialScore = (avgSocial / 10.0).clamp(0.0, 1.0);
+
+    final overallScore = (sleepScore + exerciseScore + meditationScore + socialScore) / 4.0;
+
+    final recommendations = <String>[];
+
+    if (sleepScore < 0.6) recommendations.add('Mejora tu calidad de sueño');
+    if (exerciseScore < 0.6) recommendations.add('Incrementa tu actividad física');
+    if (meditationScore < 0.3) recommendations.add('Prueba la meditación diaria');
+    if (socialScore < 0.6) recommendations.add('Conecta más con otros');
+
+    if (recommendations.isEmpty) {
+      recommendations.add('¡Excelente! Mantén tus hábitos saludables');
+    }
+
+    return {
+      'sleep_score': sleepScore,
+      'exercise_score': exerciseScore,
+      'meditation_score': meditationScore,
+      'social_score': socialScore,
+      'overall_score': overallScore,
+      'recommendations': recommendations,
+    };
+  }
+
+  /// Comparación con semanas anteriores
+  Map<String, dynamic> getWeeklyComparison() {
+    final moodTrends = _analytics['mood_trends'] as List? ?? [];
+
+    if (moodTrends.length < 14) {
+      return {
+        'has_data': false,
+        'message': 'Necesitas al menos 2 semanas de datos',
+        'mood_change': 0.0,
+        'energy_change': 0.0,
+        'stress_change': 0.0,
+      };
+    }
+
+    // Última semana vs anterior
+    final thisWeek = moodTrends.take(7).toList();
+    final lastWeek = moodTrends.skip(7).take(7).toList();
+
+    final thisWeekMood = thisWeek.map((t) => t['mood_score'] as double? ?? 5.0)
+        .reduce((a, b) => a + b) / thisWeek.length;
+    final lastWeekMood = lastWeek.map((t) => t['mood_score'] as double? ?? 5.0)
+        .reduce((a, b) => a + b) / lastWeek.length;
+
+    final thisWeekEnergy = thisWeek.map((t) => t['energy_level'] as double? ?? 5.0)
+        .reduce((a, b) => a + b) / thisWeek.length;
+    final lastWeekEnergy = lastWeek.map((t) => t['energy_level'] as double? ?? 5.0)
+        .reduce((a, b) => a + b) / lastWeek.length;
+
+    final thisWeekStress = thisWeek.map((t) => t['stress_level'] as double? ?? 5.0)
+        .reduce((a, b) => a + b) / thisWeek.length;
+    final lastWeekStress = lastWeek.map((t) => t['stress_level'] as double? ?? 5.0)
+        .reduce((a, b) => a + b) / lastWeek.length;
+
+    return {
+      'has_data': true,
+      'mood_change': thisWeekMood - lastWeekMood,
+      'energy_change': thisWeekEnergy - lastWeekEnergy,
+      'stress_change': thisWeekStress - lastWeekStress,
+      'current_week': {
+        'mood': thisWeekMood,
+        'energy': thisWeekEnergy,
+        'stress': thisWeekStress,
+      },
+      'previous_week': {
+        'mood': lastWeekMood,
+        'energy': lastWeekEnergy,
+        'stress': lastWeekStress,
+      },
+    };
+  }
+
+  /// Recomendaciones personalizadas basadas en IA
+  List<Map<String, dynamic>> getPersonalizedRecommendations() {
+    final recommendations = <Map<String, dynamic>>[];
+
+    final wellbeingStatus = getWellbeingStatus();
+    final habitsAnalysis = getHealthyHabitsAnalysis();
+    final stressAlerts = getStressAlerts();
+    final prediction = getWellbeingPrediction();
+
+    final currentScore = wellbeingStatus['score'] as int? ?? 5;
+    final stressLevel = stressAlerts['level'] as String? ?? 'sin datos';
+    final trend = prediction['trend'] as String? ?? 'stable';
+
+    // Recomendaciones basadas en estrés
+    if (stressLevel == 'alto') {
+      recommendations.add({
+        'icon': '🧘‍♀️',
+        'title': 'Sesión de Mindfulness',
+        'description': 'Dedica 10 minutos a la meditación',
+        'type': 'stress_relief',
+        'priority': 'high',
+        'action': 'meditate',
+        'estimated_time': '10 min',
+      });
+    }
+
+    // Recomendaciones basadas en hábitos
+    final sleepScore = habitsAnalysis['sleep_score'] as double? ?? 0.5;
+    if (sleepScore < 0.6) {
+      recommendations.add({
+        'icon': '😴',
+        'title': 'Rutina de Sueño',
+        'description': 'Establece una hora fija para dormir',
+        'type': 'sleep',
+        'priority': 'medium',
+        'action': 'plan_sleep',
+        'estimated_time': '5 min',
+      });
+    }
+
+    // Recomendaciones basadas en tendencia
+    if (trend == 'descending') {
+      recommendations.add({
+        'icon': '🌱',
+        'title': 'Momento de Gratitud',
+        'description': 'Escribe 3 cosas por las que estás agradecido',
+        'type': 'mood_boost',
+        'priority': 'medium',
+        'action': 'gratitude',
+        'estimated_time': '5 min',
+      });
+    }
+
+    // Recomendación de ejercicio
+    final exerciseScore = habitsAnalysis['exercise_score'] as double? ?? 0.5;
+    if (exerciseScore < 0.6) {
+      recommendations.add({
+        'icon': '🏃‍♀️',
+        'title': 'Actividad Física',
+        'description': 'Una caminata corta puede mejorar tu energía',
+        'type': 'exercise',
+        'priority': 'low',
+        'action': 'walk',
+        'estimated_time': '15 min',
+      });
+    }
+
+    // Recomendación social
+    final socialScore = habitsAnalysis['social_score'] as double? ?? 0.5;
+    if (socialScore < 0.5) {
+      recommendations.add({
+        'icon': '👥',
+        'title': 'Conexión Social',
+        'description': 'Llama a un amigo o familiar',
+        'type': 'social',
+        'priority': 'low',
+        'action': 'connect',
+        'estimated_time': '10 min',
+      });
+    }
+
+    // Ordenar por prioridad
+    recommendations.sort((a, b) {
+      final priorityOrder = {'high': 0, 'medium': 1, 'low': 2};
+      return priorityOrder[a['priority']]!.compareTo(priorityOrder[b['priority']]!);
+    });
+
+    return recommendations.take(3).toList(); // Máximo 3 recomendaciones
+  }
+
+  /// Calendario de estados de ánimo para los últimos días
+  List<Map<String, dynamic>> getMoodCalendarData() {
+    final moodTrends = _analytics['mood_trends'] as List? ?? [];
+
+    return moodTrends.take(30).map((trend) {
+      final mood = trend['mood_score'] as double? ?? 5.0;
+      final energy = trend['energy_level'] as double? ?? 5.0;
+      final stress = trend['stress_level'] as double? ?? 5.0;
+      final date = DateTime.tryParse(trend['entry_date'] as String? ?? '') ?? DateTime.now();
+
+      String emoji;
+      Color color;
+
+      final avgScore = (mood + energy + (10 - stress)) / 3;
+
+      if (avgScore >= 7) {
+        emoji = '😊';
+        color = Colors.green;
+      } else if (avgScore >= 5) {
+        emoji = '😐';
+        color = Colors.blue;
+      } else {
+        emoji = '😔';
+        color = Colors.orange;
+      }
+
+      return {
+        'date': date,
+        'mood': mood,
+        'energy': energy,
+        'stress': stress,
+        'avg_score': avgScore,
+        'emoji': emoji,
+        'color': color,
+      };
+    }).toList();
+  }
+
+  /// Challenges personalizados basados en datos del usuario
+  List<Map<String, dynamic>> getPersonalizedChallenges() {
+    final challenges = <Map<String, dynamic>>[];
+
+    final streakData = getStreakData();
+    final habitsAnalysis = getHealthyHabitsAnalysis();
+    final currentStreak = streakData['current'] as int? ?? 0;
+
+    // Challenge de racha
+    if (currentStreak < 7) {
+      challenges.add({
+        'id': 'weekly_streak',
+        'title': 'Racha Semanal',
+        'description': 'Completa 7 días seguidos de registro',
+        'icon': '🔥',
+        'progress': currentStreak / 7.0,
+        'target': 7,
+        'current': currentStreak,
+        'type': 'streak',
+        'reward': '¡Insignia de Constancia!',
+      });
+    }
+
+    // Challenge de meditación
+    final meditationScore = habitsAnalysis['meditation_score'] as double? ?? 0.0;
+    if (meditationScore < 0.5) {
+      challenges.add({
+        'id': 'meditation_week',
+        'title': 'Semana Mindful',
+        'description': 'Medita 5 minutos por 5 días',
+        'icon': '🧘‍♀️',
+        'progress': meditationScore * 2, // Convertir a progreso del challenge
+        'target': 5,
+        'current': (meditationScore * 5).round(),
+        'type': 'meditation',
+        'reward': '¡Maestro del Mindfulness!',
+      });
+    }
+
+    // Challenge de actividad física
+    final exerciseScore = habitsAnalysis['exercise_score'] as double? ?? 0.0;
+    if (exerciseScore < 0.7) {
+      challenges.add({
+        'id': 'active_week',
+        'title': 'Semana Activa',
+        'description': 'Haz ejercicio 4 días esta semana',
+        'icon': '💪',
+        'progress': exerciseScore,
+        'target': 4,
+        'current': (exerciseScore * 4).round(),
+        'type': 'exercise',
+        'reward': '¡Guerrero del Fitness!',
+      });
+    }
+
+    return challenges.take(2).toList(); // Máximo 2 challenges activos
+  }
+
 
   /// Obtener siguiente logro (basado en datos reales)
   Map<String, dynamic>? getNextAchievementToUnlock() {
@@ -1260,5 +1679,563 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
   void _clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+}
+// lib/presentation/providers/goals_provider.dart
+// ============================================================================
+// GOALS PROVIDER - GESTIÓN COMPLETA DE OBJETIVOS CON AUTO-TRACKING
+// ============================================================================
+
+
+
+class GoalsProvider with ChangeNotifier {
+  final OptimizedDatabaseService _databaseService;
+  final Logger _logger = Logger();
+
+  List<GoalModel> _goals = [];
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  GoalsProvider(this._databaseService);
+
+  // Getters principales
+  List<GoalModel> get goals => List.unmodifiable(_goals);
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+
+  // Getters específicos
+  List<GoalModel> get activeGoals =>
+      _goals.where((goal) => goal.status == GoalStatus.active).toList();
+
+  List<GoalModel> get completedGoals =>
+      _goals.where((goal) => goal.status == GoalStatus.completed).toList();
+
+  List<GoalModel> get archivedGoals =>
+      _goals.where((goal) => goal.status == GoalStatus.archived).toList();
+
+  // Métricas agregadas
+  double get averageProgress {
+    if (activeGoals.isEmpty) return 0.0;
+    final totalProgress = activeGoals.fold<double>(
+      0.0,
+          (sum, goal) => sum + goal.progress,
+    );
+    return totalProgress / activeGoals.length;
+  }
+
+  int get totalGoalsCount => _goals.length;
+
+  Map<GoalType, int> get goalsByType {
+    final Map<GoalType, int> result = {};
+    for (final goal in _goals) {
+      result[goal.type] = (result[goal.type] ?? 0) + 1;
+    }
+    return result;
+  }
+
+  /// Cargar objetivos del usuario
+  Future<void> loadUserGoals(int userId) async {
+    _logger.d('🎯 Cargando objetivos para usuario: $userId');
+    _setLoading(true);
+    _clearError();
+
+    try {
+      _goals = await _databaseService.getUserGoals(userId);
+      _logger.i('✅ Cargados ${_goals.length} objetivos');
+    } catch (e) {
+      _logger.e('❌ Error cargando objetivos: $e');
+      _setError('Error cargando objetivos');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Crear nuevo objetivo
+  Future<bool> createGoal({
+    required int userId,
+    required String title,
+    required String description,
+    required String type,
+    required double targetValue,
+  }) async {
+    _logger.i('🎯 Creando objetivo: $title');
+    _setLoading(true);
+    _clearError();
+
+    try {
+      // Convertir string a enum
+      final goalType = _parseGoalType(type);
+
+      final goal = GoalModel(
+        userId: userId,
+        title: title,
+        description: description,
+        type: goalType,
+        targetValue: targetValue,
+        createdAt: DateTime.now(),
+      );
+
+      final goalId = await _databaseService.createGoal(goal);
+
+      if (goalId != null) {
+        final savedGoal = goal.copyWith(id: goalId);
+        _goals.insert(0, savedGoal);
+
+        _logger.i('✅ Objetivo creado exitosamente: $title');
+        notifyListeners();
+        return true;
+      } else {
+        _setError('No se pudo crear el objetivo');
+        return false;
+      }
+    } catch (e) {
+      _logger.e('❌ Error creando objetivo: $e');
+      _setError('Error creando objetivo');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Actualizar objetivo existente
+  Future<bool> updateGoal(
+      int goalId, {
+        String? title,
+        String? description,
+        String? type,
+        double? targetValue,
+        double? currentValue,
+      }) async {
+    _logger.i('📝 Actualizando objetivo: $goalId');
+    _setLoading(true);
+    _clearError();
+
+    try {
+      final goalIndex = _goals.indexWhere((g) => g.id == goalId);
+      if (goalIndex == -1) {
+        _setError('Objetivo no encontrado');
+        return false;
+      }
+
+      final existingGoal = _goals[goalIndex];
+      final updatedGoal = existingGoal.copyWith(
+        title: title,
+        description: description,
+        type: type != null ? _parseGoalType(type) : null,
+        targetValue: targetValue,
+        currentValue: currentValue,
+      );
+
+      final success = await _databaseService.updateGoal(updatedGoal);
+
+      if (success) {
+        _goals[goalIndex] = updatedGoal;
+        _logger.i('✅ Objetivo actualizado exitosamente');
+        notifyListeners();
+        return true;
+      } else {
+        _setError('No se pudo actualizar el objetivo');
+        return false;
+      }
+    } catch (e) {
+      _logger.e('❌ Error actualizando objetivo: $e');
+      _setError('Error actualizando objetivo');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Actualizar progreso de un objetivo
+  Future<bool> updateGoalProgress(int goalId, double newValue) async {
+    _logger.d('📊 Actualizando progreso objetivo $goalId: $newValue');
+
+    try {
+      final goalIndex = _goals.indexWhere((g) => g.id == goalId);
+      if (goalIndex == -1) return false;
+
+      final goal = _goals[goalIndex];
+      final updatedGoal = goal.copyWith(currentValue: newValue);
+
+      // Verificar si se completó automáticamente
+      if (updatedGoal.progress >= 1.0 && goal.status == GoalStatus.active) {
+        final completedGoal = updatedGoal.copyWith(
+          status: GoalStatus.completed,
+          completedAt: DateTime.now(),
+        );
+
+        final success = await _databaseService.updateGoal(completedGoal);
+        if (success) {
+          _goals[goalIndex] = completedGoal;
+          _logger.i('🎉 ¡Objetivo completado automáticamente!: ${goal.title}');
+        }
+      } else {
+        final success = await _databaseService.updateGoal(updatedGoal);
+        if (success) {
+          _goals[goalIndex] = updatedGoal;
+        }
+      }
+
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _logger.e('❌ Error actualizando progreso: $e');
+      return false;
+    }
+  }
+
+  /// Completar objetivo manualmente
+  Future<bool> completeGoal(int goalId) async {
+    _logger.i('✅ Completando objetivo: $goalId');
+
+    try {
+      final goalIndex = _goals.indexWhere((g) => g.id == goalId);
+      if (goalIndex == -1) return false;
+
+      final goal = _goals[goalIndex];
+      final completedGoal = goal.copyWith(
+        status: GoalStatus.completed,
+        completedAt: DateTime.now(),
+        currentValue: goal.targetValue, // Marcar como 100% completado
+      );
+
+      final success = await _databaseService.updateGoal(completedGoal);
+
+      if (success) {
+        _goals[goalIndex] = completedGoal;
+        _logger.i('🎉 Objetivo completado: ${goal.title}');
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _logger.e('❌ Error completando objetivo: $e');
+      return false;
+    }
+  }
+
+  /// Reactivar objetivo completado
+  Future<bool> reactivateGoal(int goalId) async {
+    _logger.i('🔄 Reactivando objetivo: $goalId');
+
+    try {
+      final goalIndex = _goals.indexWhere((g) => g.id == goalId);
+      if (goalIndex == -1) return false;
+
+      final goal = _goals[goalIndex];
+      final reactivatedGoal = goal.copyWith(
+        status: GoalStatus.active,
+        completedAt: null,
+      );
+
+      final success = await _databaseService.updateGoal(reactivatedGoal);
+
+      if (success) {
+        _goals[goalIndex] = reactivatedGoal;
+        _logger.i('🔄 Objetivo reactivado: ${goal.title}');
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _logger.e('❌ Error reactivando objetivo: $e');
+      return false;
+    }
+  }
+
+  /// Archivar objetivo
+  Future<bool> archiveGoal(int goalId) async {
+    _logger.i('📦 Archivando objetivo: $goalId');
+
+    try {
+      final goalIndex = _goals.indexWhere((g) => g.id == goalId);
+      if (goalIndex == -1) return false;
+
+      final goal = _goals[goalIndex];
+      final archivedGoal = goal.copyWith(status: GoalStatus.archived);
+
+      final success = await _databaseService.updateGoal(archivedGoal);
+
+      if (success) {
+        _goals[goalIndex] = archivedGoal;
+        _logger.i('📦 Objetivo archivado: ${goal.title}');
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _logger.e('❌ Error archivando objetivo: $e');
+      return false;
+    }
+  }
+
+  /// Eliminar objetivo
+  Future<bool> deleteGoal(int goalId) async {
+    _logger.i('🗑️ Eliminando objetivo: $goalId');
+
+    try {
+      final success = await _databaseService.deleteGoal(goalId);
+
+      if (success) {
+        _goals.removeWhere((g) => g.id == goalId);
+        _logger.i('🗑️ Objetivo eliminado exitosamente');
+        notifyListeners();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _logger.e('❌ Error eliminando objetivo: $e');
+      return false;
+    }
+  }
+
+  /// Auto-actualizar progreso basado en datos del usuario
+  Future<void> updateGoalsProgress(int userId) async {
+    _logger.d('🔄 Auto-actualizando progreso de objetivos');
+
+    try {
+      for (final goal in activeGoals) {
+        double newProgress = 0.0;
+
+        switch (goal.type) {
+          case GoalType.consistency:
+            newProgress = await _calculateConsistencyProgress(userId, goal);
+            break;
+          case GoalType.mood:
+            newProgress = await _calculateMoodProgress(userId, goal);
+            break;
+          case GoalType.positiveMoments:
+            newProgress = await _calculatePositiveMomentsProgress(userId, goal);
+            break;
+          case GoalType.stressReduction:
+            newProgress = await _calculateStressReductionProgress(userId, goal);
+            break;
+        }
+
+        if (newProgress != goal.currentValue) {
+          await updateGoalProgress(goal.id!, newProgress);
+        }
+      }
+    } catch (e) {
+      _logger.e('❌ Error auto-actualizando progreso: $e');
+    }
+  }
+
+  /// Calcular progreso de consistencia (días consecutivos)
+  Future<double> _calculateConsistencyProgress(int userId, GoalModel goal) async {
+    try {
+      // Obtener datos de streak del analytics
+      final analytics = await _databaseService.getUserAnalytics(userId, days: 30);
+      final streakData = analytics['streak_data'] as Map<String, dynamic>?;
+      final currentStreak = streakData?['current_streak'] as int? ?? 0;
+
+      return currentStreak.toDouble();
+    } catch (e) {
+      _logger.e('Error calculando progreso de consistencia: $e');
+      return goal.currentValue;
+    }
+  }
+
+  /// Calcular progreso de mood (puntuación promedio)
+  Future<double> _calculateMoodProgress(int userId, GoalModel goal) async {
+    try {
+      final analytics = await _databaseService.getUserAnalytics(userId, days: 30);
+      final basicStats = analytics['basic_stats'] as Map<String, dynamic>?;
+      final avgMood = basicStats?['avg_mood'] as double? ?? 0.0;
+
+      // Convertir mood de 0-10 a valor de progreso
+      return avgMood;
+    } catch (e) {
+      _logger.e('Error calculando progreso de mood: $e');
+      return goal.currentValue;
+    }
+  }
+
+  /// Calcular progreso de momentos positivos
+  Future<double> _calculatePositiveMomentsProgress(int userId, GoalModel goal) async {
+    try {
+      // Obtener momentos positivos del último mes
+      final moments = await _databaseService.getInteractiveMoments(
+        userId: userId,
+        type: 'positive',
+        limit: 1000,
+      );
+
+      final positiveMomentsCount = moments.length;
+      return positiveMomentsCount.toDouble();
+    } catch (e) {
+      _logger.e('Error calculando progreso de momentos positivos: $e');
+      return goal.currentValue;
+    }
+  }
+
+  /// Calcular progreso de reducción de estrés
+  Future<double> _calculateStressReductionProgress(int userId, GoalModel goal) async {
+    try {
+      final analytics = await _databaseService.getUserAnalytics(userId, days: 30);
+      final basicStats = analytics['basic_stats'] as Map<String, dynamic>?;
+      final avgStress = basicStats?['avg_stress'] as double? ?? 5.0;
+
+      // Para reducción de estrés, menor valor = mejor progreso
+      // Convertir: si objetivo es reducir estrés a 3, y actual es 7, progreso sería bajo
+      final stressReduction = math.max(0.0, 10.0 - avgStress); // ✅ FIXED: Usar double explícitamente
+      return stressReduction.toDouble(); // ✅ FIXED: Conversión explícita a double
+    } catch (e) {
+      _logger.e('Error calculando progreso de reducción de estrés: $e');
+      return goal.currentValue;
+    }
+  }
+
+  /// Obtener objetivos por tipo específico
+  List<GoalModel> getGoalsByType(GoalType type) {
+    return _goals.where((goal) => goal.type == type).toList();
+  }
+
+  /// Obtener estadísticas de objetivos
+  Map<String, dynamic> getGoalsStatistics() {
+    final total = _goals.length;
+    final active = activeGoals.length;
+    final completed = completedGoals.length;
+    final archived = archivedGoals.length;
+
+    return {
+      'total': total,
+      'active': active,
+      'completed': completed,
+      'archived': archived,
+      'completion_rate': total > 0 ? completed / total : 0.0,
+      'average_progress': averageProgress,
+      'goals_by_type': goalsByType,
+    };
+  }
+
+  // Métodos privados de utilidad
+  GoalType _parseGoalType(String type) {
+    switch (type.toLowerCase()) {
+      case 'consistency':
+        return GoalType.consistency;
+      case 'mood':
+        return GoalType.mood;
+      case 'positivemoments':
+        return GoalType.positiveMoments;
+      case 'stressreduction':
+        return GoalType.stressReduction;
+      default:
+        return GoalType.consistency;
+    }
+  }
+
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void _setError(String error) {
+    _errorMessage = error;
+    notifyListeners();
+  }
+
+  void _clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+}
+
+// ============================================================================
+// EXTENSIÓN PARA EL OPTIMIZED DATABASE SERVICE - MÉTODOS DE GOALS
+// ============================================================================
+
+extension GoalsDatabase on OptimizedDatabaseService {
+
+  /// Obtener objetivos del usuario
+  Future<List<GoalModel>> getUserGoals(int userId) async {
+    try {
+      final db = await database;
+      final results = await db.query(
+        'user_goals',
+        where: 'user_id = ?',
+        whereArgs: [userId],
+        orderBy: 'created_at DESC',
+      );
+
+      return results.map((row) => GoalModel.fromDatabase(row)).toList();
+    } catch (e) {
+      throw Exception('Error obteniendo objetivos: $e');
+    }
+  }
+
+  /// Crear nuevo objetivo
+  Future<int?> createGoal(GoalModel goal) async {
+    try {
+      final db = await database;
+      return await db.insert('user_goals', goal.toDatabase());
+    } catch (e) {
+      throw Exception('Error creando objetivo: $e');
+    }
+  }
+
+  /// Actualizar objetivo
+  Future<bool> updateGoal(GoalModel goal) async {
+    try {
+      final db = await database;
+      final rowsAffected = await db.update(
+        'user_goals',
+        goal.toDatabase(),
+        where: 'id = ?',
+        whereArgs: [goal.id],
+      );
+      return rowsAffected > 0;
+    } catch (e) {
+      throw Exception('Error actualizando objetivo: $e');
+    }
+  }
+
+  /// Eliminar objetivo
+  Future<bool> deleteGoal(int goalId) async {
+    try {
+      final db = await database;
+      final rowsAffected = await db.delete(
+        'user_goals',
+        where: 'id = ?',
+        whereArgs: [goalId],
+      );
+      return rowsAffected > 0;
+    } catch (e) {
+      throw Exception('Error eliminando objetivo: $e');
+    }
+  }
+
+  /// Obtener objetivos por tipo
+  Future<List<GoalModel>> getGoalsByType(int userId, GoalType type) async {
+    try {
+      final db = await database;
+      final results = await db.query(
+        'user_goals',
+        where: 'user_id = ? AND type = ?',
+        whereArgs: [userId, type.toString()],
+        orderBy: 'created_at DESC',
+      );
+
+      return results.map((row) => GoalModel.fromDatabase(row)).toList();
+    } catch (e) {
+      throw Exception('Error obteniendo objetivos por tipo: $e');
+    }
+  }
+
+  /// Obtener objetivos por estado
+  Future<List<GoalModel>> getGoalsByStatus(int userId, GoalStatus status) async {
+    try {
+      final db = await database;
+      final results = await db.query(
+        'user_goals',
+        where: 'user_id = ? AND status = ?',
+        whereArgs: [userId, status.toString()],
+        orderBy: 'created_at DESC',
+      );
+
+      return results.map((row) => GoalModel.fromDatabase(row)).toList();
+    } catch (e) {
+      throw Exception('Error obteniendo objetivos por estado: $e');
+    }
   }
 }

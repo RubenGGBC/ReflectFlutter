@@ -1,0 +1,24 @@
+# Podfile
+
+# Descomenta esta línea para definir una plataforma global para tu proyecto
+platform :ios, '12.0'
+
+# Las definiciones de CocoaPods para un proyecto de Flutter
+flutter_application_path = File.join(File.dirname(__FILE__), '..')
+load File.join(flutter_application_path, '.ios', 'Flutter', 'podhelper.rb')
+
+target 'Runner' do
+  use_frameworks!
+  use_modular_headers!
+
+  # >>> AÑADE ESTA LÍNEA PARA LA IA <<<
+  pod 'TensorFlowLiteTaskText'
+
+  flutter_install_all_ios_pods(flutter_application_path)
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+  end
+end

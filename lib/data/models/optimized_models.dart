@@ -7,109 +7,130 @@ import 'dart:convert';
 // USER MODEL OPTIMIZADO
 // ============================================================================
 
+// lib/data/models/optimized_models.dart - UPDATED WITH PROFILE PICTURE SUPPORT
+// ============================================================================
+
+import 'dart:convert';
+
+// ============================================================================
+// USER MODEL OPTIMIZADO CON FOTO DE PERFIL
+// ============================================================================
+
 class OptimizedUserModel {
-final int id;
-final String email;
-final String name;
-final String avatarEmoji;
-final String bio;
-final Map<String, dynamic> preferences;
-final DateTime createdAt;
-final DateTime? lastLogin;
-final bool isActive;
+  final int id;
+  final String email;
+  final String name;
+  final String avatarEmoji;
+  final String? profilePicturePath; // ✅ NUEVO: Ruta de la imagen de perfil
+  final String bio;
+  final Map<String, dynamic> preferences;
+  final DateTime createdAt;
+  final DateTime? lastLogin;
+  final bool isActive;
 
-const OptimizedUserModel({
-required this.id,
-required this.email,
-required this.name,
-required this.avatarEmoji,
-required this.bio,
-this.preferences = const {},
-required this.createdAt,
-this.lastLogin,
-this.isActive = true,
-});
+  const OptimizedUserModel({
+    required this.id,
+    required this.email,
+    required this.name,
+    required this.avatarEmoji,
+    this.profilePicturePath, // ✅ NUEVO: Campo opcional para imagen
+    required this.bio,
+    this.preferences = const {},
+    required this.createdAt,
+    this.lastLogin,
+    this.isActive = true,
+  });
 
-factory OptimizedUserModel.create({
-required String email,
-required String name,
-String avatarEmoji = '🧘‍♀️',
-String bio = '',
-Map<String, dynamic> preferences = const {},
-}) {
-return OptimizedUserModel(
-id: 0, // Se asignará por la BD
-email: email.toLowerCase().trim(),
-name: name.trim(),
-avatarEmoji: avatarEmoji,
-bio: bio,
-preferences: preferences,
-createdAt: DateTime.now(),
-isActive: true,
-);
-}
+  factory OptimizedUserModel.create({
+    required String email,
+    required String name,
+    String avatarEmoji = '🧘‍♀️',
+    String? profilePicturePath, // ✅ NUEVO
+    String bio = '',
+    Map<String, dynamic> preferences = const {},
+  }) {
+    return OptimizedUserModel(
+      id: 0, // Se asignará por la BD
+      email: email.toLowerCase().trim(),
+      name: name.trim(),
+      avatarEmoji: avatarEmoji,
+      profilePicturePath: profilePicturePath, // ✅ NUEVO
+      bio: bio,
+      preferences: preferences,
+      createdAt: DateTime.now(),
+      isActive: true,
+    );
+  }
 
-factory OptimizedUserModel.fromDatabase(Map<String, dynamic> map) {
-return OptimizedUserModel(
-id: map['id'] as int,
-email: map['email'] as String,
-name: map['name'] as String,
-avatarEmoji: map['avatar_emoji'] as String,
-bio: map['bio'] as String? ?? '',
-preferences: _parseJsonMap(map['preferences'] as String?),
-createdAt: DateTime.fromMillisecondsSinceEpoch((map['created_at'] as int) * 1000),
-lastLogin: map['last_login'] != null
-? DateTime.fromMillisecondsSinceEpoch((map['last_login'] as int) * 1000)
-    : null,
-isActive: (map['is_active'] as int) == 1,
-);
-}
+  factory OptimizedUserModel.fromDatabase(Map<String, dynamic> map) {
+    return OptimizedUserModel(
+      id: map['id'] as int,
+      email: map['email'] as String,
+      name: map['name'] as String,
+      avatarEmoji: map['avatar_emoji'] as String,
+      profilePicturePath: map['profile_picture_path'] as String?, // ✅ NUEVO
+      bio: map['bio'] as String? ?? '',
+      preferences: _parseJsonMap(map['preferences'] as String?),
+      createdAt: DateTime.fromMillisecondsSinceEpoch((map['created_at'] as int) * 1000),
+      lastLogin: map['last_login'] != null
+          ? DateTime.fromMillisecondsSinceEpoch((map['last_login'] as int) * 1000)
+          : null,
+      isActive: (map['is_active'] as int) == 1,
+    );
+  }
 
-Map<String, dynamic> toDatabase() {
-return {
-'email': email,
-'name': name,
-'avatar_emoji': avatarEmoji,
-'bio': bio,
-'preferences': jsonEncode(preferences),
-'created_at': createdAt.millisecondsSinceEpoch ~/ 1000,
-'last_login': lastLogin!.millisecondsSinceEpoch ~/ 1000,
-'is_active': isActive ? 1 : 0,
-};
-}
+  Map<String, dynamic> toDatabase() {
+    return {
+      'email': email,
+      'name': name,
+      'avatar_emoji': avatarEmoji,
+      'profile_picture_path': profilePicturePath, // ✅ NUEVO
+      'bio': bio,
+      'preferences': jsonEncode(preferences),
+      'created_at': createdAt.millisecondsSinceEpoch ~/ 1000,
+      'last_login': lastLogin?.millisecondsSinceEpoch != null
+          ? lastLogin!.millisecondsSinceEpoch ~/ 1000
+          : null,
+      'is_active': isActive ? 1 : 0,
+    };
+  }
 
-OptimizedUserModel copyWith({
-int? id,
-String? email,
-String? name,
-String? avatarEmoji,
-String? bio,
-Map<String, dynamic>? preferences,
-DateTime? createdAt,
-DateTime? lastLogin,
-bool? isActive,
-}) {
-return OptimizedUserModel(
-id: id ?? this.id,
-email: email ?? this.email,
-name: name ?? this.name,
-avatarEmoji: avatarEmoji ?? this.avatarEmoji,
-bio: bio ?? this.bio,
-preferences: preferences ?? this.preferences,
-createdAt: createdAt ?? this.createdAt,
-lastLogin: lastLogin ?? this.lastLogin,
-isActive: isActive ?? this.isActive,
-);
-}
+  OptimizedUserModel copyWith({
+    int? id,
+    String? email,
+    String? name,
+    String? avatarEmoji,
+    String? profilePicturePath, // ✅ NUEVO
+    String? bio,
+    Map<String, dynamic>? preferences,
+    DateTime? createdAt,
+    DateTime? lastLogin,
+    bool? isActive,
+  }) {
+    return OptimizedUserModel(
+      id: id ?? this.id,
+      email: email ?? this.email,
+      name: name ?? this.name,
+      avatarEmoji: avatarEmoji ?? this.avatarEmoji,
+      profilePicturePath: profilePicturePath ?? this.profilePicturePath, // ✅ NUEVO
+      bio: bio ?? this.bio,
+      preferences: preferences ?? this.preferences,
+      createdAt: createdAt ?? this.createdAt,
+      lastLogin: lastLogin ?? this.lastLogin,
+      isActive: isActive ?? this.isActive,
+    );
+  }
 
-static Map<String, dynamic> _parseJsonMap(String? jsonString) {
-if (jsonString == null || jsonString.isEmpty) return {};
-try {
-return jsonDecode(jsonString) as Map<String, dynamic>;
-} catch (e) {
-return {};
-}
-}
+  bool get hasProfilePicture => profilePicturePath != null && profilePicturePath!.isNotEmpty;
+
+  static Map<String, dynamic> _parseJsonMap(String? jsonString) {
+    if (jsonString == null || jsonString.isEmpty) return {};
+    try {
+      return jsonDecode(jsonString) as Map<String, dynamic>;
+    } catch (e) {
+      return {};
+    }
+  }
 }
 
 // ============================================================================

@@ -1,15 +1,16 @@
 <!-- android/app/src/main/AndroidManifest.xml -->
-<!-- UPDATE YOUR EXISTING MANIFEST - ADD THE AI PERMISSION -->
+<!-- UPDATED WITH PROFILE PICTURE SUPPORT -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- ✅ PERMISOS EXISTENTES (mantener) -->
+    <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- 🚨 PERMISOS CRÍTICOS FALTANTES PARA BASE DE DATOS -->
+    <!-- ✅ PERMISOS EXISTENTES PARA ALMACENAMIENTO -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
@@ -17,8 +18,16 @@
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29" />
 
-    <!-- 🤖 NEW: Para procesamiento de IA -->
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- ✅ NUEVO: Para Android 13+ (Tiramisu) - Acceso a imágenes -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+
+    <!-- ✅ NUEVO: Declarar características de cámara (opcional pero recomendado) -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    <uses-feature
+        android:name="android.hardware.camera.autofocus"
+        android:required="false" />
 
     <application
         android:label="Reflect"
@@ -50,6 +59,17 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- ✅ NUEVO: FileProvider para image_picker (REQUERIDO) -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
