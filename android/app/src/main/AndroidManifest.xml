@@ -110,32 +110,12 @@
             </intent-filter>
         </receiver>
 
-        <!-- ✅ NUEVOS META-DATA PARA CONFIGURACIÓN DE NOTIFICACIONES -->
-
-        <!-- Icono de notificación por defecto -->
-        <meta-data
-            android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@drawable/ic_notification" />
-
-        <!-- Color de notificación por defecto -->
-        <meta-data
-            android:name="com.google.firebase.messaging.default_notification_color"
-            android:resource="@color/notification_color" />
+        <!-- ✅ META-DATA PARA CONFIGURACIÓN DE NOTIFICACIONES (SIN ICONOS PERSONALIZADOS) -->
 
         <!-- Canal de notificación por defecto -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="default_notification_channel" />
-
-        <!-- Configuración para flutter_local_notifications -->
-        <meta-data
-            android:name="com.dexterous.flutterlocalnotifications.DEFAULT_ICON"
-            android:resource="@drawable/ic_notification" />
-
-        <!-- Configuración para sonidos personalizados (opcional) -->
-        <meta-data
-            android:name="com.dexterous.flutterlocalnotifications.NOTIFICATION_SOUND"
-            android:resource="@raw/notification_sound" />
 
         <!-- ✅ META-DATA EXISTENTE PARA FLUTTER (mantenido) -->
         <meta-data
