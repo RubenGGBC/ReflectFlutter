@@ -1,32 +1,34 @@
-// ============================================================================
-// data/services/optimized_database_service.dart - VERSIÓN FINAL PARA APK
-// ============================================================================
-import 'package:flutter/material.dart'; // Para los Colors en getMoodCalendarData
+// lib/data/services/optimized_database_service.dart - VERSIÓN FINAL CON CORRECCIÓN DE DUPLICADOS
+// =======================================================================================
+// SERVICIO DE BASE DE DATOS OPTIMIZADO PARA APK CON ANALYTICS AVANZADOS
+// =======================================================================================
 
-import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'dart:math' as math;
-
+import 'package:crypto/crypto.dart';
+import 'package:flutter/material.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:crypto/crypto.dart';
 import 'package:logger/logger.dart';
 import 'package:flutter/foundation.dart';
 
-// ✅ SOLO imports de modelos optimizados
+// Asegúrate de que la ruta de importación sea correcta para tu proyecto.
 import '../models/optimized_models.dart';
 
 class OptimizedDatabaseService {
-  static const String _databaseName = 'reflect_optimized2.db';
-  static const int _databaseVersion = 3;
+  static const String _databaseName = 'reflect_optimized_v2.db';
+  static const int _databaseVersion = 2;
 
   static Database? _database;
-  static final OptimizedDatabaseService _instance = OptimizedDatabaseService._internal();
+  static final OptimizedDatabaseService _instance = OptimizedDatabaseService
+      ._internal();
 
   final Logger _logger = Logger();
 
   factory OptimizedDatabaseService() => _instance;
+
   OptimizedDatabaseService._internal();
 
   Future<Database> get database async {
@@ -84,7 +86,8 @@ class OptimizedDatabaseService {
       // ✅ CONFIGURACIONES SEGURAS PARA APK
       await db.execute('PRAGMA foreign_keys = ON');
       await db.execute('PRAGMA journal_mode = WAL');
-      await db.execute('PRAGMA cache_size = -1000'); // 1MB cache (reducido para APK)
+      await db.execute(
+          'PRAGMA cache_size = -1000'); // 1MB cache (reducido para APK)
       await db.execute('PRAGMA temp_store = MEMORY');
       await db.execute('PRAGMA synchronous = NORMAL');
 
@@ -104,7 +107,7 @@ class OptimizedDatabaseService {
         password_hash TEXT NOT NULL,
         name TEXT NOT NULL,
         avatar_emoji TEXT DEFAULT '🧘‍♀️',
-        profile_picture_path TEXT, 
+        profile_picture_path TEXT,
         bio TEXT,
         created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
         is_active BOOLEAN DEFAULT 1
@@ -142,6 +145,23 @@ class OptimizedDatabaseService {
       )
     ''');
 
+    // ✅ NUEVO: Tabla user_goals agregada al esquema mínimo
+    await db.execute('''
+      CREATE TABLE user_goals (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        type TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'active',
+        target_value REAL NOT NULL,
+        current_value REAL NOT NULL DEFAULT 0.0,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+        completed_at INTEGER,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+      )
+    ''');
+
     _logger.i('✅ Esquema mínimo creado para fallback');
   }
 
@@ -156,7 +176,7 @@ class OptimizedDatabaseService {
             password_hash TEXT NOT NULL,
             name TEXT NOT NULL,
             avatar_emoji TEXT DEFAULT '🧘‍♀️',
-            profile_picture_path TEXT, 
+            profile_picture_path TEXT,
             bio TEXT,
             preferences TEXT DEFAULT '{}',
             created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
@@ -172,39 +192,37 @@ class OptimizedDatabaseService {
             user_id INTEGER NOT NULL,
             entry_date TEXT NOT NULL,
             free_reflection TEXT NOT NULL,
-            positive_tags TEXT DEFAULT '[]',
-            negative_tags TEXT DEFAULT '[]',
-            worth_it INTEGER,
-            overall_sentiment TEXT,
-            mood_score INTEGER CHECK (mood_score >= 1 AND mood_score <= 10),
-            ai_summary TEXT,
-            word_count INTEGER DEFAULT 0,
-            
-            -- Analytics expandidos
-            energy_level INTEGER CHECK (energy_level >= 1 AND energy_level <= 10),
-            stress_level INTEGER CHECK (stress_level >= 1 AND stress_level <= 10),
+
+            -- Métricas básicas
+            mood_score INTEGER DEFAULT 5 CHECK (mood_score >= 1 AND mood_score <= 10),
+            energy_level INTEGER DEFAULT 5 CHECK (energy_level >= 1 AND energy_level <= 10),
+            stress_level INTEGER DEFAULT 5 CHECK (stress_level >= 1 AND stress_level <= 10),
+            worth_it INTEGER DEFAULT 1 CHECK (worth_it IN (0, 1)),
+
+            -- Métricas avanzadas de analytics (agregadas dinámicamente si es necesario)
             sleep_quality INTEGER CHECK (sleep_quality >= 1 AND sleep_quality <= 10),
             anxiety_level INTEGER CHECK (anxiety_level >= 1 AND anxiety_level <= 10),
             motivation_level INTEGER CHECK (motivation_level >= 1 AND motivation_level <= 10),
             social_interaction INTEGER CHECK (social_interaction >= 1 AND social_interaction <= 10),
             physical_activity INTEGER CHECK (physical_activity >= 1 AND physical_activity <= 10),
             work_productivity INTEGER CHECK (work_productivity >= 1 AND work_productivity <= 10),
+
+            -- Métricas cuantitativas
             sleep_hours REAL CHECK (sleep_hours >= 0 AND sleep_hours <= 24),
             water_intake INTEGER CHECK (water_intake >= 0),
             meditation_minutes INTEGER CHECK (meditation_minutes >= 0),
             exercise_minutes INTEGER CHECK (exercise_minutes >= 0),
             screen_time_hours REAL CHECK (screen_time_hours >= 0),
+
+            -- Campos de texto
             gratitude_items TEXT,
-            weather_mood_impact INTEGER CHECK (weather_mood_impact >= -5 AND weather_mood_impact <= 5),
-            social_battery INTEGER CHECK (social_battery >= 1 AND social_battery <= 10),
-            creative_energy INTEGER CHECK (creative_energy >= 1 AND creative_energy <= 10),
-            emotional_stability INTEGER CHECK (emotional_stability >= 1 AND emotional_stability <= 10),
-            focus_level INTEGER CHECK (focus_level >= 1 AND focus_level <= 10),
-            life_satisfaction INTEGER CHECK (life_satisfaction >= 1 AND life_satisfaction <= 10),
-            
+            positive_tags TEXT DEFAULT '[]',
+            negative_tags TEXT DEFAULT '[]',
+
+            -- Timestamps
             created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
             updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
-            
+
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
             UNIQUE(user_id, entry_date)
           )
@@ -221,7 +239,7 @@ class OptimizedDatabaseService {
             type TEXT NOT NULL CHECK (type IN ('positive', 'negative', 'neutral')),
             intensity INTEGER DEFAULT 5 CHECK (intensity >= 1 AND intensity <= 10),
             category TEXT DEFAULT 'general',
-            
+
             -- Contexto enriquecido
             context_location TEXT,
             context_weather TEXT,
@@ -230,10 +248,10 @@ class OptimizedDatabaseService {
             energy_after INTEGER CHECK (energy_after >= 1 AND energy_after <= 10),
             mood_before INTEGER CHECK (mood_before >= 1 AND mood_before <= 10),
             mood_after INTEGER CHECK (mood_after >= 1 AND mood_after <= 10),
-            
+
             timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
             created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
-            
+
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
           )
         ''');
@@ -250,16 +268,35 @@ class OptimizedDatabaseService {
             usage_count INTEGER DEFAULT 1,
             last_used INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
             created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
-            
+
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
             UNIQUE(user_id, name, type)
+          )
+        ''');
+
+        // ✅ NUEVA TABLA: USER_GOALS - Agregada al esquema optimizado
+        await txn.execute('''
+          CREATE TABLE user_goals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            type TEXT NOT NULL CHECK (type IN ('consistency', 'mood', 'positiveMoments', 'stressReduction')),
+            status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused', 'cancelled')),
+            target_value REAL NOT NULL CHECK (target_value > 0),
+            current_value REAL NOT NULL DEFAULT 0.0 CHECK (current_value >= 0),
+
+            -- Timestamps
+            created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+            completed_at INTEGER,
+
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
           )
         ''');
 
         await _createOptimizedIndexes(txn);
 
         _logger.i('✅ Esquema optimizado creado exitosamente para APK');
-
       } catch (e) {
         _logger.e('❌ Error creando esquema: $e');
         rethrow;
@@ -268,21 +305,48 @@ class OptimizedDatabaseService {
   }
 
   Future<void> _createOptimizedIndexes(Transaction txn) async {
-    // Índices optimizados para APK
+    // Índices para usuarios
     await txn.execute('CREATE INDEX idx_users_email ON users (email)');
-    await txn.execute('CREATE INDEX idx_users_active ON users (is_active, last_login)');
-    await txn.execute('CREATE INDEX idx_daily_entries_user_date ON daily_entries (user_id, entry_date)');
-    await txn.execute('CREATE INDEX idx_daily_entries_created ON daily_entries (created_at DESC)');
-    await txn.execute('CREATE INDEX idx_daily_entries_mood ON daily_entries (user_id, mood_score, entry_date)');
-    await txn.execute('CREATE INDEX idx_moments_user_date ON interactive_moments (user_id, entry_date)');
-    await txn.execute('CREATE INDEX idx_moments_type ON interactive_moments (user_id, type, timestamp)');
-    await txn.execute('CREATE INDEX idx_moments_category ON interactive_moments (user_id, category)');
-    await txn.execute('CREATE INDEX idx_moments_timeline ON interactive_moments (user_id, timestamp DESC)');
-    await txn.execute('CREATE INDEX idx_tags_user_type ON tags (user_id, type)');
-    await txn.execute('CREATE INDEX idx_tags_usage ON tags (usage_count DESC, last_used DESC)');
+    await txn.execute(
+        'CREATE INDEX idx_users_active ON users (is_active, last_login)');
+
+    // Índices para entradas diarias
+    await txn.execute(
+        'CREATE INDEX idx_daily_entries_user_date ON daily_entries (user_id, entry_date)');
+    await txn.execute(
+        'CREATE INDEX idx_daily_entries_created ON daily_entries (created_at DESC)');
+    await txn.execute(
+        'CREATE INDEX idx_daily_entries_mood ON daily_entries (user_id, mood_score, entry_date)');
+
+    // Índices para momentos
+    await txn.execute(
+        'CREATE INDEX idx_moments_user_date ON interactive_moments (user_id, entry_date)');
+    await txn.execute(
+        'CREATE INDEX idx_moments_type ON interactive_moments (user_id, type, timestamp)');
+    await txn.execute(
+        'CREATE INDEX idx_moments_category ON interactive_moments (user_id, category)');
+    await txn.execute(
+        'CREATE INDEX idx_moments_timeline ON interactive_moments (user_id, timestamp DESC)');
+
+    // Índices para tags
+    await txn.execute(
+        'CREATE INDEX idx_tags_user_type ON tags (user_id, type)');
+    await txn.execute(
+        'CREATE INDEX idx_tags_usage ON tags (usage_count DESC, last_used DESC)');
+
+    // ✅ NUEVOS ÍNDICES: Para user_goals
+    await txn.execute(
+        'CREATE INDEX idx_user_goals_user_status ON user_goals (user_id, status)');
+    await txn.execute(
+        'CREATE INDEX idx_user_goals_created ON user_goals (user_id, created_at DESC)');
+    await txn.execute(
+        'CREATE INDEX idx_user_goals_type ON user_goals (user_id, type)');
+    await txn.execute(
+        'CREATE INDEX idx_user_goals_progress ON user_goals (user_id, status, current_value, target_value)');
   }
 
-  Future<void> _upgradeSchema(Database db, int oldVersion, int newVersion) async {
+  Future<void> _upgradeSchema(Database db, int oldVersion,
+      int newVersion) async {
     _logger.i('🔄 Actualizando esquema desde v$oldVersion a v$newVersion');
 
     try {
@@ -295,7 +359,47 @@ class OptimizedDatabaseService {
     }
   }
 
+
   Future<void> _migrateToV2(Database db) async {
+    // ✅ Migración para agregar tabla user_goals si no existe
+    try {
+      // Verificar si la tabla user_goals ya existe
+      final result = await db.rawQuery('''
+        SELECT name FROM sqlite_master
+        WHERE type='table' AND name='user_goals'
+      ''');
+
+      if (result.isEmpty) {
+        _logger.i('📦 Agregando tabla user_goals en migración v2');
+
+        await db.execute('''
+          CREATE TABLE user_goals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            type TEXT NOT NULL CHECK (type IN ('consistency', 'mood', 'positiveMoments', 'stressReduction')),
+            status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused', 'cancelled')),
+            target_value REAL NOT NULL CHECK (target_value > 0),
+            current_value REAL NOT NULL DEFAULT 0.0 CHECK (current_value >= 0),
+            created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+            completed_at INTEGER,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+          )
+        ''');
+
+        // Crear índices para user_goals
+        await db.execute('CREATE INDEX idx_user_goals_user_status ON user_goals (user_id, status)');
+        await db.execute('CREATE INDEX idx_user_goals_created ON user_goals (user_id, created_at DESC)');
+        await db.execute('CREATE INDEX idx_user_goals_type ON user_goals (user_id, type)');
+        await db.execute('CREATE INDEX idx_user_goals_progress ON user_goals (user_id, status, current_value, target_value)');
+
+        _logger.i('✅ Tabla user_goals agregada exitosamente');
+      }
+    } catch (e) {
+      _logger.e('❌ Error en migración v2: $e');
+    }
+
     _logger.i('📦 Migración a v2 completada');
   }
 
@@ -303,6 +407,8 @@ class OptimizedDatabaseService {
   // MÉTODOS OPTIMIZADOS PARA USUARIOS
   // ============================================================================
 
+  /// **MÉTODO CORREGIDO**
+  /// Crea un nuevo usuario solo si el email no existe previamente.
   Future<OptimizedUserModel?> createUser({
     required String email,
     required String password,
@@ -313,10 +419,28 @@ class OptimizedDatabaseService {
   }) async {
     try {
       final db = await database;
+      final normalizedEmail = email.toLowerCase().trim();
+
+      // ✅ **PASO 1: VERIFICAR SI EL USUARIO YA EXISTE**
+      final existingUser = await db.query(
+        'users',
+        where: 'email = ?',
+        whereArgs: [normalizedEmail],
+        limit: 1,
+      );
+
+      // Si la lista no está vacía, el usuario ya existe.
+      if (existingUser.isNotEmpty) {
+        _logger.w('⚠️ Intento de crear un usuario duplicado con el email: $normalizedEmail');
+        // Retorna null para indicar que la creación falló por duplicado.
+        return null;
+      }
+
+      // Si no existe, procede con la inserción.
       final passwordHash = _hashPassword(password);
 
       final userId = await db.insert('users', {
-        'email': email.toLowerCase().trim(),
+        'email': normalizedEmail,
         'password_hash': passwordHash,
         'name': name.trim(),
         'avatar_emoji': avatarEmoji,
@@ -337,10 +461,12 @@ class OptimizedDatabaseService {
         lastLogin: null,
       );
     } catch (e) {
+      // El catch general ahora manejará otros errores inesperados.
       _logger.e('❌ Error creando usuario: $e');
       return null;
     }
   }
+
 
   Future<OptimizedUserModel?> authenticateUser(String email, String password) async {
     try {
@@ -378,7 +504,7 @@ class OptimizedDatabaseService {
     String? name,
     String? bio,
     String? avatarEmoji,
-    String? profilePicturePath, // ✅ NUEVO PARÁMETRO
+    String? profilePicturePath,
   }) async {
     try {
       final db = await database;
@@ -388,7 +514,7 @@ class OptimizedDatabaseService {
       if (bio != null) updates['bio'] = bio;
       if (avatarEmoji != null) updates['avatar_emoji'] = avatarEmoji;
       if (profilePicturePath != null) {
-        updates['profile_picture_path'] = profilePicturePath; // ✅ NUEVO
+        updates['profile_picture_path'] = profilePicturePath;
       }
 
       if (updates.isEmpty) return true;
@@ -600,7 +726,7 @@ class OptimizedDatabaseService {
       Database db, int userId, DateTime start, DateTime end) async {
 
     final result = await db.rawQuery('''
-      SELECT 
+      SELECT
         COUNT(*) as total_entries,
         AVG(mood_score) as avg_mood,
         AVG(energy_level) as avg_energy,
@@ -609,7 +735,7 @@ class OptimizedDatabaseService {
         AVG(sleep_hours) as avg_sleep,
         SUM(meditation_minutes) as total_meditation,
         SUM(exercise_minutes) as total_exercise
-      FROM daily_entries 
+      FROM daily_entries
       WHERE user_id = ? AND entry_date BETWEEN ? AND ?
     ''', [userId, start.toIso8601String().split('T')[0], end.toIso8601String().split('T')[0]]);
 
@@ -620,13 +746,13 @@ class OptimizedDatabaseService {
       Database db, int userId, DateTime start, DateTime end) async {
 
     return await db.rawQuery('''
-      SELECT 
+      SELECT
         entry_date,
         mood_score,
         energy_level,
         stress_level,
         sleep_quality
-      FROM daily_entries 
+      FROM daily_entries
       WHERE user_id = ? AND entry_date BETWEEN ? AND ?
       ORDER BY entry_date ASC
     ''', [userId, start.toIso8601String().split('T')[0], end.toIso8601String().split('T')[0]]);
@@ -636,12 +762,12 @@ class OptimizedDatabaseService {
       Database db, int userId, DateTime start, DateTime end) async {
 
     final result = await db.rawQuery('''
-      SELECT 
+      SELECT
         type,
         COUNT(*) as count,
         AVG(intensity) as avg_intensity,
         category
-      FROM interactive_moments 
+      FROM interactive_moments
       WHERE user_id = ? AND entry_date BETWEEN ? AND ?
       GROUP BY type, category
     ''', [userId, start.toIso8601String().split('T')[0], end.toIso8601String().split('T')[0]]);
@@ -651,47 +777,62 @@ class OptimizedDatabaseService {
 
   Future<Map<String, dynamic>> _getStreakData(Database db, int userId) async {
     final results = await db.rawQuery('''
-      SELECT entry_date 
-      FROM daily_entries 
-      WHERE user_id = ? 
-      ORDER BY entry_date DESC 
+      SELECT entry_date
+      FROM daily_entries
+      WHERE user_id = ?
+      ORDER BY entry_date DESC
       LIMIT 365
     ''', [userId]);
 
     return _calculateStreaks(results.map((r) => r['entry_date'] as String).toList());
   }
 
-  Map<String, dynamic> _calculateStreaks(List<String> dates) {
-    if (dates.isEmpty) return {'current_streak': 0, 'longest_streak': 0};
+  Map<String, dynamic> _calculateStreaks(List<String> dateStrings) {
+    if (dateStrings.isEmpty) {
+      return {'current_streak': 0, 'longest_streak': 0};
+    }
+
+    // 1. Parse and sort dates in descending order (most recent first)
+    final dates = dateStrings.map((d) => DateTime.parse(d)).toList();
+    dates.sort((a, b) => b.compareTo(a));
 
     int currentStreak = 0;
     int longestStreak = 0;
-    int tempStreak = 1;
 
+    // 2. Check if the most recent entry is today or yesterday
     final today = DateTime.now();
-    final sortedDates = dates.map((d) => DateTime.parse(d)).toList()..sort();
+    final mostRecentDate = dates.first;
+    if (DateUtils.isSameDay(mostRecentDate, today) ||
+        DateUtils.isSameDay(mostRecentDate, today.subtract(const Duration(days: 1)))) {
+      currentStreak = 1;
+    }
 
-    // Calcular streak actual
-    for (int i = 0; i < sortedDates.length; i++) {
-      final date = sortedDates[i];
-      if (i == 0) {
-        if (date.difference(today).inDays.abs() <= 1) {
-          currentStreak = 1;
-        }
+    // 3. Iterate to calculate streaks
+    int tempStreak = 1;
+    for (int i = 0; i < dates.length - 1; i++) {
+      final date = dates[i];
+      final prevDate = dates[i + 1];
+
+      if (DateUtils.isSameDay(date, prevDate.add(const Duration(days: 1)))) {
+        // Dates are consecutive
+        tempStreak++;
       } else {
-        final prevDate = sortedDates[i - 1];
-        if (date.difference(prevDate).inDays == 1) {
-          if (currentStreak > 0) currentStreak++;
-          tempStreak++;
-        } else {
-          longestStreak = math.max(longestStreak, tempStreak);
-          tempStreak = 1;
-          currentStreak = 0;
-        }
+        // Gap found, streak is broken
+        longestStreak = math.max(longestStreak, tempStreak);
+        tempStreak = 1; // Reset for the next potential streak
       }
     }
 
+    // 4. Final check for the longest streak
     longestStreak = math.max(longestStreak, tempStreak);
+
+    // 5. If the most recent streak is not the current one, reset currentStreak
+    if (currentStreak == 0) {
+      // No entry today or yesterday, so current streak is 0
+    } else {
+      // The current streak is the last one calculated
+      currentStreak = tempStreak;
+    }
 
     return {
       'current_streak': currentStreak,
@@ -699,7 +840,7 @@ class OptimizedDatabaseService {
     };
   }
   // ============================================================================
-  // 🚀 MÉTODOS DE ANALYTICS AVANZADOS - AGREGAR ESTA SECCIÓN COMPLETA AQUÍ
+  // 🚀 MÉTODOS DE ANALYTICS AVANZADOS
   // ============================================================================
 
   /// Obtener datos para predicción de bienestar basada en patrones
@@ -709,7 +850,7 @@ class OptimizedDatabaseService {
 
       // Obtener tendencias de mood de los últimos días
       final moodTrends = await db.rawQuery('''
-        SELECT 
+        SELECT
           entry_date,
           mood_score,
           energy_level,
@@ -717,8 +858,8 @@ class OptimizedDatabaseService {
           sleep_quality,
           physical_activity,
           JULIANDAY(entry_date) as day_number
-        FROM daily_entries 
-        WHERE user_id = ? 
+        FROM daily_entries
+        WHERE user_id = ?
           AND entry_date >= date('now', '-$days days')
         ORDER BY entry_date DESC
       ''', [userId]);
@@ -802,7 +943,7 @@ class OptimizedDatabaseService {
       final db = await database;
 
       final habitsData = await db.rawQuery('''
-        SELECT 
+        SELECT
           AVG(CAST(sleep_quality as REAL)) as avg_sleep_quality,
           AVG(CAST(sleep_hours as REAL)) as avg_sleep_hours,
           AVG(CAST(physical_activity as REAL)) as avg_physical_activity,
@@ -812,12 +953,12 @@ class OptimizedDatabaseService {
           AVG(CAST(water_intake as REAL)) as avg_water_intake,
           AVG(CAST(screen_time_hours as REAL)) as avg_screen_time,
           COUNT(*) as total_entries
-        FROM daily_entries 
-        WHERE user_id = ? 
+        FROM daily_entries
+        WHERE user_id = ?
           AND entry_date >= date('now', '-$days days')
-          AND (sleep_quality IS NOT NULL 
-               OR physical_activity IS NOT NULL 
-               OR meditation_minutes IS NOT NULL 
+          AND (sleep_quality IS NOT NULL
+               OR physical_activity IS NOT NULL
+               OR meditation_minutes IS NOT NULL
                OR social_interaction IS NOT NULL)
       ''', [userId]);
 
@@ -977,19 +1118,19 @@ class OptimizedDatabaseService {
 
       // Obtener datos de las últimas 2 semanas
       final weeklyData = await db.rawQuery('''
-        SELECT 
+        SELECT
           entry_date,
           mood_score,
           energy_level,
           stress_level,
           sleep_quality,
           physical_activity,
-          CASE 
+          CASE
             WHEN entry_date >= date('now', '-7 days') THEN 'current'
             ELSE 'previous'
           END as week_period
-        FROM daily_entries 
-        WHERE user_id = ? 
+        FROM daily_entries
+        WHERE user_id = ?
           AND entry_date >= date('now', '-14 days')
         ORDER BY entry_date DESC
       ''', [userId]);
@@ -1099,14 +1240,14 @@ class OptimizedDatabaseService {
       final db = await database;
 
       final calendarData = await db.rawQuery('''
-        SELECT 
+        SELECT
           entry_date,
           mood_score,
           energy_level,
           stress_level,
           (CAST(mood_score as REAL) + CAST(energy_level as REAL) + (10 - CAST(stress_level as REAL))) / 3.0 as avg_score
-        FROM daily_entries 
-        WHERE user_id = ? 
+        FROM daily_entries
+        WHERE user_id = ?
           AND entry_date >= date('now', '-$days days')
         ORDER BY entry_date DESC
       ''', [userId]);
@@ -1153,7 +1294,7 @@ class OptimizedDatabaseService {
 
       // Obtener análisis de las últimas 2 semanas
       final recentAnalysis = await db.rawQuery('''
-        SELECT 
+        SELECT
           AVG(CAST(mood_score as REAL)) as avg_mood,
           AVG(CAST(energy_level as REAL)) as avg_energy,
           AVG(CAST(stress_level as REAL)) as avg_stress,
@@ -1164,8 +1305,8 @@ class OptimizedDatabaseService {
           COUNT(*) as total_entries,
           COUNT(CASE WHEN mood_score >= 7 THEN 1 END) as good_mood_days,
           COUNT(CASE WHEN stress_level >= 7 THEN 1 END) as high_stress_days
-        FROM daily_entries 
-        WHERE user_id = ? 
+        FROM daily_entries
+        WHERE user_id = ?
           AND entry_date >= date('now', '-14 days')
       ''', [userId]);
 
@@ -1302,13 +1443,13 @@ class OptimizedDatabaseService {
 
       // Obtener estadísticas del usuario
       final userStats = await db.rawQuery('''
-        SELECT 
+        SELECT
           COUNT(*) as total_entries,
           COUNT(CASE WHEN entry_date >= date('now', '-7 days') THEN 1 END) as week_entries,
           AVG(CAST(meditation_minutes as REAL)) as avg_meditation,
           AVG(CAST(physical_activity as REAL)) as avg_exercise,
           AVG(CAST(sleep_quality as REAL)) as avg_sleep
-        FROM daily_entries 
+        FROM daily_entries
         WHERE user_id = ?
       ''', [userId]);
 
@@ -1672,9 +1813,9 @@ class OptimizedDatabaseService {
 
       // Obtener entradas de la semana
       final entriesQuery = '''
-      SELECT entry_date, free_reflection, mood_score, energy_level, 
+      SELECT entry_date, free_reflection, mood_score, energy_level,
              stress_level, worth_it, sleep_hours, meditation_minutes
-      FROM daily_entries 
+      FROM daily_entries
       WHERE user_id = ? AND entry_date >= ? AND entry_date <= ?
       ORDER BY entry_date DESC
     ''';
@@ -1688,7 +1829,7 @@ class OptimizedDatabaseService {
       // Obtener momentos de la semana
       final momentsQuery = '''
       SELECT entry_date, type, emoji, text, category
-      FROM interactive_moments 
+      FROM interactive_moments
       WHERE user_id = ? AND entry_date >= ? AND entry_date <= ?
       ORDER BY timestamp DESC
     ''';
@@ -1728,20 +1869,18 @@ class OptimizedDatabaseService {
     return _hashPassword(password) == hash;
   }
 
-  Future<bool> clearUserData(int userId) async {
+  Future<void> clearUserData(int userId) async {
     try {
       final db = await database;
       await db.transaction((txn) async {
-        await txn.delete('interactive_moments', where: 'user_id = ?', whereArgs: [userId]);
         await txn.delete('daily_entries', where: 'user_id = ?', whereArgs: [userId]);
+        await txn.delete('interactive_moments', where: 'user_id = ?', whereArgs: [userId]);
         await txn.delete('tags', where: 'user_id = ?', whereArgs: [userId]);
+        await txn.delete('user_goals', where: 'user_id = ?', whereArgs: [userId]); // ✅ AÑADIDO
       });
-
       _logger.i('🗑️ Datos del usuario $userId eliminados');
-      return true;
     } catch (e) {
-      _logger.e('❌ Error eliminando datos: $e');
-      return false;
+      _logger.e('❌ Error eliminando datos del usuario: $e');
     }
   }
 
@@ -1804,4 +1943,3 @@ class _MomentData {
 
   _MomentData(this.emoji, this.text, this.type, this.intensity, this.category);
 }
-

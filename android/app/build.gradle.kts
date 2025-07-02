@@ -53,7 +53,8 @@ flutter {
 dependencies {
     // CRITICAL: Core library desugaring dependency MUST be first
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
-
+    implementation("androidx.work:work-runtime:2.8.1")
+    implementation("androidx.concurrent:concurrent-futures:1.1.0")
     // Keep any other dependencies you need
      implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
      implementation("com.microsoft.onnxruntime:onnxruntime-android:1.15.1")

@@ -1,5 +1,5 @@
 // ============================================================================
-// injection_container_clean.dart - DEPENDENCY INJECTION OPTIMIZADO - FIXED
+// injection_container_clean.dart - DEPENDENCY INJECTION OPTIMIZADO + NOTIFICATIONS
 // ============================================================================
 
 import 'package:get_it/get_it.dart';
@@ -7,9 +7,12 @@ import 'package:logger/logger.dart';
 
 // Services optimizados
 import 'data/services/optimized_database_service.dart';
+import '../../data/services/notification_service.dart'; // ✅ NUEVO
 
 // Providers optimizados
 import 'presentation/providers/optimized_providers.dart';
+import 'presentation/providers/extended_daily_entries_provider.dart';
+import 'presentation/providers/notifications_provider.dart'; // ✅ NUEVO
 import 'ai/provider/ai_provider.dart';
 
 // Theme provider (reutilizado del original)
@@ -41,6 +44,12 @@ Future<void> initCleanDependencies() async {
           () => OptimizedDatabaseService(),
     );
 
+    // ✅ NUEVO: Inicializar servicio de notificaciones como singleton
+    sl.registerLazySingleton<NotificationService>(() {
+      // El servicio se inicializa de forma estática, pero registramos la instancia
+      return NotificationService();
+    });
+
     // ============================================================================
     // PROVIDERS (Factories - nueva instancia cuando se pide)
     // ✅ CORREGIDO: Se cambia de registerLazySingleton a registerFactory para
@@ -59,6 +68,11 @@ Future<void> initCleanDependencies() async {
           () => OptimizedDailyEntriesProvider(sl<OptimizedDatabaseService>()),
     );
 
+    // ✅ ExtendedDailyEntriesProvider con IA
+    sl.registerFactory<ExtendedDailyEntriesProvider>(
+          () => ExtendedDailyEntriesProvider(sl<OptimizedDatabaseService>()),
+    );
+
     sl.registerFactory<OptimizedMomentsProvider>(
           () => OptimizedMomentsProvider(sl<OptimizedDatabaseService>()),
     );
@@ -71,6 +85,15 @@ Future<void> initCleanDependencies() async {
           () => AIProvider(),
     );
 
+    sl.registerFactory<GoalsProvider>(
+          () => GoalsProvider(sl<OptimizedDatabaseService>()),
+    );
+
+    // ✅ NUEVO: NotificationsProvider
+    sl.registerFactory<NotificationsProvider>(
+          () => NotificationsProvider(),
+    );
+
     logger.i('✅ Dependencias limpias inicializadas correctamente');
 
   } catch (e) {
@@ -79,8 +102,26 @@ Future<void> initCleanDependencies() async {
   }
 }
 
+/// Inicializar servicios críticos al startup
+Future<void> initCriticalServices() async {
+  final logger = sl<Logger>();
+  logger.i('🚀 Inicializando servicios críticos...');
+
+  try {
+    // ✅ NUEVO: Inicializar servicio de notificaciones
+    await NotificationService.initialize();
+    logger.i('✅ Servicio de notificaciones inicializado');
+
+    // Inicializar otros servicios críticos aquí si es necesario
+
+  } catch (e) {
+    logger.e('❌ Error inicializando servicios críticos: $e');
+    // No lanzar error para evitar crash de la app
+  }
+}
+
 // ============================================================================
-// FUNCIONES DE UTILIDAD (SIN CAMBIOS)
+// FUNCIONES DE UTILIDAD
 // ============================================================================
 
 /// Verificar que todos los servicios estén registrados
@@ -89,14 +130,18 @@ bool areCleanServicesRegistered() {
     // Verificar servicios core
     sl<Logger>();
     sl<OptimizedDatabaseService>();
+    sl<NotificationService>(); // ✅ NUEVO
 
     // Verificar providers
     sl<OptimizedAuthProvider>();
     sl<ThemeProvider>();
     sl<OptimizedDailyEntriesProvider>();
+    sl<ExtendedDailyEntriesProvider>();
     sl<OptimizedMomentsProvider>();
     sl<OptimizedAnalyticsProvider>();
     sl<AIProvider>();
+    sl<GoalsProvider>();
+    sl<NotificationsProvider>(); // ✅ NUEVO
 
     return true;
   } catch (e) {
@@ -107,26 +152,29 @@ bool areCleanServicesRegistered() {
 /// Información del contenedor limpio
 Map<String, dynamic> getCleanContainerInfo() {
   return {
-    'total_services': 8,
+    'total_services': 10, // ✅ ACTUALIZADO
     'services_ready': areCleanServicesRegistered(),
     'core_services': [
       'Logger',
       'OptimizedDatabaseService',
+      'NotificationService', // ✅ NUEVO
     ],
     'providers': [
       'OptimizedAuthProvider',
       'ThemeProvider',
       'OptimizedDailyEntriesProvider',
+      'ExtendedDailyEntriesProvider',
       'OptimizedMomentsProvider',
       'OptimizedAnalyticsProvider',
       'AIProvider',
+      'GoalsProvider',
+      'NotificationsProvider', // ✅ NUEVO
     ],
     'removed_legacy': [
       'AnalyticsProvider (legacy)',
       'EnhancedAnalyticsProvider (duplicate)',
       'InteractiveMomentsProvider (legacy)',
       'AuthProvider (legacy)',
-      'NotificationsProvider (unused)',
       'AdvancedUserAnalytics (merged)',
     ],
   };
@@ -146,7 +194,7 @@ Future<void> initForCleanTesting() async {
 }
 
 // ============================================================================
-// EXTENSIONES PARA FACILITAR USO (SIN CAMBIOS)
+// EXTENSIONES PARA FACILITAR USO
 // ============================================================================
 
 extension CleanGetItExtension on GetIt {
@@ -181,22 +229,26 @@ extension CleanGetItExtension on GetIt {
 }
 
 // ============================================================================
-// CONSTANTES DE IDENTIFICACIÓN (SIN CAMBIOS)
+// CONSTANTES DE IDENTIFICACIÓN
 // ============================================================================
 
 class CleanDIConstants {
   static const String logger = 'Logger';
   static const String databaseService = 'OptimizedDatabaseService';
+  static const String notificationService = 'NotificationService'; // ✅ NUEVO
   static const String authProvider = 'OptimizedAuthProvider';
   static const String themeProvider = 'ThemeProvider';
   static const String dailyEntriesProvider = 'OptimizedDailyEntriesProvider';
+  static const String extendedDailyEntriesProvider = 'ExtendedDailyEntriesProvider';
   static const String momentsProvider = 'OptimizedMomentsProvider';
   static const String analyticsProvider = 'OptimizedAnalyticsProvider';
   static const String aiProvider = 'AIProvider';
+  static const String goalsProvider = 'GoalsProvider';
+  static const String notificationsProvider = 'NotificationsProvider'; // ✅ NUEVO
 }
 
 // ============================================================================
-// HELPER PARA MIGRACIÓN GRADUAL (SIN CAMBIOS)
+// HELPER PARA MIGRACIÓN GRADUAL
 // ============================================================================
 
 class DIMigrationHelper {
@@ -219,7 +271,6 @@ class DIMigrationHelper {
     return [
       'AdvancedUserAnalytics',
       'EnhancedAnalyticsProvider',
-      'NotificationsProvider',
       'SessionService',
     ];
   }
@@ -237,7 +288,7 @@ class DIMigrationHelper {
 }
 
 // ============================================================================
-// CONFIGURACIÓN DE LOGGING OPTIMIZADA (SIN CAMBIOS)
+// CONFIGURACIÓN DE LOGGING OPTIMIZADA
 // ============================================================================
 
 class OptimizedLoggingConfig {
@@ -278,21 +329,24 @@ class OptimizedLoggingConfig {
 }
 
 // ============================================================================
-// INICIALIZADORES ESPECÍFICOS POR ENTORNO (SIN CAMBIOS)
+// INICIALIZADORES ESPECÍFICOS POR ENTORNO
 // ============================================================================
 
 Future<void> initForProduction() async {
   sl.registerLazySingleton<Logger>(() => OptimizedLoggingConfig.createProductionLogger());
   await initCleanDependencies();
+  await initCriticalServices(); // ✅ NUEVO
 }
 
 Future<void> initForDevelopment() async {
   sl.registerLazySingleton<Logger>(() => OptimizedLoggingConfig.createDevelopmentLogger());
   await initCleanDependencies();
+  await initCriticalServices(); // ✅ NUEVO
 }
 
 Future<void> initForTesting() async {
   await resetCleanContainer();
   sl.registerLazySingleton<Logger>(() => OptimizedLoggingConfig.createTestingLogger());
   await initCleanDependencies();
+  // No inicializar notificaciones en testing
 }

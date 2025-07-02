@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Color para notificaciones - coral cálido que coincide con la paleta -->
+    <color name="notification_color">#FF7F50</color>
+
+    <!-- Colores adicionales para la app -->
+    <color name="primary_color">#FF7F50</color>
+    <color name="primary_dark">#E55B3C</color>
+    <color name="accent_color">#FFB347</color>
+    <color name="background_primary">#2D1B1B</color>
+    <color name="background_secondary">#3D2424</color>
+</resources>
