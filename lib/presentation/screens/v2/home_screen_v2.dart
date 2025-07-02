@@ -1,68 +1,46 @@
-// lib/presentation/screens/v2/home_screen_v2.dart - APPLE DESIGN INSPIRED
-// ============================================================================
-// PANTALLA DE INICIO CON ESTILO VISUAL DE APPLE + RECOMENDACIONES DE IA
-// ============================================================================
+// lib/presentation/screens/v2/home_screen_v2.dart
+// ✅ HOME SCREEN CON ANÁLISIS AVANZADOS Y MÉTRICAS INTELIGENTES
 
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
 import 'dart:ui';
 
-// Providers optimizados
+// Providers
 import '../../providers/optimized_providers.dart';
-import '../../providers/extended_daily_entries_provider.dart';
 
 // Modelos
-import '../../../data/models/optimized_models.dart';
 import '../../../data/models/goal_model.dart';
 
-// Componentes modernos
-import '../components/modern_design_system.dart';
-
-// Widgets personalizados
-import '../../widgets/profile_picture_widget.dart';
-import '../../widgets/goals_recommendations_widget.dart';
-
-// ============================================================================
-// PALETA DE COLORES INSPIRADA EN MONTEREY DARK
-// ============================================================================
 class MontereyColors {
-  // Colores de fondo - Monterey Dark Theme
-  static const Color backgroundPrimary = Color(0xFF0D0B1E);     // Deep Purple Black
-  static const Color backgroundSecondary = Color(0xFF1A1625);   // Dark Purple
-  static const Color backgroundTertiary = Color(0xFF252035);    // Medium Purple
+  // Colores base - Monterey Dark Theme
+  static const Color primaryBackground = Color(0xFF0D0B1E);
+  static const Color primaryPurple = Color(0xFF7C3AED);
+  static const Color accentPink = Color(0xFFEC4899);
+  static const Color accentBlue = Color(0xFF3B82F6);
+  static const Color accentViolet = Color(0xFF8B5CF6);
+  static const Color accentTeal = Color(0xFF06B6D4);
+  static const Color accentGold = Color(0xFFF59E0B);
+  static const Color accentGreen = Color(0xFF10B981);
 
-  // Colores principales - Monterey Gradient Colors
-  static const Color primaryPurple = Color(0xFF7C3AED);         // Vibrant Purple
-  static const Color primaryMagenta = Color(0xFFD946EF);        // Bright Magenta
-  static const Color primaryBlue = Color(0xFF3B82F6);           // Electric Blue
-  static const Color primaryCyan = Color(0xFF06B6D4);           // Cyan
+  // Superficies - Glass Morphism
+  static const Color surfacePrimary = Color(0xFF1E1B2E);
+  static const Color surfaceSecondary = Color(0xFF2A2640);
+  static const Color surfaceTertiary = Color(0xFF363152);
 
-  // Colores secundarios - Monterey Accent Colors
-  static const Color accentPink = Color(0xFFEC4899);            // Hot Pink
-  static const Color accentRose = Color(0xFFF472B6);            // Light Rose
-  static const Color accentIndigo = Color(0xFF6366F1);          // Indigo
-  static const Color accentViolet = Color(0xFF8B5CF6);          // Violet
-  static const Color accentTeal = Color(0xFF14B8A6);            // Teal
-  static const Color accentEmerald = Color(0xFF10B981);         // Emerald
+  // Colores de texto
+  static const Color labelPrimary = Color(0xFFFFFFFF);
+  static const Color labelSecondary = Color(0xFFB4B4B8);
+  static const Color labelTertiary = Color(0xFF8E8E93);
 
-  // Colores de superficie - Glass Effect
-  static const Color surfacePrimary = Color(0xFF1E1B2E);        // Glass Surface
-  static const Color surfaceSecondary = Color(0xFF2A2640);      // Elevated Surface
-  static const Color surfaceTertiary = Color(0xFF363152);       // Highest Surface
-
-  // Colores de texto - Dark Theme Typography
-  static const Color labelPrimary = Color(0xFFFFFFFF);          // White Text
-  static const Color labelSecondary = Color(0xFFB4B4B8);        // Gray Text
-  static const Color labelTertiary = Color(0xFF8E8E93);         // Muted Text
-
-  // Gradientes Monterey-style
+  // Gradientes
   static const List<Color> primaryGradient = [Color(0xFF7C3AED), Color(0xFFD946EF)];
   static const List<Color> blueGradient = [Color(0xFF3B82F6), Color(0xFF06B6D4)];
   static const List<Color> pinkGradient = [Color(0xFFEC4899), Color(0xFFF472B6)];
   static const List<Color> purpleGradient = [Color(0xFF8B5CF6), Color(0xFF6366F1)];
-  static const List<Color> meshGradient = [Color(0xFF7C3AED), Color(0xFF3B82F6), Color(0xFF06B6D4), Color(0xFFEC4899)];
+  static const List<Color> goldGradient = [Color(0xFFF59E0B), Color(0xFFEAB308)];
+  static const List<Color> greenGradient = [Color(0xFF10B981), Color(0xFF34D399)];
+  static const List<Color> redGradient = [Color(0xFFEF4444), Color(0xFFF87171)];
   static const List<Color> backgroundGradient = [Color(0xFF0D0B1E), Color(0xFF1A1625), Color(0xFF252035)];
 }
 
@@ -76,21 +54,33 @@ class HomeScreenV2 extends StatefulWidget {
 class _HomeScreenV2State extends State<HomeScreenV2>
     with TickerProviderStateMixin {
 
+  // Controladores de animación
   late AnimationController _fadeController;
   late AnimationController _slideController;
-  late AnimationController _profilePictureController;
-  late AnimationController _welcomeTextController;
   late AnimationController _cardsController;
   late AnimationController _pulseController;
-  late AnimationController _goalsController;
+  late AnimationController _rotationController;
+  late AnimationController _shimmerController;
+  late AnimationController _glowController;
+  late AnimationController _floatingController;
+  late AnimationController _particleController;
+  late AnimationController _analyticsController;
 
+  // Animaciones
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
-  late Animation<double> _profilePictureAnimation;
-  late Animation<Offset> _welcomeTextAnimation;
   late Animation<double> _cardsAnimation;
   late Animation<double> _pulseAnimation;
-  late Animation<double> _goalsAnimation;
+  late Animation<double> _rotationAnimation;
+  late Animation<double> _shimmerAnimation;
+  late Animation<double> _glowAnimation;
+  late Animation<double> _floatingAnimation;
+  late Animation<double> _particleAnimation;
+  late Animation<double> _analyticsAnimation;
+
+  // Staggered animations para cards
+  late List<Animation<double>> _cardAnimations;
+  late List<Animation<Offset>> _cardSlideAnimations;
 
   @override
   void initState() {
@@ -99,6 +89,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _loadInitialData();
+        _startStaggeredAnimations();
       }
     });
   }
@@ -107,89 +98,207 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   void dispose() {
     _fadeController.dispose();
     _slideController.dispose();
-    _profilePictureController.dispose();
-    _welcomeTextController.dispose();
     _cardsController.dispose();
     _pulseController.dispose();
-    _goalsController.dispose();
+    _rotationController.dispose();
+    _shimmerController.dispose();
+    _glowController.dispose();
+    _floatingController.dispose();
+    _particleController.dispose();
+    _analyticsController.dispose();
     super.dispose();
   }
 
   void _setupAnimations() {
+    // Controladores principales
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
-      vsync: this,
-    );
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
-      vsync: this,
-    );
-    _profilePictureController = AnimationController(
       duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
-    _welcomeTextController = AnimationController(
-      duration: const Duration(milliseconds: 1400),
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
     _cardsController = AnimationController(
-      duration: const Duration(milliseconds: 1600),
-      vsync: this,
-    );
-    _pulseController = AnimationController(
       duration: const Duration(milliseconds: 2000),
       vsync: this,
     );
-    _goalsController = AnimationController(
-      duration: const Duration(milliseconds: 1800),
+    _pulseController = AnimationController(
+      duration: const Duration(seconds: 3),
+      vsync: this,
+    );
+    _rotationController = AnimationController(
+      duration: const Duration(seconds: 20),
+      vsync: this,
+    );
+    _shimmerController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+    _glowController = AnimationController(
+      duration: const Duration(milliseconds: 2500),
+      vsync: this,
+    );
+    _floatingController = AnimationController(
+      duration: const Duration(seconds: 4),
+      vsync: this,
+    );
+    _particleController = AnimationController(
+      duration: const Duration(seconds: 8),
+      vsync: this,
+    );
+    _analyticsController = AnimationController(
+      duration: const Duration(milliseconds: 3000),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
-    );
+    // Animaciones básicas
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _fadeController,
+      curve: Curves.easeOut,
+    ));
 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.1),
+      begin: const Offset(0, 0.5),
       end: Offset.zero,
     ).animate(CurvedAnimation(
       parent: _slideController,
       curve: Curves.easeOutCubic,
     ));
 
-    _profilePictureAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _profilePictureController, curve: Curves.easeOutBack),
-    );
-
-    _welcomeTextAnimation = Tween<Offset>(
-      begin: const Offset(-0.3, 0),
-      end: Offset.zero,
+    _cardsAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
     ).animate(CurvedAnimation(
-      parent: _welcomeTextController,
+      parent: _cardsController,
+      curve: Curves.elasticOut,
+    ));
+
+    _pulseAnimation = Tween<double>(
+      begin: 0.95,
+      end: 1.05,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+
+    _rotationAnimation = Tween<double>(
+      begin: 0.0,
+      end: 2 * math.pi,
+    ).animate(CurvedAnimation(
+      parent: _rotationController,
+      curve: Curves.linear,
+    ));
+
+    _shimmerAnimation = Tween<double>(
+      begin: -1.0,
+      end: 2.0,
+    ).animate(CurvedAnimation(
+      parent: _shimmerController,
+      curve: Curves.easeInOut,
+    ));
+
+    _glowAnimation = Tween<double>(
+      begin: 0.3,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _glowController,
+      curve: Curves.easeInOut,
+    ));
+
+    _floatingAnimation = Tween<double>(
+      begin: -5.0,
+      end: 5.0,
+    ).animate(CurvedAnimation(
+      parent: _floatingController,
+      curve: Curves.easeInOut,
+    ));
+
+    _particleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _particleController,
+      curve: Curves.linear,
+    ));
+
+    _analyticsAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _analyticsController,
       curve: Curves.easeOutCubic,
     ));
 
-    _cardsAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _cardsController, curve: Curves.easeInOut),
-    );
+    // Staggered animations para cards
+    _setupStaggeredAnimations();
 
-    _pulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
-
-    _goalsAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _goalsController, curve: Curves.easeInOut),
-    );
-
-    // Animaciones secuenciales más suaves
-    _fadeController.forward();
-    Future.delayed(const Duration(milliseconds: 100), () => _slideController.forward());
-    Future.delayed(const Duration(milliseconds: 200), () => _profilePictureController.forward());
-    Future.delayed(const Duration(milliseconds: 300), () => _welcomeTextController.forward());
-    Future.delayed(const Duration(milliseconds: 400), () => _cardsController.forward());
-    Future.delayed(const Duration(milliseconds: 500), () => _goalsController.forward());
-
+    // Iniciar animaciones infinitas
     _pulseController.repeat(reverse: true);
+    _rotationController.repeat();
+    _shimmerController.repeat(reverse: true);
+    _glowController.repeat(reverse: true);
+    _floatingController.repeat(reverse: true);
+    _particleController.repeat();
+  }
+
+  void _setupStaggeredAnimations() {
+    _cardAnimations = List.generate(10, (index) {
+      return Tween<double>(
+        begin: 0.0,
+        end: 1.0,
+      ).animate(CurvedAnimation(
+        parent: _cardsController,
+        curve: Interval(
+          index * 0.08,
+          0.5 + (index * 0.08),
+          curve: Curves.elasticOut,
+        ),
+      ));
+    });
+
+    _cardSlideAnimations = List.generate(10, (index) {
+      return Tween<Offset>(
+        begin: Offset(0, 0.3 + (index * 0.05)),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _cardsController,
+        curve: Interval(
+          index * 0.08,
+          0.5 + (index * 0.08),
+          curve: Curves.easeOutCubic,
+        ),
+      ));
+    });
+  }
+
+  void _startStaggeredAnimations() {
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _fadeController.forward();
+      }
+    });
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _slideController.forward();
+      }
+    });
+
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (mounted) {
+        _cardsController.forward();
+      }
+    });
+
+    Future.delayed(const Duration(milliseconds: 1200), () {
+      if (mounted) {
+        _analyticsController.forward();
+      }
+    });
   }
 
   void _loadInitialData() {
@@ -197,6 +306,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     final user = authProvider.currentUser;
 
     if (user != null) {
+      // Cargar todos los datos necesarios
       context.read<OptimizedDailyEntriesProvider>().loadEntries(user.id);
       context.read<OptimizedMomentsProvider>().loadMoments(user.id);
       context.read<OptimizedAnalyticsProvider>().loadCompleteAnalytics(user.id);
@@ -206,13 +316,21 @@ class _HomeScreenV2State extends State<HomeScreenV2>
 
   @override
   Widget build(BuildContext context) {
-    return Consumer6<OptimizedAuthProvider, OptimizedDailyEntriesProvider,
-        OptimizedMomentsProvider, OptimizedAnalyticsProvider, GoalsProvider, ExtendedDailyEntriesProvider>(
+    return Consumer5<OptimizedAuthProvider, OptimizedDailyEntriesProvider,
+        OptimizedMomentsProvider, OptimizedAnalyticsProvider, GoalsProvider>(
       builder: (context, authProvider, entriesProvider, momentsProvider,
-          analyticsProvider, goalsProvider, extendedDailyProvider, child) {
+          analyticsProvider, goalsProvider, child) {
+
+        final user = authProvider.currentUser;
+
+        if (user == null) {
+          return const Center(
+            child: Text('No hay usuario autenticado',
+                style: TextStyle(color: Colors.white)),
+          );
+        }
 
         return Container(
-          // 🌌 FONDO ESTILO MONTEREY DARK - Gradiente dinámico
           decoration: const BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
@@ -220,66 +338,176 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               colors: MontereyColors.backgroundGradient,
             ),
           ),
-          child: SafeArea(
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 20),
+          child: Stack(
+            children: [
+              // Fondo animado con partículas
+              _buildAnimatedBackground(),
 
-                      // Header estilo Monterey
-                      _buildMontereyStyledHeader(authProvider),
-                      const SizedBox(height: 32),
+              // Contenido principal
+              SafeArea(
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SlideTransition(
+                    position: _slideAnimation,
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header personalizado con efectos
+                          _buildEnhancedPersonalizedHeader(user, 0),
+                          const SizedBox(height: 24),
 
-                      // Indicador de estado de IA
-                      const AIStatusIndicator(),
+                          // Estado del día actual con glow
+                          _buildEnhancedTodayStatusCard(entriesProvider, momentsProvider, 1),
+                          const SizedBox(height: 20),
 
-                      // Widget de recomendaciones de IA
-                      const GoalsRecommendationsWidget(),
+                          // 🆕 SECCIÓN DE ANÁLISIS INTELIGENTE
+                          _buildIntelligentAnalyticsSection(analyticsProvider, entriesProvider, momentsProvider, 2),
+                          const SizedBox(height: 20),
 
-                      // Momentos del día estilo Monterey
-                      _buildMontereyStyledMomentsSection(momentsProvider),
-                      const SizedBox(height: 24),
+                          // Métricas principales con animaciones
+                          _buildEnhancedMainMetricsSection(analyticsProvider, entriesProvider, 3),
+                          const SizedBox(height: 20),
 
-                      // Estado de reflexión estilo Monterey
-                      _buildMontereyStyledReflectionSection(entriesProvider),
-                      const SizedBox(height: 24),
+                          // 🆕 ANÁLISIS DE TENDENCIAS
+                          _buildTrendsAnalysisSection(analyticsProvider, entriesProvider, 4),
+                          const SizedBox(height: 20),
 
-                      // Métricas de bienestar estilo Monterey
-                      _buildMontereyStyledMetricsSection(analyticsProvider),
-                      const SizedBox(height: 24),
+                          // Goals Progress con shimmer
+                          _buildEnhancedGoalsProgressSection(goalsProvider, 5),
+                          const SizedBox(height: 20),
 
-                      // Progreso semanal estilo Monterey
-                      _buildMontereyStyledWeeklyProgress(analyticsProvider),
-                      const SizedBox(height: 24),
+                          // 🆕 ANÁLISIS DE CORRELACIONES
+                          _buildCorrelationAnalysisSection(analyticsProvider, entriesProvider, 6),
+                          const SizedBox(height: 20),
 
-                      // Tracker de humor estilo Monterey
-                      _buildMontereyStyledMoodTracker(analyticsProvider),
-                      const SizedBox(height: 24),
+                          // Momentos con efectos de luz
+                          _buildEnhancedTodayMomentsSection(momentsProvider, 7),
+                          const SizedBox(height: 20),
 
-                      // Goals activos estilo Monterey + IA
-                      _buildMontereyStyledActiveGoalsSection(goalsProvider, extendedDailyProvider),
-                      const SizedBox(height: 24),
+                          // 🆕 ALERTAS Y PREDICCIONES INTELIGENTES
+                          _buildSmartAlertsSection(analyticsProvider, entriesProvider, 8),
+                          const SizedBox(height: 20),
 
-                      // Tareas de hoy estilo Monterey
-                      _buildMontereyStyledTodayTasks(momentsProvider),
-                      const SizedBox(height: 24),
+                          // Insights con gradientes animados
+                          _buildEnhancedInsightsSection(analyticsProvider, 9),
+                          const SizedBox(height: 20),
 
-                      // Recomendaciones estilo Monterey
-                      _buildMontereyStyledRecommendations(analyticsProvider),
-                      const SizedBox(height: 24),
-
-                      // Programas destacados estilo Monterey
-                      _buildMontereyStyledFeaturedPrograms(),
-                      const SizedBox(height: 100),
-                    ],
+                          // Quick actions con hover effects
+                          _buildEnhancedQuickActionsSection(9),
+                          const SizedBox(height: 40),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // 🆕 SECCIÓN DE ANÁLISIS INTELIGENTE
+  Widget _buildIntelligentAnalyticsSection(OptimizedAnalyticsProvider analyticsProvider,
+      OptimizedDailyEntriesProvider entriesProvider, OptimizedMomentsProvider momentsProvider, int index) {
+
+    final analytics = analyticsProvider.analytics;
+    final intelligentData = _calculateIntelligentMetrics(analytics, entriesProvider, momentsProvider);
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_cardAnimations[index], _cardSlideAnimations[index], _analyticsAnimation]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: _cardSlideAnimations[index].value * 100,
+          child: Transform.scale(
+            scale: _cardAnimations[index].value,
+            child: _buildGlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: MontereyColors.purpleGradient.map((c) => c.withOpacity(0.3)).toList()),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.psychology, color: MontereyColors.accentViolet),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Análisis Inteligente',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: MontereyColors.purpleGradient),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Text(
+                          'IA',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Grid de métricas inteligentes
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    childAspectRatio: 1.6,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    children: [
+                      _buildIntelligentMetricCard(
+                        '🧠',
+                        'Salud Mental',
+                        intelligentData['mentalHealthScore'],
+                        _getMentalHealthColor(intelligentData['mentalHealthScore']),
+                        'Basado en patrones',
+                      ),
+                      _buildIntelligentMetricCard(
+                        '⚡',
+                        'Productividad',
+                        intelligentData['productivityScore'],
+                        _getProductivityColor(intelligentData['productivityScore']),
+                        'Análisis de energía',
+                      ),
+                      _buildIntelligentMetricCard(
+                        '🎯',
+                        'Equilibrio',
+                        intelligentData['balanceScore'],
+                        _getBalanceColor(intelligentData['balanceScore']),
+                        'Vida-trabajo',
+                      ),
+                      _buildIntelligentMetricCard(
+                        '📈',
+                        'Tendencia',
+                        intelligentData['trendDirection'],
+                        _getTrendColor(intelligentData['trendDirection']),
+                        'Últimos 7 días',
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -288,113 +516,492 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  // ============================================================================
-  // 🌌 HEADER ESTILO MONTEREY DARK
-  // ============================================================================
-  Widget _buildMontereyStyledHeader(OptimizedAuthProvider authProvider) {
-    final user = authProvider.currentUser;
-    final userName = user?.name ?? 'Usuario';
+  // 🆕 ANÁLISIS DE TENDENCIAS
+  Widget _buildTrendsAnalysisSection(OptimizedAnalyticsProvider analyticsProvider,
+      OptimizedDailyEntriesProvider entriesProvider, int index) {
 
-    return SlideTransition(
-      position: _welcomeTextAnimation,
-      child: Row(
-        children: [
-          // Avatar estilo Monterey con glassmorphism
-          ScaleTransition(
-            scale: _profilePictureAnimation,
-            child: Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                color: MontereyColors.surfacePrimary,
-                border: Border.all(
-                  color: MontereyColors.primaryPurple.withOpacity(0.3),
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: MontereyColors.primaryPurple.withOpacity(0.3),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
+    final trendsData = _calculateTrends(analyticsProvider, entriesProvider);
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_cardAnimations[index], _cardSlideAnimations[index]]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: _cardSlideAnimations[index].value * 100,
+          child: Transform.scale(
+            scale: _cardAnimations[index].value,
+            child: _buildGlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: MontereyColors.goldGradient.map((c) => c.withOpacity(0.3)).toList()),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.trending_up, color: MontereyColors.accentGold),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Análisis de Tendencias',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.4),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
+                  const SizedBox(height: 20),
+
+                  // Tendencias principales
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTrendCard(
+                          'Humor',
+                          trendsData['moodTrend'],
+                          trendsData['moodDirection'],
+                          MontereyColors.blueGradient,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildTrendCard(
+                          'Energía',
+                          trendsData['energyTrend'],
+                          trendsData['energyDirection'],
+                          MontereyColors.greenGradient,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTrendCard(
+                          'Estrés',
+                          trendsData['stressTrend'],
+                          trendsData['stressDirection'],
+                          MontereyColors.redGradient,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildTrendCard(
+                          'Sueño',
+                          trendsData['sleepTrend'],
+                          trendsData['sleepDirection'],
+                          MontereyColors.purpleGradient,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: user?.profilePicturePath != null
-                    ? Image.file(
-                  File(user!.profilePicturePath!),
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) =>
-                      _buildMontereyDefaultAvatar(),
-                )
-                    : _buildMontereyDefaultAvatar(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // 🆕 ANÁLISIS DE CORRELACIONES
+  Widget _buildCorrelationAnalysisSection(OptimizedAnalyticsProvider analyticsProvider,
+      OptimizedDailyEntriesProvider entriesProvider, int index) {
+
+    final correlations = _calculateCorrelations(analyticsProvider, entriesProvider);
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_cardAnimations[index], _cardSlideAnimations[index]]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: _cardSlideAnimations[index].value * 100,
+          child: Transform.scale(
+            scale: _cardAnimations[index].value,
+            child: _buildGlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: MontereyColors.pinkGradient.map((c) => c.withOpacity(0.3)).toList()),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.scatter_plot, color: MontereyColors.accentPink),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Correlaciones Inteligentes',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Correlaciones más importantes
+                  ...correlations.map((correlation) => _buildCorrelationItem(correlation)),
+                ],
               ),
             ),
           ),
-          const SizedBox(width: 16),
+        );
+      },
+    );
+  }
 
-          // Saludo contextual estilo Monterey
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _getGreeting(),
-                  style: TextStyle(
-                    color: MontereyColors.labelSecondary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: -0.24,
+  // 🆕 ALERTAS Y PREDICCIONES INTELIGENTES
+  Widget _buildSmartAlertsSection(OptimizedAnalyticsProvider analyticsProvider,
+      OptimizedDailyEntriesProvider entriesProvider, int index) {
+
+    final alerts = _generateSmartAlerts(analyticsProvider, entriesProvider);
+
+    if (alerts.isEmpty) return const SizedBox.shrink();
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_cardAnimations[index], _cardSlideAnimations[index], _pulseAnimation]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: _cardSlideAnimations[index].value * 100,
+          child: Transform.scale(
+            scale: _cardAnimations[index].value * _pulseAnimation.value,
+            child: _buildGlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: MontereyColors.redGradient.map((c) => c.withOpacity(0.3)).toList()),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          alerts.any((a) => a['priority'] == 'high') ? Icons.warning : Icons.info,
+                          color: alerts.any((a) => a['priority'] == 'high') ? Colors.red : Colors.orange,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Alertas Inteligentes',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  userName,
+                  const SizedBox(height: 20),
+
+                  // Alertas
+                  ...alerts.map((alert) => _buildSmartAlertItem(alert)),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // MÉTODOS DE CÁLCULO AVANZADOS
+
+  Map<String, dynamic> _calculateIntelligentMetrics(Map<String, dynamic> analytics,
+      OptimizedDailyEntriesProvider entriesProvider, OptimizedMomentsProvider momentsProvider) {
+
+    if (analytics.isEmpty || entriesProvider.entries.isEmpty) {
+      return {
+        'mentalHealthScore': 'N/A',
+        'productivityScore': 'N/A',
+        'balanceScore': 'N/A',
+        'trendDirection': 'N/A',
+      };
+    }
+
+    final basicStats = analytics['basic_stats'] as Map<String, dynamic>? ?? {};
+    final entries = entriesProvider.entries;
+    final recentEntries = entries.take(7).toList();
+
+    // Salud Mental (combinación de humor, estrés, ansiedad)
+    final avgMood = basicStats['avg_mood'] as double? ?? 0.0;
+    final avgStress = basicStats['avg_stress'] as double? ?? 0.0;
+    final mentalHealthScore = ((avgMood * 2 - avgStress) / 3).clamp(0.0, 10.0);
+
+    // Productividad (energía + productividad laboral + enfoque)
+    final avgEnergy = basicStats['avg_energy'] as double? ?? 0.0;
+    final productivityScore = (avgEnergy * 1.2).clamp(0.0, 10.0);
+
+    // Equilibrio (balance entre diferentes aspectos)
+    final avgSocial = _calculateAverage(recentEntries, 'socialInteraction');
+    final avgPhysical = _calculateAverage(recentEntries, 'physicalActivity');
+    final balanceScore = ((avgSocial + avgPhysical + avgEnergy) / 3).clamp(0.0, 10.0);
+
+    // Tendencia (comparación últimos 7 días vs anteriores)
+    final trendDirection = _calculateTrendDirection(entries);
+
+    return {
+      'mentalHealthScore': mentalHealthScore.toStringAsFixed(1),
+      'productivityScore': productivityScore.toStringAsFixed(1),
+      'balanceScore': balanceScore.toStringAsFixed(1),
+      'trendDirection': trendDirection,
+    };
+  }
+
+  Map<String, dynamic> _calculateTrends(OptimizedAnalyticsProvider analyticsProvider,
+      OptimizedDailyEntriesProvider entriesProvider) {
+
+    final entries = entriesProvider.entries;
+    if (entries.length < 7) {
+      return {
+        'moodTrend': 'N/A',
+        'energyTrend': 'N/A',
+        'stressTrend': 'N/A',
+        'sleepTrend': 'N/A',
+        'moodDirection': 'stable',
+        'energyDirection': 'stable',
+        'stressDirection': 'stable',
+        'sleepDirection': 'stable',
+      };
+    }
+
+    final recent = entries.take(3).toList();
+    final previous = entries.skip(3).take(4).toList();
+
+    return {
+      'moodTrend': _calculateTrendValue(recent, previous, 'moodScore'),
+      'energyTrend': _calculateTrendValue(recent, previous, 'energyLevel'),
+      'stressTrend': _calculateTrendValue(recent, previous, 'stressLevel'),
+      'sleepTrend': _calculateTrendValue(recent, previous, 'sleepHours'),
+      'moodDirection': _getTrendDirection(recent, previous, 'moodScore'),
+      'energyDirection': _getTrendDirection(recent, previous, 'energyLevel'),
+      'stressDirection': _getTrendDirection(recent, previous, 'stressLevel'),
+      'sleepDirection': _getTrendDirection(recent, previous, 'sleepHours'),
+    };
+  }
+
+  List<Map<String, dynamic>> _calculateCorrelations(OptimizedAnalyticsProvider analyticsProvider,
+      OptimizedDailyEntriesProvider entriesProvider) {
+
+    final entries = entriesProvider.entries;
+    if (entries.length < 10) return [];
+
+    final correlations = <Map<String, dynamic>>[];
+
+    // Correlación Sueño - Energía
+    final sleepEnergyCorr = _calculateCorrelation(entries, 'sleepQuality', 'energyLevel');
+    if (sleepEnergyCorr.abs() > 0.3) {
+      correlations.add({
+        'title': 'Sueño → Energía',
+        'strength': sleepEnergyCorr,
+        'description': sleepEnergyCorr > 0
+            ? 'Mejor sueño mejora tu energía'
+            : 'El sueño afecta negativamente tu energía',
+        'icon': '😴',
+      });
+    }
+
+    // Correlación Ejercicio - Humor
+    final exerciseMoodCorr = _calculateCorrelation(entries, 'physicalActivity', 'moodScore');
+    if (exerciseMoodCorr.abs() > 0.3) {
+      correlations.add({
+        'title': 'Ejercicio → Humor',
+        'strength': exerciseMoodCorr,
+        'description': exerciseMoodCorr > 0
+            ? 'Más ejercicio mejora tu humor'
+            : 'El ejercicio afecta tu humor negativamente',
+        'icon': '🏃‍♀️',
+      });
+    }
+
+    // Correlación Estrés - Productividad
+    final stressProductivityCorr = _calculateCorrelation(entries, 'stressLevel', 'workProductivity');
+    if (stressProductivityCorr.abs() > 0.3) {
+      correlations.add({
+        'title': 'Estrés → Productividad',
+        'strength': stressProductivityCorr,
+        'description': stressProductivityCorr < 0
+            ? 'Más estrés reduce tu productividad'
+            : 'El estrés aumenta tu productividad',
+        'icon': '😰',
+      });
+    }
+
+    return correlations.take(3).toList();
+  }
+
+  List<Map<String, dynamic>> _generateSmartAlerts(OptimizedAnalyticsProvider analyticsProvider,
+      OptimizedDailyEntriesProvider entriesProvider) {
+
+    final alerts = <Map<String, dynamic>>[];
+    final entries = entriesProvider.entries;
+    final analytics = analyticsProvider.analytics;
+
+    if (entries.isEmpty) return alerts;
+
+    final recentEntries = entries.take(3).toList();
+
+    // Alerta de estrés elevado
+    final avgStress = _calculateAverage(recentEntries, 'stressLevel');
+    if (avgStress > 7.0) {
+      alerts.add({
+        'type': 'stress',
+        'priority': 'high',
+        'title': 'Estrés Elevado Detectado',
+        'description': 'Tus niveles de estrés han estado altos últimamente',
+        'recommendation': 'Considera técnicas de relajación o meditación',
+        'icon': '⚠️',
+        'color': MontereyColors.redGradient,
+      });
+    }
+
+    // Alerta de baja energía
+    final avgEnergy = _calculateAverage(recentEntries, 'energyLevel');
+    if (avgEnergy < 4.0) {
+      alerts.add({
+        'type': 'energy',
+        'priority': 'medium',
+        'title': 'Energía Baja Persistente',
+        'description': 'Tu energía ha estado baja los últimos días',
+        'recommendation': 'Revisa tus hábitos de sueño y alimentación',
+        'icon': '🔋',
+        'color': MontereyColors.goldGradient,
+      });
+    }
+
+    // Alerta de falta de ejercicio
+    final avgExercise = _calculateAverage(recentEntries, 'physicalActivity');
+    if (avgExercise < 3.0) {
+      alerts.add({
+        'type': 'exercise',
+        'priority': 'low',
+        'title': 'Actividad Física Baja',
+        'description': 'No has estado muy activo físicamente',
+        'recommendation': 'Intenta incluir más movimiento en tu día',
+        'icon': '🏃‍♀️',
+        'color': MontereyColors.greenGradient,
+      });
+    }
+
+    return alerts.take(2).toList();
+  }
+
+  // WIDGETS DE LOS NUEVOS ANÁLISIS
+
+  Widget _buildIntelligentMetricCard(String emoji, String title, String value,
+      List<Color> gradient, String subtitle) {
+    return AnimatedBuilder(
+      animation: _analyticsAnimation,
+      builder: (context, child) {
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: gradient.map((c) => c.withOpacity(0.1 * _analyticsAnimation.value)).toList(),
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: gradient.first.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(emoji, style: const TextStyle(fontSize: 24)),
+              const SizedBox(height: 8),
+              ShaderMask(
+                shaderCallback: (bounds) {
+                  return LinearGradient(colors: gradient).createShader(bounds);
+                },
+                child: Text(
+                  value,
                   style: const TextStyle(
-                    color: MontereyColors.labelPrimary,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.5,
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-              ],
-            ),
-          ),
-
-          // Botón de notificaciones estilo Monterey
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: MontereyColors.surfacePrimary,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: MontereyColors.primaryBlue.withOpacity(0.3),
-                width: 1,
               ),
-              boxShadow: [
-                BoxShadow(
-                  color: MontereyColors.primaryBlue.withOpacity(0.2),
-                  blurRadius: 16,
-                  offset: const Offset(0, 4),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
-              ],
-            ),
-            child: IconButton(
-              onPressed: () {
-                Navigator.pushNamed(context, '/notifications-settings');
-              },
-              icon: Icon(
-                Icons.notifications_none_rounded,
-                color: MontereyColors.primaryBlue,
-                size: 22,
+              ),
+              Text(
+                subtitle,
+                style: const TextStyle(
+                  color: Colors.white60,
+                  fontSize: 9,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTrendCard(String title, String value, String direction, List<Color> gradient) {
+    IconData trendIcon = Icons.trending_flat;
+    if (direction == 'up') trendIcon = Icons.trending_up;
+    if (direction == 'down') trendIcon = Icons.trending_down;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradient.map((c) => c.withOpacity(0.1)).toList(),
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: gradient.first.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(trendIcon, color: gradient.first, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ShaderMask(
+            shaderCallback: (bounds) {
+              return LinearGradient(colors: gradient).createShader(bounds);
+            },
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
@@ -403,1378 +1010,1772 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  Widget _buildMontereyDefaultAvatar() {
+  Widget _buildCorrelationItem(Map<String, dynamic> correlation) {
+    final strength = correlation['strength'] as double;
+    final isPositive = strength > 0;
+
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: MontereyColors.primaryGradient,
-        ),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(12),
       ),
-      child: const Icon(
-        Icons.person_rounded,
-        color: Colors.white,
-        size: 32,
-      ),
-    );
-  }
-
-  // ============================================================================
-  // 🌌 MOMENTOS DEL DÍA ESTILO MONTEREY
-  // ============================================================================
-  Widget _buildMontereyStyledMomentsSection(OptimizedMomentsProvider momentsProvider) {
-    final todayMoments = momentsProvider.todayMoments;
-    final positiveMoments = todayMoments.where((m) => m.type == 'positive').length;
-    final negativeMoments = todayMoments.where((m) => m.type == 'negative').length;
-
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _cardsAnimation,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Título estilo Monterey
-            _buildMontereySectionTitle('Momentos de Hoy', Icons.wb_sunny_outlined),
-            const SizedBox(height: 16),
-
-            // Grid estilo Monterey
-            Row(
+      child: Row(
+        children: [
+          Text(correlation['icon'], style: const TextStyle(fontSize: 20)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Momentos positivos
-                Expanded(
-                  child: _buildMontereyMomentCard(
-                    title: 'Positivos',
-                    value: positiveMoments.toString(),
-                    icon: Icons.sentiment_satisfied_rounded,
-                    color: MontereyColors.accentEmerald,
+                Text(
+                  correlation['title'],
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(width: 16),
-
-                // Momentos por mejorar
-                Expanded(
-                  child: _buildMontereyMomentCard(
-                    title: 'Por mejorar',
-                    value: negativeMoments.toString(),
-                    icon: Icons.sentiment_neutral_rounded,
-                    color: MontereyColors.accentPink,
+                Text(
+                  correlation['description'],
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: (isPositive ? Colors.green : Colors.red).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${(strength.abs() * 100).toStringAsFixed(0)}%',
+              style: TextStyle(
+                color: isPositive ? Colors.green : Colors.red,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildMontereySectionTitle(String title, IconData icon) {
-    return Row(
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: MontereyColors.primaryGradient,
-            ),
-            borderRadius: BorderRadius.circular(8),
+  Widget _buildSmartAlertItem(Map<String, dynamic> alert) {
+    final gradient = alert['color'] as List<Color>;
+    final priority = alert['priority'] as String;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: gradient.map((c) => c.withOpacity(0.1)).toList(),
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: gradient.first.withOpacity(0.3),
+          width: priority == 'high' ? 2 : 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(alert['icon'], style: const TextStyle(fontSize: 20)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  alert['title'],
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: gradient),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  priority.toUpperCase(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
-          child: Icon(
-            icon,
-            color: Colors.white,
-            size: 18,
+          const SizedBox(height: 8),
+          Text(
+            alert['description'],
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '💡 ${alert['recommendation']}',
+            style: const TextStyle(
+              color: Colors.white60,
+              fontSize: 11,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // MÉTODOS AUXILIARES DE CÁLCULO
+
+  double _calculateAverage(List<dynamic> entries, String field) {
+    if (entries.isEmpty) return 0.0;
+
+    double sum = 0.0;
+    int count = 0;
+
+    for (final entry in entries) {
+      final value = _getFieldValue(entry, field);
+      if (value != null) {
+        sum += value;
+        count++;
+      }
+    }
+
+    return count > 0 ? sum / count : 0.0;
+  }
+
+  double? _getFieldValue(dynamic entry, String field) {
+    try {
+      switch (field) {
+        case 'moodScore':
+          return entry.moodScore?.toDouble();
+        case 'energyLevel':
+          return entry.energyLevel?.toDouble();
+        case 'stressLevel':
+          return entry.stressLevel?.toDouble();
+        case 'sleepQuality':
+          return entry.sleepQuality?.toDouble();
+        case 'sleepHours':
+          return entry.sleepHours?.toDouble();
+        case 'physicalActivity':
+          return entry.physicalActivity?.toDouble();
+        case 'socialInteraction':
+          return entry.socialInteraction?.toDouble();
+        case 'workProductivity':
+          return entry.workProductivity?.toDouble();
+        default:
+          return null;
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
+  String _calculateTrendDirection(List<dynamic> entries) {
+    if (entries.length < 7) return 'stable';
+
+    final recent = entries.take(3);
+    final previous = entries.skip(3).take(4);
+
+    final recentAvg = _calculateAverage(recent.toList(), 'moodScore');
+    final previousAvg = _calculateAverage(previous.toList(), 'moodScore');
+
+    final diff = recentAvg - previousAvg;
+    if (diff > 0.5) return 'Mejorando ↗️';
+    if (diff < -0.5) return 'Descendiendo ↘️';
+    return 'Estable →';
+  }
+
+  String _calculateTrendValue(List<dynamic> recent, List<dynamic> previous, String field) {
+    final recentAvg = _calculateAverage(recent, field);
+    final previousAvg = _calculateAverage(previous, field);
+
+    if (previousAvg == 0) return recentAvg.toStringAsFixed(1);
+
+    final percentChange = ((recentAvg - previousAvg) / previousAvg * 100);
+    return '${percentChange >= 0 ? '+' : ''}${percentChange.toStringAsFixed(1)}%';
+  }
+
+  String _getTrendDirection(List<dynamic> recent, List<dynamic> previous, String field) {
+    final recentAvg = _calculateAverage(recent, field);
+    final previousAvg = _calculateAverage(previous, field);
+
+    final diff = recentAvg - previousAvg;
+    if (diff > 0.3) return 'up';
+    if (diff < -0.3) return 'down';
+    return 'stable';
+  }
+
+  double _calculateCorrelation(List<dynamic> entries, String field1, String field2) {
+    if (entries.length < 10) return 0.0;
+
+    final values1 = <double>[];
+    final values2 = <double>[];
+
+    for (final entry in entries) {
+      final val1 = _getFieldValue(entry, field1);
+      final val2 = _getFieldValue(entry, field2);
+      if (val1 != null && val2 != null) {
+        values1.add(val1);
+        values2.add(val2);
+      }
+    }
+
+    if (values1.length < 5) return 0.0;
+
+    final mean1 = values1.reduce((a, b) => a + b) / values1.length;
+    final mean2 = values2.reduce((a, b) => a + b) / values2.length;
+
+    double numerator = 0.0;
+    double sumSq1 = 0.0;
+    double sumSq2 = 0.0;
+
+    for (int i = 0; i < values1.length; i++) {
+      final diff1 = values1[i] - mean1;
+      final diff2 = values2[i] - mean2;
+      numerator += diff1 * diff2;
+      sumSq1 += diff1 * diff1;
+      sumSq2 += diff2 * diff2;
+    }
+
+    final denominator = math.sqrt(sumSq1 * sumSq2);
+    return denominator != 0 ? numerator / denominator : 0.0;
+  }
+
+  // MÉTODOS DE COLOR BASADOS EN VALORES
+
+  List<Color> _getMentalHealthColor(String value) {
+    if (value == 'N/A') return MontereyColors.purpleGradient;
+    final score = double.tryParse(value) ?? 0.0;
+    if (score >= 7) return MontereyColors.greenGradient;
+    if (score >= 5) return MontereyColors.goldGradient;
+    return MontereyColors.redGradient;
+  }
+
+  List<Color> _getProductivityColor(String value) {
+    if (value == 'N/A') return MontereyColors.blueGradient;
+    final score = double.tryParse(value) ?? 0.0;
+    if (score >= 7) return MontereyColors.greenGradient;
+    if (score >= 5) return MontereyColors.goldGradient;
+    return MontereyColors.redGradient;
+  }
+
+  List<Color> _getBalanceColor(String value) {
+    if (value == 'N/A') return MontereyColors.purpleGradient;
+    final score = double.tryParse(value) ?? 0.0;
+    if (score >= 7) return MontereyColors.greenGradient;
+    if (score >= 5) return MontereyColors.goldGradient;
+    return MontereyColors.redGradient;
+  }
+
+  List<Color> _getTrendColor(String value) {
+    if (value.contains('↗️')) return MontereyColors.greenGradient;
+    if (value.contains('↘️')) return MontereyColors.redGradient;
+    return MontereyColors.blueGradient;
+  }
+
+  // [Resto del código anterior se mantiene igual...]
+  // Incluir todos los métodos existentes: _buildAnimatedBackground, _buildEnhancedPersonalizedHeader,
+  // _buildEnhancedTodayStatusCard, _buildEnhancedMainMetricsSection, _buildEnhancedGoalsProgressSection,
+  // _buildEnhancedTodayMomentsSection, _buildEnhancedInsightsSection, _buildEnhancedQuickActionsSection,
+  // _buildGlassCard, métodos helper, navegación, etc.
+
+  Widget _buildAnimatedBackground() {
+    return AnimatedBuilder(
+      animation: _particleAnimation,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: ParticlesPainter(_particleAnimation.value),
+          size: Size.infinite,
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedPersonalizedHeader(user, int index) {
+    final greeting = _getContextualGreeting();
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_cardAnimations[index], _cardSlideAnimations[index], _glowAnimation]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: _cardSlideAnimations[index].value * 100,
+          child: Transform.scale(
+            scale: _cardAnimations[index].value,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: MontereyColors.primaryGradient.map((color) =>
+                  Color.lerp(color, Colors.white, 0.1 * _glowAnimation.value)!
+                  ).toList(),
+                ),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: MontereyColors.primaryPurple.withOpacity(0.4 * _glowAnimation.value),
+                    blurRadius: 30 * _glowAnimation.value,
+                    offset: const Offset(0, 8),
+                    spreadRadius: 2 * _glowAnimation.value,
+                  ),
+                  BoxShadow(
+                    color: MontereyColors.accentPink.withOpacity(0.2 * _glowAnimation.value),
+                    blurRadius: 50 * _glowAnimation.value,
+                    offset: const Offset(0, 15),
+                  ),
+                ],
+              ),
+              child: Stack(
+                children: [
+                  // Shimmer effect
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: AnimatedBuilder(
+                      animation: _shimmerAnimation,
+                      builder: (context, child) {
+                        return Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment(_shimmerAnimation.value - 1, 0),
+                              end: Alignment(_shimmerAnimation.value, 0),
+                              colors: [
+                                Colors.transparent,
+                                Colors.white.withOpacity(0.1),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Contenido principal
+                  Row(
+                    children: [
+                      // Avatar animado con efectos
+                      AnimatedBuilder(
+                        animation: Listenable.merge([_pulseAnimation, _rotationAnimation, _floatingAnimation]),
+                        builder: (context, child) {
+                          return Transform.translate(
+                            offset: Offset(0, _floatingAnimation.value),
+                            child: Transform.scale(
+                              scale: _pulseAnimation.value,
+                              child: Container(
+                                width: 70,
+                                height: 70,
+                                decoration: BoxDecoration(
+                                  gradient: RadialGradient(
+                                    colors: [
+                                      Colors.white.withOpacity(0.3),
+                                      Colors.white.withOpacity(0.1),
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.white.withOpacity(0.2),
+                                      blurRadius: 20,
+                                      spreadRadius: 5,
+                                    ),
+                                  ],
+                                ),
+                                child: Center(
+                                  child: Transform.rotate(
+                                    angle: _rotationAnimation.value * 0.1,
+                                    child: Text(
+                                      user.avatarEmoji ?? '😊',
+                                      style: const TextStyle(fontSize: 32),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(width: 20),
+
+                      // Texto de saludo con efectos
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AnimatedBuilder(
+                              animation: _floatingAnimation,
+                              builder: (context, child) {
+                                return Transform.translate(
+                                  offset: Offset(0, _floatingAnimation.value * 0.5),
+                                  child: Text(
+                                    greeting,
+                                    style: TextStyle(
+                                      color: Colors.white.withOpacity(0.9),
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                      shadows: [
+                                        Shadow(
+                                          color: Colors.black.withOpacity(0.3),
+                                          blurRadius: 10,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                            AnimatedBuilder(
+                              animation: _floatingAnimation,
+                              builder: (context, child) {
+                                return Transform.translate(
+                                  offset: Offset(0, -_floatingAnimation.value * 0.3),
+                                  child: ShaderMask(
+                                    shaderCallback: (bounds) {
+                                      return const LinearGradient(
+                                        colors: [Colors.white, Color(0xFFF8FAFC)],
+                                      ).createShader(bounds);
+                                    },
+                                    child: Text(
+                                      user.name,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 28,
+                                        fontWeight: FontWeight.bold,
+                                        shadows: [
+                                          Shadow(
+                                            color: Colors.black26,
+                                            blurRadius: 15,
+                                            offset: Offset(0, 3),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedTodayStatusCard(OptimizedDailyEntriesProvider entriesProvider,
+      OptimizedMomentsProvider momentsProvider, int index) {
+
+    final todayEntry = entriesProvider.todayEntry;
+    final todayMomentsCount = momentsProvider.todayCount;
+    final hasReflection = todayEntry != null;
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_cardAnimations[index], _cardSlideAnimations[index], _glowAnimation]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: _cardSlideAnimations[index].value * 100,
+          child: Transform.scale(
+            scale: _cardAnimations[index].value,
+            child: _buildGlassCard(
+              child: Stack(
+                children: [
+                  // Glow effect background
+                  Positioned.fill(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        gradient: RadialGradient(
+                          center: Alignment.topLeft,
+                          radius: 1.5,
+                          colors: [
+                            (hasReflection ? Colors.green : Colors.orange)
+                                .withOpacity(0.1 * _glowAnimation.value),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Contenido principal
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              gradient: RadialGradient(
+                                colors: [
+                                  (hasReflection ? Colors.green : Colors.orange).withOpacity(0.3),
+                                  (hasReflection ? Colors.green : Colors.orange).withOpacity(0.1),
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              hasReflection ? Icons.check_circle : Icons.pending,
+                              color: hasReflection ? Colors.green : Colors.orange,
+                              size: 24,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              hasReflection ? 'Reflexión completada' : 'Reflexión pendiente',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      Text(
+                        hasReflection
+                            ? 'Has registrado tu día. ¡Excelente trabajo!'
+                            : 'Tómate un momento para reflexionar sobre tu día.',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+
+                      if (todayMomentsCount > 0) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: MontereyColors.blueGradient.map((c) => c.withOpacity(0.2)).toList(),
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '✨ Momentos capturados hoy: $todayMomentsCount',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedMainMetricsSection(OptimizedAnalyticsProvider analyticsProvider,
+      OptimizedDailyEntriesProvider entriesProvider, int index) {
+
+    final analytics = analyticsProvider.analytics;
+    final wellbeingScore = _getWellbeingScore(analytics);
+    final streakDays = _getStreakDays(analytics);
+    final avgMood = _getAverageMood(analytics);
+    final totalEntries = entriesProvider.entries.length;
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_cardAnimations[index], _cardSlideAnimations[index]]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: _cardSlideAnimations[index].value * 100,
+          child: Transform.scale(
+            scale: _cardAnimations[index].value,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShaderMask(
+                  shaderCallback: (bounds) {
+                    return LinearGradient(
+                      colors: MontereyColors.primaryGradient,
+                    ).createShader(bounds);
+                  },
+                  child: const Text(
+                    'Métricas Principales',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Row(
+                  children: [
+                    // Puntuación principal de bienestar con efectos
+                    Expanded(
+                      flex: 2,
+                      child: _buildEnhancedWellbeingScoreCard(wellbeingScore),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // Métricas secundarias con animaciones
+                    Expanded(
+                      child: Column(
+                        children: [
+                          _buildEnhancedSmallMetricCard(
+                            title: 'Racha',
+                            value: '${streakDays}d',
+                            icon: Icons.local_fire_department_rounded,
+                            gradient: MontereyColors.pinkGradient,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildEnhancedSmallMetricCard(
+                            title: 'Humor',
+                            value: avgMood.toStringAsFixed(1),
+                            icon: Icons.sentiment_satisfied_rounded,
+                            gradient: MontereyColors.purpleGradient,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Grid de estadísticas con efectos staggered
+                _buildEnhancedStatsGrid(analytics, totalEntries),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedWellbeingScoreCard(double score) {
+    final percentage = (score / 10.0).clamp(0.0, 1.0);
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_pulseAnimation, _glowAnimation]),
+      builder: (context, child) {
+        return Transform.scale(
+          scale: 1.0 + (_pulseAnimation.value - 1.0) * 0.02,
+          child: _buildGlassCard(
+            child: Stack(
+              children: [
+                // Glow background animado
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(20),
+                      gradient: RadialGradient(
+                        colors: [
+                          MontereyColors.primaryPurple.withOpacity(0.2 * _glowAnimation.value),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Contenido principal
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Círculo de progreso animado
+                        AnimatedBuilder(
+                          animation: _rotationAnimation,
+                          builder: (context, child) {
+                            return Transform.rotate(
+                              angle: _rotationAnimation.value * 0.1,
+                              child: SizedBox(
+                                width: 80,
+                                height: 80,
+                                child: CircularProgressIndicator(
+                                  value: percentage,
+                                  strokeWidth: 8,
+                                  backgroundColor: Colors.white.withOpacity(0.1),
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    percentage > 0.7 ? Colors.green :
+                                    percentage > 0.4 ? Colors.orange : Colors.red,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+
+                        // Texto central con efectos
+                        Container(
+                          width: 60,
+                          height: 60,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: RadialGradient(
+                              colors: [
+                                Colors.white.withOpacity(0.1),
+                                Colors.transparent,
+                              ],
+                            ),
+                          ),
+                          child: Center(
+                            child: ShaderMask(
+                              shaderCallback: (bounds) {
+                                return LinearGradient(
+                                  colors: [Colors.white, Colors.grey.shade300],
+                                ).createShader(bounds);
+                              },
+                              child: Text(
+                                score.toStringAsFixed(1),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Bienestar General',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedSmallMetricCard({
+    required String title,
+    required String value,
+    required IconData icon,
+    required List<Color> gradient,
+  }) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_floatingAnimation, _glowAnimation]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _floatingAnimation.value * 0.5),
+          child: _buildGlassCard(
+            height: 74,
+            child: Stack(
+              children: [
+                // Glow background
+                Positioned.fill(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(
+                        colors: gradient.map((c) => c.withOpacity(0.1 * _glowAnimation.value)).toList(),
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Contenido
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(colors: gradient.map((c) => c.withOpacity(0.3)).toList()),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(icon, color: gradient.first, size: 20),
+                    ),
+                    const SizedBox(height: 6),
+                    ShaderMask(
+                      shaderCallback: (bounds) {
+                        return LinearGradient(colors: gradient).createShader(bounds);
+                      },
+                      child: Text(
+                        value,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedStatsGrid(Map<String, dynamic> analytics, int totalEntries) {
+    final stats = [
+      _StatItem('📝', 'Entradas', '$totalEntries', MontereyColors.blueGradient),
+      _StatItem('💪', 'Energía', '${_getEnergyLevel(analytics)}', MontereyColors.goldGradient),
+      _StatItem('😌', 'Estrés', '${_getStressLevel(analytics)}', [Colors.green, Colors.teal]),
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        childAspectRatio: 1.2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: stats.length,
+      itemBuilder: (context, index) {
+        final stat = stats[index];
+        return AnimatedBuilder(
+          animation: _cardAnimations[index % _cardAnimations.length],
+          builder: (context, child) {
+            return Transform.scale(
+              scale: _cardAnimations[index % _cardAnimations.length].value,
+              child: _buildEnhancedStatCard(stat),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedStatCard(_StatItem stat) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_floatingAnimation, _shimmerAnimation]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _floatingAnimation.value * 0.3),
+          child: _buildGlassCard(
+            child: Stack(
+              children: [
+                // Shimmer effect
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment(_shimmerAnimation.value - 1, 0),
+                        end: Alignment(_shimmerAnimation.value, 0),
+                        colors: [
+                          Colors.transparent,
+                          Colors.white.withOpacity(0.05),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+
+                // Contenido
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(stat.emoji, style: const TextStyle(fontSize: 24)),
+                    const SizedBox(height: 6),
+                    ShaderMask(
+                      shaderCallback: (bounds) {
+                        return LinearGradient(colors: stat.gradient).createShader(bounds);
+                      },
+                      child: Text(
+                        stat.value,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      stat.title,
+                      style: const TextStyle(
+                        color: Colors.white60,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedGoalsProgressSection(GoalsProvider goalsProvider, int index) {
+    final activeGoals = goalsProvider.activeGoals;
+    final averageProgress = goalsProvider.averageProgress;
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_cardAnimations[index], _cardSlideAnimations[index]]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: _cardSlideAnimations[index].value * 100,
+          child: Transform.scale(
+            scale: _cardAnimations[index].value,
+            child: _buildGlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: MontereyColors.blueGradient.map((c) => c.withOpacity(0.3)).toList()),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.flag, color: MontereyColors.accentTeal),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Objetivos',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      AnimatedBuilder(
+                        animation: _pulseAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _pulseAnimation.value,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(colors: MontereyColors.blueGradient),
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: MontereyColors.accentTeal.withOpacity(0.3),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: Text(
+                                '${activeGoals.length} activos',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+
+                  if (activeGoals.isNotEmpty) ...[
+                    const SizedBox(height: 20),
+
+                    // Progreso promedio con animación
+                    _buildEnhancedProgressBar(averageProgress),
+
+                    const SizedBox(height: 20),
+
+                    // Top 3 objetivos con efectos
+                    ...activeGoals.take(3).map((goal) => _buildEnhancedGoalItem(goal)),
+                  ] else ...[
+                    const SizedBox(height: 16),
+                    Center(
+                      child: Column(
+                        children: [
+                          Text(
+                            '🎯',
+                            style: TextStyle(
+                              fontSize: 32,
+                              color: Colors.white.withOpacity(0.5),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text(
+                            'No tienes objetivos activos',
+                            style: TextStyle(
+                              color: Colors.white60,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const Text(
+                            '¡Crea tu primer objetivo!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedProgressBar(double progress) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Progreso promedio: ${(progress * 100).toStringAsFixed(0)}%',
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        const SizedBox(width: 12),
-        Text(
-          title,
-          style: const TextStyle(
-            color: MontereyColors.labelPrimary,
-            fontSize: 22,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.4,
+        const SizedBox(height: 12),
+        Container(
+          height: 8,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: AnimatedBuilder(
+            animation: _cardsAnimation,
+            builder: (context, child) {
+              return Stack(
+                children: [
+                  // Progreso principal
+                  Container(
+                    width: MediaQuery.of(context).size.width * progress * _cardsAnimation.value,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: MontereyColors.blueGradient),
+                      borderRadius: BorderRadius.circular(4),
+                      boxShadow: [
+                        BoxShadow(
+                          color: MontereyColors.accentTeal.withOpacity(0.4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Shimmer effect
+                  AnimatedBuilder(
+                    animation: _shimmerAnimation,
+                    builder: (context, child) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          gradient: LinearGradient(
+                            begin: Alignment(_shimmerAnimation.value - 1, 0),
+                            end: Alignment(_shimmerAnimation.value, 0),
+                            colors: [
+                              Colors.transparent,
+                              Colors.white.withOpacity(0.3),
+                              Colors.transparent,
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
           ),
         ),
       ],
     );
   }
 
-  Widget _buildMontereyMomentCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: MontereyColors.surfacePrimary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Ícono estilo Monterey
-          Container(
-            width: 48,
-            height: 48,
+  Widget _buildEnhancedGoalItem(GoalModel goal) {
+    final progress = goal.progress;
+    final typeEmoji = _getGoalTypeEmoji(goal.type);
+
+    return AnimatedBuilder(
+      animation: Listenable.merge([_floatingAnimation, _glowAnimation]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _floatingAnimation.value * 0.2),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [color.withOpacity(0.8), color],
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.1),
+                width: 1,
               ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Valor
-          Text(
-            value,
-            style: const TextStyle(
-              color: MontereyColors.labelPrimary,
-              fontSize: 32,
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.6,
-            ),
-          ),
-          const SizedBox(height: 4),
-
-          // Título
-          Text(
-            title,
-            style: const TextStyle(
-              color: MontereyColors.labelSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.24,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================================
-  // 🌌 ESTADO DE REFLEXIÓN ESTILO MONTEREY DARK
-  // ============================================================================
-  Widget _buildMontereyStyledReflectionSection(OptimizedDailyEntriesProvider entriesProvider) {
-    final todayEntry = entriesProvider.todayEntry;
-    final isCompleted = todayEntry != null;
-
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _cardsAnimation,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: MontereyColors.surfacePrimary,
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: isCompleted
-                  ? MontereyColors.accentEmerald.withOpacity(0.3)
-                  : MontereyColors.primaryBlue.withOpacity(0.3),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: isCompleted
-                    ? MontereyColors.accentEmerald.withOpacity(0.2)
-                    : MontereyColors.primaryBlue.withOpacity(0.2),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              // Ícono estilo Monterey
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: isCompleted
-                        ? [MontereyColors.accentEmerald.withOpacity(0.8), MontereyColors.accentEmerald]
-                        : MontereyColors.blueGradient,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-                child: Icon(
-                  isCompleted ? Icons.check_circle_rounded : Icons.edit_note_rounded,
-                  color: Colors.white,
-                  size: 28,
-                ),
-              ),
-              const SizedBox(width: 16),
-
-              // Contenido
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      isCompleted ? 'Reflexión Completada' : 'Reflexión Pendiente',
-                      style: const TextStyle(
-                        color: MontereyColors.labelPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      isCompleted
-                          ? 'Has completado tu reflexión de hoy. ¡Excelente!'
-                          : 'Tómate unos minutos para reflexionar sobre tu día.',
-                      style: const TextStyle(
-                        color: MontereyColors.labelSecondary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: -0.24,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Botón de acción estilo Monterey
-              if (!isCompleted)
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: MontereyColors.blueGradient),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(12),
-                      onTap: () {
-                        Navigator.pushNamed(context, '/daily-review');
-                      },
-                      child: const Icon(
-                        Icons.arrow_forward_rounded,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================================
-  // 🌌 MÉTRICAS DE BIENESTAR ESTILO MONTEREY
-  // ============================================================================
-  Widget _buildMontereyStyledMetricsSection(OptimizedAnalyticsProvider analyticsProvider) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _cardsAnimation,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Título estilo Monterey
-            _buildMontereySectionTitle('Métricas de Bienestar', Icons.analytics_outlined),
-            const SizedBox(height: 16),
-
-            // Grid de métricas estilo Monterey
-            Row(
+              ],
+            ),
+            child: Row(
               children: [
-                // Puntuación de bienestar
-                Expanded(
-                  flex: 2,
-                  child: _buildMontereyWellnessScore(analyticsProvider),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      colors: [
+                        Colors.white.withOpacity(0.2),
+                        Colors.white.withOpacity(0.05),
+                      ],
+                    ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(typeEmoji, style: const TextStyle(fontSize: 20)),
                 ),
                 const SizedBox(width: 16),
-
-                // Métricas secundarias
                 Expanded(
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildMontereySmallMetricCard(
-                        title: 'Racha',
-                        value: _getStreakValue(analyticsProvider),
-                        icon: Icons.local_fire_department_rounded,
-                        color: MontereyColors.accentPink,
+                      Text(
+                        goal.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      _buildMontereySmallMetricCard(
-                        title: 'Humor',
-                        value: _getMoodValue(analyticsProvider),
-                        icon: Icons.sentiment_satisfied_rounded,
-                        color: MontereyColors.accentViolet,
+                      const SizedBox(height: 8),
+                      Stack(
+                        children: [
+                          Container(
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+                          Container(
+                            height: 6,
+                            width: (MediaQuery.of(context).size.width - 140) * progress,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(colors: MontereyColors.blueGradient),
+                              borderRadius: BorderRadius.circular(3),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: MontereyColors.accentTeal.withOpacity(0.3),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMontereyWellnessScore(OptimizedAnalyticsProvider analyticsProvider) {
-    final score = _getWellnessScore(analyticsProvider);
-
-    return Container(
-      height: 140,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: MontereyColors.surfacePrimary,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: MontereyColors.primaryPurple.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: MontereyColors.primaryPurple.withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          // Círculo de progreso estilo Monterey
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 64,
-                height: 64,
-                child: CircularProgressIndicator(
-                  value: score / 10,
-                  strokeWidth: 6,
-                  backgroundColor: MontereyColors.backgroundTertiary,
-                  valueColor: const AlwaysStoppedAnimation<Color>(MontereyColors.primaryPurple),
-                ),
-              ),
-              Text(
-                score.toStringAsFixed(1),
-                style: const TextStyle(
-                  color: MontereyColors.labelPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.4,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          const Text(
-            'Bienestar',
-            style: TextStyle(
-              color: MontereyColors.labelSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              letterSpacing: -0.24,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMontereySmallMetricCard({
-    required String title,
-    required String value,
-    required IconData icon,
-    required Color color,
-  }) {
-    return Container(
-      height: 62,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: MontereyColors.surfacePrimary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                color: color,
-                size: 16,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                value,
-                style: const TextStyle(
-                  color: MontereyColors.labelPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.36,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          Text(
-            title,
-            style: const TextStyle(
-              color: MontereyColors.labelSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.24,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================================
-  // 🌌 PROGRESO SEMANAL ESTILO MONTEREY
-  // ============================================================================
-  Widget _buildMontereyStyledWeeklyProgress(OptimizedAnalyticsProvider analyticsProvider) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _cardsAnimation,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: MontereyColors.surfacePrimary, // FIX: Use Monterey color
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2), // FIX: Adjusted shadow for dark theme
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Título con ícono estilo Apple
-              Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: MontereyColors.primaryPurple.withOpacity(0.1), // FIX: Use Monterey color
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-                    child: const Icon(
-                      Icons.trending_up_rounded,
-                      color: MontereyColors.primaryPurple, // FIX: Use Monterey color
-                      size: 16,
-                    ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(colors: MontereyColors.blueGradient.map((c) => c.withOpacity(0.2)).toList()),
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Progreso Semanal',
-                    style: TextStyle(
-                      color: MontereyColors.labelPrimary, // FIX: Use Monterey color
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.4,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Gráfico estilo Apple
-              _buildMontereyWeeklyChart(), // FIX: Corrected method name
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMontereyWeeklyChart() {
-    final days = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-    final values = [0.8, 0.6, 0.9, 0.7, 0.5, 0.8, 0.4];
-
-    return SizedBox(
-      height: 100,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: List.generate(7, (index) {
-          final isToday = index == DateTime.now().weekday - 1;
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              // Barra estilo Monterey
-              Container(
-                width: 20,
-                height: 64 * values[index],
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: isToday
-                        ? MontereyColors.primaryGradient
-                        : [MontereyColors.primaryPurple.withOpacity(0.3), MontereyColors.primaryPurple.withOpacity(0.6)],
-                  ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // Día
-              Text(
-                days[index],
-                style: TextStyle(
-                  color: isToday
-                      ? MontereyColors.primaryPurple
-                      : MontereyColors.labelSecondary,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.08,
-                ),
-              ),
-            ],
-          );
-        }),
-      ),
-    );
-  }
-
-  // ============================================================================
-  // 🌌 TRACKER DE HUMOR ESTILO MONTEREY
-  // ============================================================================
-  Widget _buildMontereyStyledMoodTracker(OptimizedAnalyticsProvider analyticsProvider) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _cardsAnimation,
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: MontereyColors.surfacePrimary, // FIX: Use Monterey color
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.2), // FIX: Adjusted shadow for dark theme
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Título estilo Apple
-              Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: MontereyColors.accentTeal.withOpacity(0.1), // FIX: Use Monterey color
-                      borderRadius: BorderRadius.circular(7),
-                    ),
-                    child: const Icon(
-                      Icons.sentiment_satisfied_rounded,
-                      color: MontereyColors.accentTeal, // FIX: Use Monterey color
-                      size: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Tracker de Humor',
-                    style: TextStyle(
-                      color: MontereyColors.labelPrimary, // FIX: Use Monterey color
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: -0.4,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // Emojis de humor estilo Apple
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _buildMontereyMoodEmoji('😢', 1, false), // FIX: Corrected method name
-                  _buildMontereyMoodEmoji('😕', 2, false), // FIX: Corrected method name
-                  _buildMontereyMoodEmoji('😐', 3, false), // FIX: Corrected method name
-                  _buildMontereyMoodEmoji('😊', 4, true),  // FIX: Corrected method name (Seleccionado)
-                  _buildMontereyMoodEmoji('😄', 5, false), // FIX: Corrected method name
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMontereyMoodEmoji(String emoji, int value, bool isSelected) {
-    return GestureDetector(
-      onTap: () {
-        // Implementar selección de humor
-      },
-      child: Container(
-        width: 52,
-        height: 52,
-        decoration: BoxDecoration(
-          color: isSelected
-              ? MontereyColors.surfaceSecondary
-              : MontereyColors.backgroundTertiary,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected
-                ? MontereyColors.primaryBlue
-                : MontereyColors.labelTertiary.withOpacity(0.3),
-            width: isSelected ? 2 : 1,
-          ),
-          boxShadow: isSelected ? [
-            BoxShadow(
-              color: MontereyColors.primaryBlue.withOpacity(0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ] : null,
-        ),
-        child: Center(
-          child: Text(
-            emoji,
-            style: const TextStyle(fontSize: 24),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ============================================================================
-  // 🌌 GOALS ACTIVOS ESTILO MONTEREY + IA
-  // ============================================================================
-  Widget _buildMontereyStyledActiveGoalsSection(GoalsProvider goalsProvider, ExtendedDailyEntriesProvider extendedProvider) {
-    final activeGoals = goalsProvider.activeGoals.take(3).toList();
-
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _goalsAnimation,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Título con indicador de IA estilo Apple
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: MontereyColors.accentIndigo.withOpacity(0.1), // FIX: Use Monterey color
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.flag_rounded,
-                        color: MontereyColors.accentIndigo, // FIX: Use Monterey color
-                        size: 18,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Goals Activos',
-                      style: TextStyle(
-                        color: MontereyColors.labelPrimary, // FIX: Use Monterey color
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Indicador de IA estilo Monterey
-                    if (extendedProvider.hasNewRecommendations)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(colors: MontereyColors.blueGradient),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          'AI',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                GestureDetector(
-                  onTap: () => Navigator.pushNamed(context, '/goals'),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: MontereyColors.primaryBlue.withOpacity(0.1), // FIX: Use Monterey color
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Text(
-                      'Ver todos',
-                      style: TextStyle(
-                        color: MontereyColors.primaryBlue, // FIX: Use Monterey color
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: -0.08,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Goals activos o estado vacío estilo Monterey
-            if (activeGoals.isEmpty)
-              _buildMontereyEmptyGoalsState()
-            else
-              ...activeGoals.map((goal) => _buildMontereyGoalCard(goal)).toList(),
-
-            // Resumen de recomendaciones de IA estilo Monterey
-            if (extendedProvider.recommendations.isNotEmpty && !extendedProvider.hasNewRecommendations)
-              _buildMontereyAIRecommendationsSummary(extendedProvider),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMontereyEmptyGoalsState() {
-    return Container(
-      padding: const EdgeInsets.all(32),
-      decoration: BoxDecoration(
-        color: MontereyColors.surfacePrimary,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: MontereyColors.primaryPurple.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: MontereyColors.primaryPurple.withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: MontereyColors.backgroundTertiary,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Icon(
-              Icons.flag_outlined,
-              color: MontereyColors.labelTertiary,
-              size: 28,
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'No hay goals activos',
-            style: TextStyle(
-              color: MontereyColors.labelPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.36,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Crea tu primer goal para empezar a seguir tu progreso',
-            style: TextStyle(
-              color: MontereyColors.labelSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.24,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 20),
-          Container(
-            width: double.infinity,
-            height: 44,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: MontereyColors.primaryGradient),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => Navigator.pushNamed(context, '/goals'),
-                child: const Center(
                   child: Text(
-                    'Crear Goal',
+                    '${(progress * 100).toStringAsFixed(0)}%',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.24,
+                      color: MontereyColors.accentTeal,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
                     ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMontereyAIRecommendationsSummary(ExtendedDailyEntriesProvider extendedProvider) {
-    return Container(
-      margin: const EdgeInsets.only(top: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: MontereyColors.surfacePrimary.withOpacity(0.8),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: MontereyColors.primaryBlue.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: MontereyColors.blueGradient),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.psychology_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Recomendaciones IA Disponibles',
-                  style: TextStyle(
-                    color: MontereyColors.labelPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.24,
-                  ),
-                ),
-                Text(
-                  '${extendedProvider.recommendations.length} goals personalizados listos',
-                  style: const TextStyle(
-                    color: MontereyColors.labelSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: -0.08,
                   ),
                 ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: MontereyColors.blueGradient),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Text(
-              'Ver',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                letterSpacing: -0.08,
-              ),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildMontereyGoalCard(dynamic goal) {
-    final progress = goal.currentValue / goal.targetValue;
+  Widget _buildEnhancedTodayMomentsSection(OptimizedMomentsProvider momentsProvider, int index) {
+    final todayPositive = momentsProvider.getMomentsByType('positive').length;
+    final todayNegative = momentsProvider.getMomentsByType('negative').length;
+    final todayNeutral = momentsProvider.getMomentsByType('neutral').length;
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: MontereyColors.surfacePrimary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: _getMontereyGoalTypeColor(goal.type).withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: _getMontereyGoalTypeColor(goal.type).withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header del goal estilo Apple
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _getMontereyGoalTypeColor(goal.type).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  _getGoalTypeIcon(goal.type),
-                  color: _getMontereyGoalTypeColor(goal.type),
-                  size: 16,
-                ),
+    return AnimatedBuilder(
+      animation: Listenable.merge([_cardAnimations[index], _cardSlideAnimations[index]]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: _cardSlideAnimations[index].value * 100,
+          child: Transform.scale(
+            scale: _cardAnimations[index].value,
+            child: _buildGlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: MontereyColors.pinkGradient.map((c) => c.withOpacity(0.3)).toList()),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.auto_awesome, color: MontereyColors.accentPink),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Momentos de Hoy',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildEnhancedMomentTypeCard('😊', 'Positivos', todayPositive, [Colors.green, Colors.lightGreen]),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildEnhancedMomentTypeCard('😐', 'Neutrales', todayNeutral, [Colors.grey, Colors.blueGrey]),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildEnhancedMomentTypeCard('😔', 'Negativos', todayNegative, [Colors.red, Colors.redAccent]),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  goal.title,
-                  style: const TextStyle(
-                    color: MontereyColors.labelPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.32,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedMomentTypeCard(String emoji, String label, int count, List<Color> gradient) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_pulseAnimation, _glowAnimation]),
+      builder: (context, child) {
+        return Transform.scale(
+          scale: 1.0 + (_pulseAnimation.value - 1.0) * 0.01,
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: gradient.map((c) => c.withOpacity(0.1 * _glowAnimation.value)).toList(),
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: gradient.first.withOpacity(0.3),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: gradient.first.withOpacity(0.2 * _glowAnimation.value),
+                  blurRadius: 10 * _glowAnimation.value,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                Text(emoji, style: const TextStyle(fontSize: 28)),
+                const SizedBox(height: 12),
+                ShaderMask(
+                  shaderCallback: (bounds) {
+                    return LinearGradient(colors: gradient).createShader(bounds);
+                  },
+                  child: Text(
+                    count.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-              Text(
-                '${(progress * 100).toInt()}%',
-                style: TextStyle(
-                  color: _getMontereyGoalTypeColor(goal.type),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: -0.24,
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Barra de progreso estilo Monterey
-          Container(
-            height: 6,
-            decoration: BoxDecoration(
-              color: MontereyColors.backgroundTertiary,
-              borderRadius: BorderRadius.circular(3),
-            ),
-            child: FractionallySizedBox(
-              alignment: Alignment.centerLeft,
-              widthFactor: progress.clamp(0.0, 1.0),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: _getMontereyGoalTypeColor(goal.type),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
+              ],
             ),
           ),
-          const SizedBox(height: 8),
-
-          // Progreso textual estilo Monterey
-          Text(
-            '${goal.currentValue} / ${goal.targetValue}',
-            style: const TextStyle(
-              color: MontereyColors.labelSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              letterSpacing: -0.08,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  // ============================================================================
-  // 🌌 TAREAS DE HOY ESTILO MONTEREY
-  // ============================================================================
-  Widget _buildMontereyStyledTodayTasks(OptimizedMomentsProvider momentsProvider) {
-    final tasks = ['Meditar 10 minutos', 'Hacer ejercicio', 'Leer 30 páginas'];
+  Widget _buildEnhancedInsightsSection(OptimizedAnalyticsProvider analyticsProvider, int index) {
+    final insights = analyticsProvider.getHighlightedInsights();
 
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _cardsAnimation,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Título estilo Monterey
-            _buildMontereySectionTitle('Tareas de Hoy', Icons.checklist_rounded),
-            const SizedBox(height: 16),
+    if (insights.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
-            // Lista de tareas estilo Monterey
-            ...tasks.map((task) => _buildMontereyTaskCard(task)).toList(),
-          ],
-        ),
-      ),
+    return AnimatedBuilder(
+      animation: Listenable.merge([_cardAnimations[index], _cardSlideAnimations[index]]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: _cardSlideAnimations[index].value * 100,
+          child: Transform.scale(
+            scale: _cardAnimations[index].value,
+            child: _buildGlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(colors: MontereyColors.purpleGradient.map((c) => c.withOpacity(0.3)).toList()),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.lightbulb, color: MontereyColors.accentViolet),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'Insights del Día',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  ...insights.take(2).map((insight) => _buildEnhancedInsightItem(insight)),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildMontereyTaskCard(String task) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: MontereyColors.surfacePrimary,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: MontereyColors.accentIndigo.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: MontereyColors.accentIndigo.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 20,
-            height: 20,
+  Widget _buildEnhancedInsightItem(Map<String, String> insight) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_floatingAnimation, _shimmerAnimation]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, _floatingAnimation.value * 0.2),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: MontereyColors.backgroundTertiary,
-              borderRadius: BorderRadius.circular(4),
+              color: Colors.white.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: MontereyColors.accentIndigo.withOpacity(0.5),
+                color: Colors.white.withOpacity(0.1),
                 width: 1,
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              task,
-              style: const TextStyle(
-                color: MontereyColors.labelPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.24,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================================
-  // 🌌 RECOMENDACIONES ESTILO MONTEREY
-  // ============================================================================
-  Widget _buildMontereyStyledRecommendations(OptimizedAnalyticsProvider analyticsProvider) {
-    final recommendations = [
-      'Intenta meditar por 5 minutos hoy',
-      'Da un paseo de 15 minutos',
-      'Escribe 3 cosas por las que estés agradecido',
-    ];
-
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _cardsAnimation,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Título estilo Monterey
-            _buildMontereySectionTitle('Recomendaciones Personalizadas', Icons.lightbulb_outline_rounded),
-            const SizedBox(height: 16),
-
-            // Lista de recomendaciones estilo Monterey
-            ...recommendations.map((rec) => _buildMontereyRecommendationCard(rec)).toList(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMontereyRecommendationCard(String recommendation) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: MontereyColors.surfacePrimary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: MontereyColors.primaryBlue.withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: MontereyColors.primaryBlue.withOpacity(0.2),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: MontereyColors.blueGradient),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.lightbulb_outline_rounded,
-              color: Colors.white,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              recommendation,
-              style: const TextStyle(
-                color: MontereyColors.labelPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                letterSpacing: -0.24,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================================
-  // 🌌 PROGRAMAS DESTACADOS ESTILO MONTEREY
-  // ============================================================================
-  Widget _buildMontereyStyledFeaturedPrograms() {
-    final programs = [
-      {
-        'title': 'Meditación Diaria',
-        'description': 'Programa de 21 días',
-        'color': MontereyColors.accentViolet,
-        'icon': Icons.spa_rounded,
-      },
-      {
-        'title': 'Hábitos Saludables',
-        'description': 'Rutina de bienestar',
-        'color': MontereyColors.accentEmerald,
-        'icon': Icons.favorite_rounded,
-      },
-    ];
-
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _cardsAnimation,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Título estilo Monterey
-            _buildMontereySectionTitle('Programas Destacados', Icons.stars_rounded),
-            const SizedBox(height: 16),
-
-            // Lista de programas estilo Monterey
-            ...programs.map((program) => _buildMontereyProgramCard(program)).toList(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMontereyProgramCard(Map<String, dynamic> program) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: MontereyColors.surfacePrimary,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: (program['color'] as Color).withOpacity(0.3),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: (program['color'] as Color).withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Ícono estilo Monterey
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [(program['color'] as Color).withOpacity(0.8), program['color']],
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              program['icon'],
-              color: Colors.white,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          // Contenido estilo Monterey
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Stack(
               children: [
-                Text(
-                  program['title'],
-                  style: const TextStyle(
-                    color: MontereyColors.labelPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: -0.32,
+                // Shimmer effect
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment(_shimmerAnimation.value - 1, 0),
+                        end: Alignment(_shimmerAnimation.value, 0),
+                        colors: [
+                          Colors.transparent,
+                          Colors.white.withOpacity(0.05),
+                          Colors.transparent,
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  program['description'],
-                  style: const TextStyle(
-                    color: MontereyColors.labelSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    letterSpacing: -0.08,
-                  ),
+
+                // Contenido
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          colors: [
+                            Colors.amber.withOpacity(0.3),
+                            Colors.amber.withOpacity(0.1),
+                          ],
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Text('💡', style: TextStyle(fontSize: 20)),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            insight['title'] ?? '',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (insight['description'] != null) ...[
+                            const SizedBox(height: 6),
+                            Text(
+                              insight['description']!,
+                              style: const TextStyle(
+                                color: Colors.white70,
+                                fontSize: 13,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
+        );
+      },
+    );
+  }
 
-          // Botón de acción estilo Monterey
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [(program['color'] as Color).withOpacity(0.8), program['color']],
+  Widget _buildEnhancedQuickActionsSection(int index) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_cardAnimations[index], _cardSlideAnimations[index]]),
+      builder: (context, child) {
+        return Transform.translate(
+          offset: _cardSlideAnimations[index].value * 100,
+          child: Transform.scale(
+            scale: _cardAnimations[index].value,
+            child: _buildGlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Acciones Rápidas',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildEnhancedActionButton(
+                          'Reflexionar',
+                          Icons.edit_note,
+                          MontereyColors.blueGradient,
+                              () => _navigateToDailyReview(),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildEnhancedActionButton(
+                          'Momento',
+                          Icons.add_reaction,
+                          MontereyColors.pinkGradient,
+                              () => _navigateToMoments(),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildEnhancedActionButton(
+                          'Objetivo',
+                          Icons.flag,
+                          MontereyColors.goldGradient,
+                              () => _navigateToGoals(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.arrow_forward_ios_rounded,
-              color: Colors.white,
-              size: 16,
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedActionButton(String label, IconData icon, List<Color> gradient, VoidCallback onTap) {
+    return AnimatedBuilder(
+      animation: Listenable.merge([_pulseAnimation, _glowAnimation]),
+      builder: (context, child) {
+        return GestureDetector(
+          onTap: onTap,
+          child: Transform.scale(
+            scale: 1.0 + (_pulseAnimation.value - 1.0) * 0.005,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: gradient.map((c) => c.withOpacity(0.1 * _glowAnimation.value)).toList(),
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: gradient.first.withOpacity(0.3),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: gradient.first.withOpacity(0.2 * _glowAnimation.value),
+                    blurRadius: 15 * _glowAnimation.value,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: gradient.map((c) => c.withOpacity(0.3)).toList()),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, color: gradient.first, size: 24),
+                  ),
+                  const SizedBox(height: 12),
+                  ShaderMask(
+                    shaderCallback: (bounds) {
+                      return LinearGradient(colors: gradient).createShader(bounds);
+                    },
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildGlassCard({required Widget child, double? height}) {
+    return Container(
+      height: height,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: MontereyColors.surfacePrimary.withOpacity(0.8),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.1),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: Colors.white.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
         ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: child,
+        ),
       ),
     );
   }
 
-  // ============================================================================
-  // MÉTODOS AUXILIARES
-  // ============================================================================
+  // Helper methods para extraer datos de analytics
+  double _getWellbeingScore(Map<String, dynamic> analytics) {
+    if (analytics.isEmpty) return 0.0;
+    final basicStats = analytics['basic_stats'] as Map<String, dynamic>?;
+    return (basicStats?['avg_wellbeing'] as double? ?? 0.0) * 10;
+  }
 
-  String _getGreeting() {
+  int _getStreakDays(Map<String, dynamic> analytics) {
+    if (analytics.isEmpty) return 0;
+    final streakData = analytics['streak_data'] as Map<String, dynamic>?;
+    return streakData?['current_streak'] as int? ?? 0;
+  }
+
+  double _getAverageMood(Map<String, dynamic> analytics) {
+    if (analytics.isEmpty) return 0.0;
+    final basicStats = analytics['basic_stats'] as Map<String, dynamic>?;
+    return basicStats?['avg_mood'] as double? ?? 0.0;
+  }
+
+  String _getEnergyLevel(Map<String, dynamic> analytics) {
+    if (analytics.isEmpty) return 'N/A';
+    final basicStats = analytics['basic_stats'] as Map<String, dynamic>?;
+    final energy = basicStats?['avg_energy'] as double? ?? 0.0;
+    return energy.toStringAsFixed(1);
+  }
+
+  String _getStressLevel(Map<String, dynamic> analytics) {
+    if (analytics.isEmpty) return 'N/A';
+    final basicStats = analytics['basic_stats'] as Map<String, dynamic>?;
+    final stress = basicStats?['avg_stress'] as double? ?? 0.0;
+    return stress.toStringAsFixed(1);
+  }
+
+  String _getContextualGreeting() {
     final hour = DateTime.now().hour;
-    if (hour < 12) return 'Buenos días';
-    if (hour < 18) return 'Buenas tardes';
-    return 'Buenas noches';
+    if (hour < 12) return '¡Buenos días!';
+    if (hour < 18) return '¡Buenas tardes!';
+    return '¡Buenas noches!';
   }
 
-  double _getWellnessScore(OptimizedAnalyticsProvider analytics) {
-    final basicStats = analytics.analytics['basic_stats'] as Map<String, dynamic>?;
-    final avgMood = basicStats?['avg_mood'] as double? ?? 7.0;
-    return avgMood;
+  String _getGoalTypeEmoji(GoalType type) {
+    switch (type) {
+      case GoalType.consistency:
+        return '🎯';
+      case GoalType.mood:
+        return '😊';
+      case GoalType.positiveMoments:
+        return '✨';
+      case GoalType.stressReduction:
+        return '😌';
+      default:
+        return '🎯';
+    }
   }
 
-  String _getStreakValue(OptimizedAnalyticsProvider analytics) {
-    final streakData = analytics.analytics['streak_data'] as Map<String, dynamic>?;
-    final currentStreak = streakData?['current_streak'] as int? ?? 0;
-    return currentStreak.toString();
+  // Navigation methods
+  void _navigateToDailyReview() {
+    Navigator.pushNamed(context, '/daily-review');
   }
 
-  String _getMoodValue(OptimizedAnalyticsProvider analytics) {
-    final basicStats = analytics.analytics['basic_stats'] as Map<String, dynamic>?;
-    final avgMood = basicStats?['avg_mood'] as double? ?? 0.0;
-    return avgMood.toStringAsFixed(1);
+  void _navigateToMoments() {
+    Navigator.pushNamed(context, '/moments');
   }
 
-  // Colores Monterey para tipos de goals
-  Color _getMontereyGoalTypeColor(dynamic goalType) {
-    final typeString = goalType.toString();
-    if (typeString.contains('consistency')) return MontereyColors.primaryBlue;
-    if (typeString.contains('mood')) return MontereyColors.accentPink;
-    if (typeString.contains('positiveMoments')) return MontereyColors.accentEmerald;
-    if (typeString.contains('stressReduction')) return MontereyColors.accentViolet;
-    return MontereyColors.primaryPurple;
+  void _navigateToGoals() {
+    Navigator.pushNamed(context, '/goals');
+  }
+}
+
+// Clase auxiliar para stats
+class _StatItem {
+  final String emoji;
+  final String title;
+  final String value;
+  final List<Color> gradient;
+
+  _StatItem(this.emoji, this.title, this.value, this.gradient);
+}
+
+// Painter para efectos de partículas en el fondo
+class ParticlesPainter extends CustomPainter {
+  final double animationValue;
+
+  ParticlesPainter(this.animationValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..blendMode = BlendMode.screen;
+
+    for (int i = 0; i < 50; i++) {
+      final random = math.Random(i);
+      final x = random.nextDouble() * size.width;
+      final y = (random.nextDouble() * size.height + animationValue * 100) % size.height;
+      final opacity = (math.sin(animationValue * 2 * math.pi + i) + 1) / 2;
+
+      paint.color = MontereyColors.primaryGradient[i % MontereyColors.primaryGradient.length]
+          .withOpacity(opacity * 0.1);
+
+      canvas.drawCircle(
+        Offset(x, y),
+        1 + math.sin(animationValue * 4 * math.pi + i) * 2,
+        paint,
+      );
+    }
   }
 
-  IconData _getGoalTypeIcon(dynamic goalType) {
-    final typeString = goalType.toString();
-    if (typeString.contains('consistency')) return Icons.timeline_rounded;
-    if (typeString.contains('mood')) return Icons.sentiment_satisfied_rounded;
-    if (typeString.contains('positiveMoments')) return Icons.star_rounded;
-    if (typeString.contains('stressReduction')) return Icons.spa_rounded;
-    return Icons.flag_rounded;
+  @override
+  bool shouldRepaint(ParticlesPainter oldDelegate) {
+    return oldDelegate.animationValue != animationValue;
   }
 }

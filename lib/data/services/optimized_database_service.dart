@@ -15,6 +15,7 @@ import 'package:logger/logger.dart';
 import 'package:flutter/foundation.dart';
 
 // Asegúrate de que la ruta de importación sea correcta para tu proyecto.
+import '../models/goal_model.dart';
 import '../models/optimized_models.dart';
 
 class OptimizedDatabaseService {
@@ -1913,6 +1914,41 @@ class OptimizedDatabaseService {
     } catch (e) {
       _logger.e('❌ Base de datos no saludable: $e');
       return false;
+    }
+  }
+  // Fix these methods in your OptimizedDatabaseService
+
+  /// Obtener objetivos por tipo
+  Future<List<GoalModel>> getGoalsByType(int userId, GoalType type) async {
+    try {
+      final db = await database;
+      final results = await db.query(
+        'user_goals',
+        where: 'user_id = ? AND type = ?',
+        whereArgs: [userId, type.name], // ✅ Use type.name instead of type.toString()
+        orderBy: 'created_at DESC',
+      );
+
+      return results.map((row) => GoalModel.fromDatabase(row)).toList();
+    } catch (e) {
+      throw Exception('Error obteniendo objetivos por tipo: $e');
+    }
+  }
+
+  /// Obtener objetivos por estado
+  Future<List<GoalModel>> getGoalsByStatus(int userId, GoalStatus status) async {
+    try {
+      final db = await database;
+      final results = await db.query(
+        'user_goals',
+        where: 'user_id = ? AND status = ?',
+        whereArgs: [userId, status.name], // ✅ Use status.name instead of status.toString()
+        orderBy: 'created_at DESC',
+      );
+
+      return results.map((row) => GoalModel.fromDatabase(row)).toList();
+    } catch (e) {
+      throw Exception('Error obteniendo objetivos por estado: $e');
     }
   }
 

@@ -164,14 +164,15 @@ class GoalModel {
   }
 
   /// Convertir a formato de base de datos
+  /// Convertir a formato de base de datos
   Map<String, dynamic> toDatabase() {
     return {
       if (id != null) 'id': id,
       'user_id': userId,
       'title': title,
       'description': description,
-      'type': type.toString(),
-      'status': status.toString(),
+      'type': type.name,          // ✅ Changed from type.toString()
+      'status': status.name,      // ✅ Changed from status.toString()
       'target_value': targetValue,
       'current_value': currentValue,
       'created_at': createdAt.toIso8601String(),
@@ -179,39 +180,23 @@ class GoalModel {
     };
   }
 
-  /// Crear desde JSON
-  factory GoalModel.fromJson(Map<String, dynamic> json) {
-    return GoalModel(
-      id: json['id'] as int?,
-      userId: json['userId'] as int,
-      title: json['title'] as String,
-      description: json['description'] as String,
-      type: _parseGoalType(json['type'] as String),
-      status: _parseGoalStatus(json['status'] as String),
-      targetValue: (json['targetValue'] as num).toDouble(),
-      currentValue: (json['currentValue'] as num?)?.toDouble() ?? 0.0,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      completedAt: json['completedAt'] != null
-          ? DateTime.parse(json['completedAt'] as String)
-          : null,
-    );
-  }
-
-  /// Convertir a JSON
+  /// Convertir a JSON (also fix this if you use it)
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'userId': userId,
       'title': title,
       'description': description,
-      'type': type.toString(),
-      'status': status.toString(),
+      'type': type.name,          // ✅ Changed from type.toString()
+      'status': status.name,      // ✅ Changed from status.toString()
       'targetValue': targetValue,
       'currentValue': currentValue,
       'createdAt': createdAt.toIso8601String(),
       'completedAt': completedAt?.toIso8601String(),
     };
   }
+
+  /// Convertir a JSON
 
   // ============================================================================
   // MÉTODOS DE UTILIDAD
