@@ -1,8 +1,8 @@
 <!-- android/app/src/main/AndroidManifest.xml -->
-<!-- UPDATED WITH PROFILE PICTURE SUPPORT -->
+<!-- UPDATED WITH NOTIFICATIONS SUPPORT - PRESERVING EXISTING CONTENT -->
 
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- ✅ PERMISOS EXISTENTES (mantener) -->
+    <!-- ✅ PERMISOS EXISTENTES (mantenidos) -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
@@ -10,18 +10,23 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- ✅ PERMISOS EXISTENTES PARA ALMACENAMIENTO -->
+    <!-- ✅ PERMISOS EXISTENTES PARA ALMACENAMIENTO (mantenidos) -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
-    <!-- ✅ Para Android 10+ (Scoped Storage) -->
+    <!-- ✅ Para Android 10+ (Scoped Storage) (mantenido) -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29" />
 
-    <!-- ✅ NUEVO: Para Android 13+ (Tiramisu) - Acceso a imágenes -->
+    <!-- ✅ NUEVO: Para Android 13+ (Tiramisu) - Acceso a imágenes (mantenido) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
 
-    <!-- ✅ NUEVO: Declarar características de cámara (opcional pero recomendado) -->
+    <!-- ✅ NUEVOS PERMISOS PARA NOTIFICACIONES -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- ✅ CARACTERÍSTICAS DE CÁMARA EXISTENTES (mantenidas) -->
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
@@ -36,6 +41,7 @@
         android:requestLegacyExternalStorage="true"
         android:usesCleartextTraffic="true">
 
+        <!-- ✅ ACTIVIDAD PRINCIPAL EXISTENTE (mantenida con agregados para notificaciones) -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -46,21 +52,25 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
-            <!-- Specifies an Android theme to apply to this Activity as soon as
-                 the Android process has started. This theme is visible to the user
-                 while the Flutter UI initializes. After that, this theme continues
-                 to determine the Window background behind the Flutter UI. -->
+            <!-- Meta-data existente (mantenido) -->
             <meta-data
                 android:name="io.flutter.embedding.android.NormalTheme"
                 android:resource="@style/NormalTheme" />
 
+            <!-- Intent filter existente (mantenido) -->
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+
+            <!-- ✅ NUEVO: Intent filter para manejar notificaciones tocadas -->
+            <intent-filter>
+                <action android:name="FLUTTER_NOTIFICATION_CLICK" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
-        <!-- ✅ NUEVO: FileProvider para image_picker (REQUERIDO) -->
+        <!-- ✅ FileProvider EXISTENTE (mantenido) -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -71,18 +81,79 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Don't delete the meta-data below.
-             This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <!-- ✅ NUEVOS SERVICIOS Y RECEPTORES PARA NOTIFICACIONES -->
+
+        <!-- Servicio para notificaciones en segundo plano -->
+        <service
+            android:name="com.dexterous.flutterlocalnotifications.FLTFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- Receptor para notificaciones programadas -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
+            android:exported="false" />
+
+        <!-- Receptor para reinicio del sistema (mantener notificaciones) -->
+        <receiver
+            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
+            android:enabled="true"
+            android:exported="false">
+            <intent-filter android:priority="2147483647">
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
+        <!-- ✅ NUEVOS META-DATA PARA CONFIGURACIÓN DE NOTIFICACIONES -->
+
+        <!-- Icono de notificación por defecto -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+
+        <!-- Color de notificación por defecto -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_color" />
+
+        <!-- Canal de notificación por defecto -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="default_notification_channel" />
+
+        <!-- Configuración para flutter_local_notifications -->
+        <meta-data
+            android:name="com.dexterous.flutterlocalnotifications.DEFAULT_ICON"
+            android:resource="@drawable/ic_notification" />
+
+        <!-- Configuración para sonidos personalizados (opcional) -->
+        <meta-data
+            android:name="com.dexterous.flutterlocalnotifications.NOTIFICATION_SOUND"
+            android:resource="@raw/notification_sound" />
+
+        <!-- ✅ META-DATA EXISTENTE PARA FLUTTER (mantenido) -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- ✅ NUEVO: Configuración adicional para trabajar en segundo plano -->
+        <meta-data
+            android:name="io.flutter.app.android.SplashScreenUntilFirstFrame"
+            android:value="true" />
+
+        <!-- Servicio para mensajes en segundo plano (si se usa Firebase) -->
+        <service
+            android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingBackgroundService"
+            android:exported="false" />
     </application>
 
-    <!-- Required to query activities that can process text, see:
-         https://developer.android.com/training/package-visibility and
-         https://developer.android.com/reference/android/content/Intent#ACTION_PROCESS_TEXT.
-
-         In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
+    <!-- ✅ QUERIES EXISTENTES (mantenidas) -->
     <queries>
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>

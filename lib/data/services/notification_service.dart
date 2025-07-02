@@ -1,339 +1,441 @@
+// lib/services/notification_service.dart
 // ============================================================================
-// presentation/providers/notifications_provider.dart - VERSIÓN SIMPLIFICADA
+// SERVICIO DE NOTIFICACIONES LOCALES
 // ============================================================================
 
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
 import 'package:logger/logger.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-class NotificationsProvider with ChangeNotifier {
-  final Logger _logger = Logger();
+class NotificationService {
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
 
-  bool _isEnabled = false;
-  bool _isInitialized = false;
-  bool _isLoading = false;
-  Map<String, dynamic> _stats = {};
-  String? _errorMessage;
+  static final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  static final Logger _logger = Logger();
 
-  // Getters
-  bool get isEnabled => _isEnabled;
-  bool get isInitialized => _isInitialized;
-  bool get isLoading => _isLoading;
-  Map<String, dynamic> get stats => _stats;
-  String? get errorMessage => _errorMessage;
+  // IDs de notificaciones
+  static const int dailyReflectionId = 1;
+  static const int eveningCheckInId = 2;
+  static const int weeklyReviewId = 3;
+  static const int motivationalId = 4;
 
-  /// Inicializar provider de forma simplificada
-  Future<void> initialize() async {
-    if (_isInitialized) return;
+  // Callback para cuando se toca una notificación
+  static Function(String?)? onNotificationTap;
 
-    _logger.i('🔔 Inicializando NotificationsProvider (modo simplificado)');
-    _setLoading(true);
+  /// Inicializar el servicio de notificaciones
+  static Future<void> initialize() async {
+    _logger.i('🔔 Inicializando servicio de notificaciones...');
 
     try {
-      // Simulamos inicialización exitosa
-      await Future.delayed(const Duration(milliseconds: 500));
+      // Inicializar timezone
+      tz.initializeTimeZones();
 
-      _isEnabled = true;
-      _isInitialized = true;
-      await _updateStats();
+      // Configuración para Android
+      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
 
-      _logger.i('✅ NotificationsProvider inicializado en modo simplificado');
+      // Configuración para iOS
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
 
+      const initSettings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+      );
+
+      await _notifications.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: _onNotificationResponse,
+      );
+
+      // Solicitar permisos
+      await _requestPermissions();
+
+      _logger.i('✅ Servicio de notificaciones inicializado');
     } catch (e) {
-      _logger.e('❌ Error en inicialización: $e');
-      _setError('Error configurando notificaciones');
-    } finally {
-      _setLoading(false);
+      _logger.e('❌ Error inicializando notificaciones: $e');
     }
   }
 
-  /// Solicitar permisos (simulado)
-  Future<bool> requestPermissions() async {
-    _logger.i('🔔 Solicitando permisos (simulado)');
-    _setLoading(true);
-    _clearError();
-
+  /// Solicitar permisos de notificaciones
+  static Future<bool> _requestPermissions() async {
     try {
-      // Simulamos solicitud de permisos
-      await Future.delayed(const Duration(milliseconds: 800));
-
-      _isEnabled = true;
-      await _updateStats();
-      _logger.i('✅ Permisos otorgados (simulado)');
-
-      return true;
-
-    } catch (e) {
-      _logger.e('❌ Error solicitando permisos: $e');
-      _setError('Error solicitando permisos');
-      return false;
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Habilitar/deshabilitar notificaciones
-  Future<void> setEnabled(bool enabled) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
-      _isEnabled = enabled;
-      await _updateStats();
-
-      _logger.i('🔔 Notificaciones ${enabled ? 'habilitadas' : 'deshabilitadas'}');
-
-    } catch (e) {
-      _logger.e('❌ Error cambiando estado: $e');
-      _setError('Error actualizando configuración');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Enviar notificación de prueba (simulada)
-  Future<void> sendTestNotification() async {
-    _setLoading(true);
-    _clearError();
-
-    try {
-      _logger.i('🧪 Enviando notificación de prueba (simulada)');
-
-      // Simulamos envío de notificación
-      await Future.delayed(const Duration(milliseconds: 1000));
-
-      await _updateStats();
-      _logger.i('✅ Notificación de prueba enviada');
-
-    } catch (e) {
-      _logger.e('❌ Error enviando prueba: $e');
-      _setError('Error enviando notificación de prueba');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Programar recordatorio diario (simulado)
-  Future<void> scheduleDailyReminder({
-    required int hour,
-    required int minute,
-    String? customMessage,
-  }) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
-      final time = '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
-      _logger.i('⏰ Programando recordatorio diario para las $time (simulado)');
-
-      // Simulamos programación
-      await Future.delayed(const Duration(milliseconds: 600));
-
-      await _updateStats();
-      _logger.i('✅ Recordatorio diario programado');
-
-    } catch (e) {
-      _logger.e('❌ Error programando recordatorio: $e');
-      _setError('Error programando recordatorio');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Cancelar todas las notificaciones programadas
-  Future<void> cancelAllNotifications() async {
-    _setLoading(true);
-    _clearError();
-
-    try {
-      _logger.i('🗑️ Cancelando todas las notificaciones (simulado)');
-
-      // Simulamos cancelación
-      await Future.delayed(const Duration(milliseconds: 400));
-
-      await _updateStats();
-      _logger.i('✅ Notificaciones canceladas');
-
-    } catch (e) {
-      _logger.e('❌ Error cancelando notificaciones: $e');
-      _setError('Error cancelando notificaciones');
-    } finally {
-      _setLoading(false);
-    }
-  }
-
-  /// Obtener configuración actual
-  Map<String, dynamic> getConfiguration() {
-    return {
-      'enabled': _isEnabled,
-      'dailyReminderEnabled': true,
-      'dailyReminderTime': '22:30',
-      'motivationalEnabled': false,
-      'weekendEnabled': true,
-      'lastNotificationSent': DateTime.now().subtract(const Duration(hours: 2)),
-      'totalNotificationsSent': _stats['totalSent'] ?? 0,
-    };
-  }
-
-  /// Actualizar configuración
-  Future<void> updateConfiguration(Map<String, dynamic> config) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
-      _logger.i('⚙️ Actualizando configuración de notificaciones');
-
-      // Simulamos actualización
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      if (config.containsKey('enabled')) {
-        _isEnabled = config['enabled'] as bool;
+      // Android 13+ requiere permiso explícito
+      if (await Permission.notification.isDenied) {
+        final status = await Permission.notification.request();
+        if (status != PermissionStatus.granted) {
+          _logger.w('⚠️ Permisos de notificación denegados');
+          return false;
+        }
       }
 
-      await _updateStats();
-      _logger.i('✅ Configuración actualizada');
+      // iOS
+      final bool? granted = await _notifications
+          .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
+      _logger.i('✅ Permisos de notificación: ${granted ?? true}');
+      return granted ?? true;
     } catch (e) {
-      _logger.e('❌ Error actualizando configuración: $e');
-      _setError('Error actualizando configuración');
-    } finally {
-      _setLoading(false);
+      _logger.e('❌ Error solicitando permisos: $e');
+      return false;
     }
   }
 
-  /// Verificar estado de las notificaciones
-  Future<Map<String, dynamic>> checkNotificationStatus() async {
-    return {
-      'permissionsGranted': _isEnabled,
-      'systemEnabled': true,
-      'scheduled': [
-        {
-          'id': 1,
-          'title': 'Recordatorio diario',
-          'time': '22:30',
-          'enabled': _isEnabled,
-        },
-      ],
-      'lastCheck': DateTime.now(),
-    };
+  /// Callback cuando se toca una notificación
+  static void _onNotificationResponse(NotificationResponse response) {
+    _logger.i('🔔 Notificación tocada: ${response.payload}');
+    if (onNotificationTap != null) {
+      onNotificationTap!(response.payload);
+    }
   }
 
-  // Métodos privados de utilidad
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
+  /// Programar notificación diaria de reflexión
+  static Future<void> scheduleDailyReflection({
+    int hour = 20, // 8 PM por defecto
+    int minute = 0,
+    bool enabled = true,
+  }) async {
+    if (!enabled) {
+      await cancelNotification(dailyReflectionId);
+      return;
+    }
 
-  void _setError(String message) {
-    _errorMessage = message;
-    notifyListeners();
-  }
-
-  void _clearError() {
-    _errorMessage = null;
-    notifyListeners();
-  }
-
-  Future<void> _updateStats() async {
     try {
-      // Simulamos carga de estadísticas
-      _stats = {
-        'totalSent': 25,
-        'lastSent': DateTime.now().subtract(const Duration(hours: 8)),
-        'dailyAverage': 1.2,
-        'successRate': 98.5,
-        'scheduledCount': _isEnabled ? 1 : 0,
-        'enabledTypes': ['daily', 'reminder'],
-        'nextScheduled': _isEnabled
-            ? DateTime.now().add(const Duration(hours: 6))
-            : null,
-      };
+      final messages = _getDailyReflectionMessages();
+      final randomMessage = messages[Random().nextInt(messages.length)];
 
-      notifyListeners();
+      await _notifications.zonedSchedule(
+        dailyReflectionId,
+        '🌙 ¿Cómo fue tu día?',
+        randomMessage,
+        _nextInstanceOfTime(hour, minute),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'daily_reflection',
+            'Reflexión Diaria',
+            channelDescription: 'Recordatorios para reflexionar sobre tu día',
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
+            color: Color(0xFF4ECDC4),
+            enableVibration: true,
+            playSound: true,
+          ),
+          iOS: DarwinNotificationDetails(
+            sound: 'default',
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+        payload: 'daily_reflection',
+      );
+
+      _logger.i('✅ Notificación diaria programada para las $hour:${minute.toString().padLeft(2, '0')}');
     } catch (e) {
-      _logger.e('❌ Error actualizando estadísticas: $e');
+      _logger.e('❌ Error programando notificación diaria: $e');
     }
   }
 
-  /// Limpiar recursos
-  @override
-  void dispose() {
-    _logger.d('🧹 Limpiando NotificationsProvider');
-    super.dispose();
+  /// Programar check-in vespertino
+  static Future<void> scheduleEveningCheckIn({
+    int hour = 21, // 9 PM por defecto
+    int minute = 30,
+    bool enabled = true,
+  }) async {
+    if (!enabled) {
+      await cancelNotification(eveningCheckInId);
+      return;
+    }
+
+    try {
+      final messages = _getEveningCheckInMessages();
+      final randomMessage = messages[Random().nextInt(messages.length)];
+
+      await _notifications.zonedSchedule(
+        eveningCheckInId,
+        '🌟 Momento de reflexión',
+        randomMessage,
+        _nextInstanceOfTime(hour, minute),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'evening_checkin',
+            'Check-in Vespertino',
+            channelDescription: 'Recordatorios vespertinos para el bienestar',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+            icon: '@mipmap/ic_launcher',
+            color: Color(0xFF9B59B6),
+            enableVibration: true,
+          ),
+          iOS: DarwinNotificationDetails(
+            sound: 'default',
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.time,
+        payload: 'evening_checkin',
+      );
+
+      _logger.i('✅ Check-in vespertino programado para las $hour:${minute.toString().padLeft(2, '0')}');
+    } catch (e) {
+      _logger.e('❌ Error programando check-in vespertino: $e');
+    }
   }
 
-  /// Métodos para compatibilidad con la UI existente
-  bool areNotificationsEnabled() => _isEnabled;
+  /// Programar recordatorio semanal
+  static Future<void> scheduleWeeklyReview({
+    int weekday = 7, // Domingo
+    int hour = 19, // 7 PM
+    int minute = 0,
+    bool enabled = true,
+  }) async {
+    if (!enabled) {
+      await cancelNotification(weeklyReviewId);
+      return;
+    }
 
-  Future<bool> hasPermissions() async => _isEnabled;
+    try {
+      await _notifications.zonedSchedule(
+        weeklyReviewId,
+        '📊 Revisión Semanal',
+        '¡Es momento de revisar tu progreso de la semana!',
+        _nextInstanceOfWeekday(weekday, hour, minute),
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'weekly_review',
+            'Revisión Semanal',
+            channelDescription: 'Recordatorios semanales para revisar progreso',
+            importance: Importance.high,
+            priority: Priority.high,
+            icon: '@mipmap/ic_launcher',
+            color: Color(0xFF45B7D1),
+            enableVibration: true,
+          ),
+          iOS: DarwinNotificationDetails(
+            sound: 'default',
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        payload: 'weekly_review',
+      );
 
-  Future<void> openSystemSettings() async {
-    _logger.i('📱 Abriendo configuración del sistema (simulado)');
-    // En una implementación real, abriría los ajustes del sistema
+      _logger.i('✅ Revisión semanal programada para los domingos a las $hour:${minute.toString().padLeft(2, '0')}');
+    } catch (e) {
+      _logger.e('❌ Error programando revisión semanal: $e');
+    }
   }
 
-  /// Obtener mensajes de notificación predefinidos
-  List<Map<String, String>> getNotificationTemplates() {
+  /// Enviar notificación motivacional instantánea
+  static Future<void> sendMotivationalNotification() async {
+    try {
+      final messages = _getMotivationalMessages();
+      final randomMessage = messages[Random().nextInt(messages.length)];
+
+      await _notifications.show(
+        motivationalId,
+        '💪 ¡Tú puedes!',
+        randomMessage,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'motivational',
+            'Mensajes Motivacionales',
+            channelDescription: 'Mensajes de motivación y ánimo',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+            icon: '@mipmap/ic_launcher',
+            color: Color(0xFFFFD700),
+          ),
+          iOS: DarwinNotificationDetails(
+            sound: 'default',
+            presentAlert: true,
+            presentBadge: false,
+            presentSound: true,
+          ),
+        ),
+        payload: 'motivational',
+      );
+
+      _logger.i('✅ Notificación motivacional enviada');
+    } catch (e) {
+      _logger.e('❌ Error enviando notificación motivacional: $e');
+    }
+  }
+
+  /// Notificación personalizada
+  static Future<void> sendCustomNotification({
+    required String title,
+    required String body,
+    String? payload,
+    int? id,
+  }) async {
+    try {
+      await _notifications.show(
+        id ?? DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title,
+        body,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'custom',
+            'Notificaciones Personalizadas',
+            channelDescription: 'Notificaciones personalizadas de la app',
+            importance: Importance.defaultImportance,
+            priority: Priority.defaultPriority,
+            icon: '@mipmap/ic_launcher',
+            color: Color(0xFF4ECDC4),
+          ),
+          iOS: DarwinNotificationDetails(
+            sound: 'default',
+            presentAlert: true,
+            presentBadge: false,
+            presentSound: true,
+          ),
+        ),
+        payload: payload,
+      );
+
+      _logger.i('✅ Notificación personalizada enviada: $title');
+    } catch (e) {
+      _logger.e('❌ Error enviando notificación personalizada: $e');
+    }
+  }
+
+  /// Cancelar una notificación específica
+  static Future<void> cancelNotification(int id) async {
+    try {
+      await _notifications.cancel(id);
+      _logger.i('✅ Notificación $id cancelada');
+    } catch (e) {
+      _logger.e('❌ Error cancelando notificación $id: $e');
+    }
+  }
+
+  /// Cancelar todas las notificaciones
+  static Future<void> cancelAllNotifications() async {
+    try {
+      await _notifications.cancelAll();
+      _logger.i('✅ Todas las notificaciones canceladas');
+    } catch (e) {
+      _logger.e('❌ Error cancelando todas las notificaciones: $e');
+    }
+  }
+
+  /// Obtener notificaciones pendientes
+  static Future<List<PendingNotificationRequest>> getPendingNotifications() async {
+    try {
+      return await _notifications.pendingNotificationRequests();
+    } catch (e) {
+      _logger.e('❌ Error obteniendo notificaciones pendientes: $e');
+      return [];
+    }
+  }
+
+  /// Verificar si las notificaciones están habilitadas
+  static Future<bool> areNotificationsEnabled() async {
+    try {
+      final status = await Permission.notification.status;
+      return status == PermissionStatus.granted;
+    } catch (e) {
+      _logger.e('❌ Error verificando estado de notificaciones: $e');
+      return false;
+    }
+  }
+
+  // ============================================================================
+  // MÉTODOS PRIVADOS
+  // ============================================================================
+
+  /// Calcular próxima instancia de una hora específica
+  static tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
+    final now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    return scheduledDate;
+  }
+
+  /// Calcular próxima instancia de un día de la semana específico
+  static tz.TZDateTime _nextInstanceOfWeekday(int weekday, int hour, int minute) {
+    final now = tz.TZDateTime.now(tz.local);
+    tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+
+    while (scheduledDate.weekday != weekday || scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    return scheduledDate;
+  }
+
+  /// Mensajes para reflexión diaria
+  static List<String> _getDailyReflectionMessages() {
     return [
-      {
-        'type': 'daily_reminder',
-        'title': '🌙 Hora de reflexionar',
-        'body': '¿Cómo ha sido tu día? Registra tus momentos importantes.',
-      },
-      {
-        'type': 'morning_motivation',
-        'title': '🌅 Buenos días',
-        'body': '¡Nuevo día, nuevas oportunidades! ¿Qué quieres lograr hoy?',
-      },
-      {
-        'type': 'midday_checkin',
-        'title': '☀️ Check-in del mediodía',
-        'body': 'Pausa un momento. ¿Cómo te sientes en este momento?',
-      },
-      {
-        'type': 'evening_reflection',
-        'title': '🌆 Reflexión de la tarde',
-        'body': '¿Qué momento especial has vivido hoy?',
-      },
-      {
-        'type': 'weekly_review',
-        'title': '📊 Revisión semanal',
-        'body': 'Una semana más completada. ¿Qué has aprendido?',
-      },
+      'Tómate unos minutos para reflexionar sobre tu día 🌅',
+      '¿Qué fue lo mejor de tu día hoy? ✨',
+      'Es momento de registrar tus pensamientos del día 📝',
+      '¿Cómo te sientes al final de este día? 😊',
+      'Reflexiona sobre los momentos especiales de hoy 🌟',
+      '¿Qué aprendiste hoy sobre ti mismo? 🤔',
+      'Comparte tus emociones del día conmigo 💭',
+      '¿Hubo algo que te hizo sonreír hoy? 😄',
+      'Es hora de hacer tu reflexión diaria 🧘‍♀️',
+      '¿Qué te gustaría mejorar mañana? 🌱',
     ];
   }
 
-  /// Programar múltiples recordatorios
-  Future<void> scheduleMultipleReminders(List<Map<String, dynamic>> reminders) async {
-    _setLoading(true);
-    _clearError();
-
-    try {
-      _logger.i('📅 Programando ${reminders.length} recordatorios (simulado)');
-
-      // Simulamos programación múltiple
-      await Future.delayed(const Duration(milliseconds: 800));
-
-      await _updateStats();
-      _logger.i('✅ ${reminders.length} recordatorios programados');
-
-    } catch (e) {
-      _logger.e('❌ Error programando múltiples recordatorios: $e');
-      _setError('Error programando recordatorios');
-    } finally {
-      _setLoading(false);
-    }
+  /// Mensajes para check-in vespertino
+  static List<String> _getEveningCheckInMessages() {
+    return [
+      '¿Cómo está tu energía al finalizar el día? ⚡',
+      'Registra un momento positivo de hoy 🌈',
+      '¿Te sientes satisfecho con tu día? 💫',
+      'Comparte algo por lo que te sientes agradecido 🙏',
+      '¿Qué emoción predominó en tu día? 🎭',
+      'Reflexiona sobre tu bienestar de hoy 💚',
+      '¿Cómo fue tu nivel de estrés hoy? 😌',
+      'Comparte un pequeño logro del día 🏆',
+      '¿Te cuidaste bien hoy? 💆‍♀️',
+      'Prepárate para un buen descanso 🌙',
+    ];
   }
 
-  /// Debug: Obtener información detallada
-  Map<String, dynamic> getDebugInfo() {
-    return {
-      'isInitialized': _isInitialized,
-      'isEnabled': _isEnabled,
-      'isLoading': _isLoading,
-      'errorMessage': _errorMessage,
-      'stats': _stats,
-      'lastUpdate': DateTime.now(),
-      'version': '1.0.0-simplified',
-    };
+  /// Mensajes motivacionales
+  static List<String> _getMotivationalMessages() {
+    return [
+      'Cada día es una nueva oportunidad para crecer 🌱',
+      'Tu bienestar mental es una prioridad 💚',
+      'Pequeños pasos llevan a grandes cambios ✨',
+      'Eres más fuerte de lo que piensas 💪',
+      'La reflexión es el camino hacia el autoconocimiento 🧘‍♀️',
+      'Cada momento de autorreflexión cuenta 🌟',
+      'Tu crecimiento personal importa 📈',
+      'Está bien sentir lo que sientes 🤗',
+      'Eres capaz de superar cualquier desafío 🚀',
+      'La constancia es la clave del progreso 🔑',
+    ];
   }
 }
