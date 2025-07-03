@@ -1,4 +1,4 @@
-// lib/data/services/optimized_database_service.dart - VERSIÓN FINAL CON CORRECCIÓN DE DUPLICADOS
+// lib/data/services/optimized_database_service.dart - VERSIÓN FINAL CON CORRECCIÓN DE DUPLICADOS Y NUEVOS MÉTODOS
 // =======================================================================================
 // SERVICIO DE BASE DE DATOS OPTIMIZADO PARA APK CON ANALYTICS AVANZADOS
 // =======================================================================================
@@ -1678,131 +1678,436 @@ class OptimizedDatabaseService {
     }
   }
 
+  // ============================================================================
+  // GENERADOR DE DATOS DE PRUEBA MEJORADO PARA ALEX DEVELOPER
+  // ============================================================================
+
   Future<void> generateComprehensiveTestData(int userId) async {
     try {
       final db = await database;
-      _logger.i('📊 Generando datos comprehensivos para usuario: $userId');
+      _logger.i('📊 Generando datos MEJORADOS para Alex Developer (ID: $userId)');
 
+      // Limpiar datos previos
       await db.delete('daily_entries', where: 'user_id = ?', whereArgs: [userId]);
       await db.delete('interactive_moments', where: 'user_id = ?', whereArgs: [userId]);
-      _logger.i('🗑️ Datos previos del desarrollador limpiados.');
+      _logger.i('🗑️ Datos previos limpiados');
 
-      await _generateHistoricalData(userId, db);
-      await _generateInteractiveMoments(userId, db);
+      // Generar datos históricos más completos
+      await _generateEnhancedHistoricalData(userId, db);
 
-      _logger.i('✅ Datos comprehensivos generados exitosamente');
+      // Generar momentos interactivos más variados
+      await _generateEnhancedInteractiveMoments(userId, db);
+
+      // Generar eventos especiales y patrones
+      await _generateSpecialEvents(userId, db);
+
+      _logger.i('✅ Datos MEJORADOS generados exitosamente - Total: ~150 entradas y 300+ momentos');
     } catch (e) {
-      _logger.e('❌ Error generando datos de prueba: $e');
-      // No rethrow para no romper la creación de usuario
+      _logger.e('❌ Error generando datos mejorados: $e');
+      // No hacer rethrow para no romper la creación de usuario
     }
   }
 
-  Future<void> _generateHistoricalData(int userId, Database db) async {
-    _logger.i('📈 Generando datos históricos con patrones...');
+  Future<void> _generateEnhancedHistoricalData(int userId, Database db) async {
+    _logger.i('📈 Generando datos históricos MEJORADOS...');
 
     final now = DateTime.now();
     final random = math.Random();
 
-    // Fases para simular una historia realista
-    final phases = [
-      _PersonalityPhase('Período Difícil', -90, -61, 3.5, 4.0, 7.5),
-      _PersonalityPhase('Recuperación Gradual', -60, -31, 5.0, 5.5, 6.0),
-      _PersonalityPhase('Fase de Crecimiento', -30, -1, 7.5, 8.0, 3.5),
+    // Fases más realistas y detalladas
+    final lifePeriods = [
+      _LifePeriod('Crisis Personal', -120, -91, 2.8, 3.2, 8.5),
+      _LifePeriod('Buscando Dirección', -90, -61, 4.2, 4.8, 7.0),
+      _LifePeriod('Pequeñas Victorias', -60, -31, 6.5, 6.8, 5.5),
+      _LifePeriod('Momentum Positivo', -30, -8, 8.2, 7.9, 3.2),
+      _LifePeriod('Estabilidad Actual', -7, 0, 7.8, 8.1, 3.8),
     ];
 
-    for (final phase in phases) {
-      for (int dayOffset = phase.startDay; dayOffset <= phase.endDay; dayOffset++) {
+    for (final period in lifePeriods) {
+      await _generatePeriodData(userId, db, now, period, random);
+    }
+
+    // Generar datos para hoy
+    await _generateTodayEntry(userId, db, now);
+  }
+
+  Future<void> _generatePeriodData(int userId, Database db, DateTime now, _LifePeriod period, math.Random random) async {
+    _logger.i('📅 Generando período: ${period.name} (${period.endDay - period.startDay + 1} días)');
+
+    for (int dayOffset = period.startDay; dayOffset <= period.endDay; dayOffset++) {
+      // Solo generar datos para algunos días (no todos) para mayor realismo
+      if (random.nextDouble() < 0.7) { // 70% de probabilidad de tener entrada
         final date = now.add(Duration(days: dayOffset));
-
-        final weekendBoost = (date.weekday >= 6) ? 0.5 : 0.0;
-        final mondayDip = (date.weekday == 1) ? -0.8 : 0.0;
-        final variation = (random.nextDouble() - 0.5) * 2;
-
-        final mood = (phase.baseMood + variation + weekendBoost + mondayDip).clamp(1.0, 10.0);
-        final energy = (phase.baseEnergy + variation + weekendBoost).clamp(1.0, 10.0);
-        final stress = (phase.baseStress - variation + mondayDip).clamp(1.0, 10.0);
-
-        final entry = OptimizedDailyEntryModel.create(
-            userId: userId,
-            entryDate: date,
-            freeReflection: _generateReflection(mood, energy, stress, phase.name),
-            moodScore: mood.round(),
-            energyLevel: energy.round(),
-            stressLevel: stress.round(),
-            sleepQuality: (energy - (stress * 0.2) + random.nextDouble() * 2).clamp(1, 10).round(),
-            anxietyLevel: (stress - (mood * 0.1) + random.nextDouble() * 1.5).clamp(1, 10).round(),
-            motivationLevel: ((mood + energy) / 2 + random.nextDouble() * 1.5).clamp(1, 10).round(),
-            socialInteraction: (mood * 0.6 + weekendBoost * 2 + random.nextDouble() * 2).clamp(1, 10).round(),
-            physicalActivity: (energy * 0.7 + weekendBoost + random.nextDouble() * 2).clamp(1, 10).round(),
-            workProductivity: date.weekday >= 6 ? (random.nextInt(3) + 1) : (energy - (stress * 0.4) + random.nextDouble() * 2).clamp(1, 10).round(),
-            sleepHours: (7.5 - stress * 0.3 + energy * 0.1 + (random.nextDouble() - 0.5) * 2).clamp(4.0, 10.0),
-            waterIntake: (6 + energy * 0.3 + random.nextDouble() * 3).clamp(3, 12).round(),
-            meditationMinutes: (stress > 6 || mood < 4) ? (10 + random.nextDouble() * 20).round() : (random.nextDouble() * 10).round(),
-            exerciseMinutes: date.weekday >=6 ? (random.nextDouble() * 90).round() : (energy * 5 + (random.nextDouble()-0.5) * 20).clamp(0,120).round(),
-            screenTimeHours: (6 - mood * 0.2 + stress * 0.3 + random.nextDouble() * 3).clamp(2.0, 14.0),
-            gratitudeItems: mood > 6 ? 'Mi familia, el progreso en mis proyectos, la salud.' : 'El café de la mañana.',
-            weatherMoodImpact: (random.nextDouble() * 10 - 5).round(),
-            socialBattery: (mood * 0.8 - (date.weekday == 1 ? 2:0) + random.nextDouble() * 2).clamp(1, 10).round(),
-            creativeEnergy: ((mood + energy) / 2.2 + random.nextDouble() * 2).clamp(1, 10).round(),
-            emotionalStability: (mood - stress * 0.3 + random.nextDouble() * 1.5).clamp(1, 10).round(),
-            focusLevel: (energy - stress * 0.4 + random.nextDouble() * 2).clamp(1, 10).round(),
-            lifeSatisfaction: (mood - stress * 0.2 + random.nextDouble()).clamp(1, 10).round()
-        );
-
-        await db.insert('daily_entries', entry.toOptimizedDatabase(), conflictAlgorithm: ConflictAlgorithm.replace);
+        await _generateDayEntry(userId, db, date, period, random);
       }
     }
-    _logger.i('✅ ${phases.length} fases de datos históricos generadas.');
   }
 
-  Future<void> _generateInteractiveMoments(int userId, Database db) async {
-    _logger.i('🎭 Generando momentos interactivos...');
+  Future<void> _generateDayEntry(int userId, Database db, DateTime date, _LifePeriod period, math.Random random) async {
+    // Factores que afectan el día
+    final weekendBoost = (date.weekday >= 6) ? random.nextDouble() * 1.2 : 0.0;
+    final mondayDip = (date.weekday == 1) ? -random.nextDouble() * 1.5 : 0.0;
+    final fridayBoost = (date.weekday == 5) ? random.nextDouble() * 0.8 : 0.0;
+    final seasonalFactor = _getSeasonalFactor(date);
+    final dailyVariation = (random.nextDouble() - 0.5) * 2.5;
+
+    // Calcular métricas con más variabilidad
+    final mood = (period.baseMood + dailyVariation + weekendBoost + mondayDip + fridayBoost + seasonalFactor).clamp(1.0, 10.0);
+    final energy = (period.baseEnergy + dailyVariation + weekendBoost - (period.baseStress * 0.2) + seasonalFactor).clamp(1.0, 10.0);
+    final stress = (period.baseStress - dailyVariation + mondayDip - weekendBoost + random.nextDouble()).clamp(1.0, 10.0);
+
+    // Métricas correlacionadas más realistas
+    final sleepQuality = (energy * 0.6 + (10 - stress) * 0.3 + random.nextDouble() * 2).clamp(1.0, 10.0);
+    final anxietyLevel = (stress * 0.7 + (10 - mood) * 0.2 + random.nextDouble() * 1.5).clamp(1.0, 10.0);
+    final motivation = ((mood + energy) / 2 + random.nextDouble() * 1.5 - stress * 0.1).clamp(1.0, 10.0);
+    final socialInteraction = (mood * 0.5 + weekendBoost * 2 + fridayBoost * 1.5 + random.nextDouble() * 2).clamp(1.0, 10.0);
+    final physicalActivity = (energy * 0.6 + weekendBoost * 1.5 + motivation * 0.2 + random.nextDouble() * 2).clamp(1.0, 10.0);
+    final workProductivity = date.weekday >= 6 ? random.nextInt(4) + 1 :
+    (energy * 0.5 + motivation * 0.3 - stress * 0.2 + random.nextDouble() * 2).clamp(1.0, 10.0);
+
+    // Métricas específicas más variadas
+    final sleepHours = (7.5 + energy * 0.1 - stress * 0.2 + (random.nextDouble() - 0.5) * 2).clamp(4.0, 11.0);
+    final waterIntake = (6 + energy * 0.3 + physicalActivity * 0.2 + random.nextDouble() * 4).clamp(2, 15).round();
+    final meditationMinutes = stress > 6 || anxietyLevel > 6 ?
+    (5 + random.nextDouble() * 25).round() :
+    (random.nextDouble() * 10).round();
+    final exerciseMinutes = date.weekday >= 6 ?
+    (random.nextDouble() * 90).round() :
+    (physicalActivity * 4 + random.nextDouble() * 30).round();
+    final screenTimeHours = (4 + stress * 0.3 + (10 - socialInteraction) * 0.2 + random.nextDouble() * 4).clamp(1.0, 12.0);
+
+    // Crear entrada con reflexión realista
+    final entry = OptimizedDailyEntryModel.create(
+      userId: userId,
+      entryDate: date,
+      freeReflection: _generateRealisticReflection(mood, energy, stress, period, date, random),
+      moodScore: mood.round(),
+      energyLevel: energy.round(),
+      stressLevel: stress.round(),
+      sleepQuality: sleepQuality.round(),
+      anxietyLevel: anxietyLevel.round(),
+      motivationLevel: motivation.round(),
+      socialInteraction: socialInteraction.round(),
+      physicalActivity: physicalActivity.round(),
+      workProductivity: workProductivity.round(),
+      sleepHours: sleepHours,
+      waterIntake: waterIntake,
+      meditationMinutes: meditationMinutes,
+      exerciseMinutes: exerciseMinutes,
+      screenTimeHours: screenTimeHours,
+      gratitudeItems: _generateGratitudeItems(mood, random),
+    );
+
+    try {
+      await db.insert('daily_entries', entry.toOptimizedDatabase(), conflictAlgorithm: ConflictAlgorithm.replace);
+    } catch (e) {
+      _logger.e('❌ Error insertando entrada para fecha ${entry.entryDate}: $e');
+    }
+  }
+
+  Future<void> _generateTodayEntry(int userId, Database db, DateTime now) async {
+    _logger.i('📅 Generando entrada especial para HOY');
+
+    // Entrada para hoy con datos optimistas
+    final todayEntry = OptimizedDailyEntryModel.create(
+      userId: userId,
+      entryDate: now,
+      freeReflection: '''¡Qué día tan increíble para estar trabajando en Reflect!
+
+Como desarrollador, estoy fascinado por cómo esta app está evolucionando. Hoy me he centrado en optimizar las métricas de analytics y la verdad es que ver cómo los datos cobran vida es emocionante.
+
+He estado experimentando con nuevos patrones de UI y me siento muy productivo. El feedback loop entre código-compilación-testing está fluyendo perfectamente.
+
+Creo que estamos construyendo algo realmente valioso aquí. Una herramienta que no solo registra datos, sino que ayuda a las personas a entenderse mejor a sí mismas.
+
+Físicamente me siento bien - he mantenido mi rutina de ejercicio y eso definitivamente impacta mi energía para programar.
+
+Para mañana: seguir refinando la experiencia de usuario y tal vez experimentar con algunas animaciones nuevas.
+
+#desarrollo #reflect #productividad #bienestar''',
+      moodScore: 8,
+      energyLevel: 8,
+      stressLevel: 3,
+      sleepQuality: 7,
+      anxietyLevel: 2,
+      motivationLevel: 9,
+      socialInteraction: 6,
+      physicalActivity: 7,
+      workProductivity: 9,
+      sleepHours: 7.5,
+      waterIntake: 8,
+      meditationMinutes: 10,
+      exerciseMinutes: 45,
+      screenTimeHours: 8.0,
+      gratitudeItems: 'Poder trabajar en un proyecto que me apasiona, tener un equipo increíble, café de calidad',
+    );
+
+    await db.insert('daily_entries', todayEntry.toOptimizedDatabase(), conflictAlgorithm: ConflictAlgorithm.replace);
+  }
+
+  Future<void> _generateEnhancedInteractiveMoments(int userId, Database db) async {
+    _logger.i('💫 Generando momentos interactivos MEJORADOS...');
+
+    final now = DateTime.now();
     final random = math.Random();
-    final momentsData = [
-      _MomentData('😄', 'Completé una funcionalidad compleja sin bugs', 'positive', 8, 'trabajo'),
-      _MomentData('🎉', 'El cliente quedó encantado con la demo de la app', 'positive', 9, 'trabajo'),
-      _MomentData('☕', 'Disfrutando de un café perfecto mientras programo', 'positive', 6, 'personal'),
-      _MomentData('🧘', 'Una meditación de 20 minutos me centró por completo', 'positive', 7, 'salud'),
-      _MomentData('📚', 'Aprendí un nuevo patrón de diseño muy útil hoy', 'positive', 7, 'estudio'),
-      _MomentData('😰', 'Encontré un bug crítico justo antes del release', 'negative', 8, 'trabajo'),
-      _MomentData('🥱', 'Noche de poco sueño, me siento realmente agotado', 'negative', 6, 'salud'),
-      _MomentData('😤', 'Reunión improductiva de 2 horas que pudo ser un email', 'negative', 7, 'trabajo'),
-      _MomentData('🚶', 'Una caminata corta durante el almuerzo para despejar la mente', 'positive', 5, 'salud'),
-      _MomentData('📱', 'Perdí 30 minutos haciendo scroll sin propósito en redes', 'neutral', 3, 'personal'),
-      _MomentData('🍕', 'La pizza de la cena estaba deliciosa', 'positive', 7, 'personal'),
-      _MomentData('🏋️‍♂️', 'Buen entrenamiento en el gimnasio, me siento con energía', 'positive', 8, 'salud'),
-      _MomentData('❤️', 'Conversación profunda y bonita con mi pareja', 'positive', 9, 'amor'),
-      _MomentData('🤔', 'Reflexionando sobre mis metas para el próximo trimestre', 'neutral', 5, 'estudio'),
+
+    // Generar momentos para los últimos 30 días
+    for (int dayOffset = -30; dayOffset <= 0; dayOffset++) {
+      final date = now.add(Duration(days: dayOffset));
+
+      // 2-5 momentos por día
+      final momentsCount = 2 + random.nextInt(4);
+
+      for (int i = 0; i < momentsCount; i++) {
+        await _generateRandomMoment(userId, db, date, random);
+      }
+    }
+  }
+
+  Future<void> _generateRandomMoment(int userId, Database db, DateTime date, math.Random random) async {
+    final momentTypes = ['positive', 'negative', 'neutral'];
+    final type = momentTypes[random.nextInt(momentTypes.length)];
+
+    final categories = ['trabajo', 'personal', 'salud', 'relaciones', 'aprendizaje', 'creatividad'];
+    final category = categories[random.nextInt(categories.length)];
+
+    final hour = 8 + random.nextInt(14); // Entre 8 AM y 10 PM
+    final minute = random.nextInt(60);
+    final timestamp = DateTime(date.year, date.month, date.day, hour, minute);
+
+    final momentData = _getMomentDataByType(type, category, random);
+
+    final moment = OptimizedInteractiveMomentModel.create(
+      userId: userId,
+      emoji: momentData['emoji'],
+      text: momentData['text'],
+      type: type,
+      intensity: momentData['intensity'],
+      category: category,
+      timestamp: timestamp,
+      contextLocation: momentData['location'],
+      // Omitiendo context y tags ya que no están en el schema
+    );
+
+    try {
+      await db.insert('interactive_moments', moment.toOptimizedDatabase());
+    } catch (e) {
+      _logger.e('❌ Error insertando momento: $e');
+    }
+  }
+
+  Future<void> _generateSpecialEvents(int userId, Database db) async {
+    _logger.i('🎉 Generando eventos especiales...');
+
+    // Eventos especiales que crean patrones interesantes
+    final specialEvents = [
+      {
+        'date': DateTime.now().subtract(const Duration(days: 15)),
+        'type': 'milestone',
+        'emoji': '🚀',
+        'text': 'Lanzamiento exitoso de nueva feature en Reflect',
+        'intensity': 9,
+        'category': 'trabajo',
+        'location': 'Oficina',
+      },
+      {
+        'date': DateTime.now().subtract(const Duration(days: 8)),
+        'type': 'learning',
+        'emoji': '📚',
+        'text': 'Completé curso avanzado de Flutter',
+        'intensity': 8,
+        'category': 'aprendizaje',
+        'location': 'Casa',
+      },
+      {
+        'date': DateTime.now().subtract(const Duration(days: 3)),
+        'type': 'social',
+        'emoji': '🎂',
+        'text': 'Cumpleaños de mi hermana - familia reunida',
+        'intensity': 8,
+        'category': 'personal',
+        'location': 'Casa familiar',
+      },
     ];
 
-    for (int i=0; i < momentsData.length; i++) {
-      final data = momentsData[i];
-      final timestamp = DateTime.now().subtract(Duration(hours: i*3, minutes: random.nextInt(60)));
+    for (final event in specialEvents) {
       final moment = OptimizedInteractiveMomentModel.create(
-          userId: userId,
-          emoji: data.emoji,
-          text: data.text,
-          type: data.type,
-          intensity: data.intensity,
-          category: data.category,
-          timestamp: timestamp
+        userId: userId,
+        emoji: event['emoji'] as String,
+        text: event['text'] as String,
+        type: 'positive',
+        intensity: event['intensity'] as int,
+        category: event['category'] as String,
+        timestamp: event['date'] as DateTime,
+        contextLocation: event['location'] as String,
       );
+
       await db.insert('interactive_moments', moment.toOptimizedDatabase());
     }
-    _logger.i('✅ ${momentsData.length} momentos interactivos generados.');
   }
 
-  String _generateReflection(double mood, double energy, double stress, String phaseName) {
-    if (phaseName == 'Período Difícil') {
-      return 'Hoy fue un día complicado. El estrés ha sido alto y la energía baja. Intentando mantenerme a flote y ser paciente.';
+  // ============================================================================
+  // MÉTODOS HELPER PARA GENERAR CONTENIDO REALISTA
+  // ============================================================================
+
+  String _generateRealisticReflection(double mood, double energy, double stress, _LifePeriod period, DateTime date, math.Random random) {
+    final reflections = _getReflectionsByPeriodAndMood(period.name, mood, energy, stress, date);
+    return reflections[random.nextInt(reflections.length)];
+  }
+
+  List<String> _getReflectionsByPeriodAndMood(String period, double mood, double energy, double stress, DateTime date) {
+    if (period == 'Crisis Personal') {
+      return [
+        'Hoy ha sido especialmente difícil. Me cuesta encontrar motivación y todo parece cuesta arriba. Pero sé que estos momentos pasan.',
+        'Día complicado. He estado reflexionando sobre lo que realmente importa en mi vida. A veces las crisis nos ayudan a reenfocar.',
+        'No ha sido mi mejor día, pero estoy intentando ser compasivo conmigo mismo. Mañana será diferente.',
+        'Sensación de estar perdido, pero al menos estoy escribiendo esto. Escribir me ayuda a procesar.',
+        'Lunes especialmente pesado. Me pregunto si estoy en el camino correcto, pero sé que dudar es parte del proceso.',
+      ];
+    } else if (period == 'Buscando Dirección') {
+      return [
+        'Poco a poco siento que voy encontrando mi rumbo. Aún hay días difíciles, pero también momentos de claridad.',
+        'Hoy me he sentido más centrado. Estoy empezando a entender qué es lo que realmente quiero.',
+        'He tenido una conversación interesante que me ha hecho pensar. Las perspectivas externas ayudan mucho.',
+        'Día de pequeños progresos. No son cambios dramáticos, pero sí sostenibles.',
+        'Me he dado cuenta de que el crecimiento no es lineal. Algunos días retrocedo, otros avanzo.',
+      ];
+    } else if (period == 'Pequeñas Victorias') {
+      return [
+        '¡Hoy he completado algo que había estado posponiendo durante semanas! Se siente increíble.',
+        'Las cosas van mejorando gradualmente. Tengo más energía y las decisiones fluyen más fácil.',
+        'He notado que mi productividad ha aumentado significativamente. Creo que finalmente estoy en un buen ritmo.',
+        'Día productivo y satisfactorio. He encontrado un equilibrio entre trabajo y descanso que funciona.',
+        'Me siento más confiado en mis decisiones. Los pequeños éxitos se van acumulando.',
+      ];
+    } else if (period == 'Momentum Positivo') {
+      return [
+        'Increíble día de desarrollo! He resuelto un bug complejo y implementado dos features nuevas. El flow de código está siendo fantástico.',
+        'Hoy me levanté con una energía tremenda. Todo parece posible cuando estás en la zona correcta.',
+        'Excelente sesión de brainstorming. Las ideas fluyen cuando tienes la mente clara y el equipo alineado.',
+        'Me siento imparable. Cada desafío que aparece lo veo como una oportunidad de crecer.',
+        'Día muy productivo. He logrado avanzar tanto en objetivos personales como profesionales.',
+      ];
+    } else { // Estabilidad Actual
+      return [
+        'Día equilibrado y tranquilo. Me siento cómodo con el ritmo que llevo actualmente.',
+        'Hoy ha sido un buen día para reflexionar sobre todo lo que he crecido en estos meses.',
+        'Productivo sin agobios. Creo que he encontrado un ritmo sostenible que me funciona.',
+        'Sensación de estabilidad y claridad. Sé hacia dónde voy y cómo llegar.',
+        'Día normal, pero en el buen sentido. A veces la normalidad es exactamente lo que necesitas.',
+      ];
     }
-    if (phaseName == 'Recuperación Gradual') {
-      return 'Las cosas están mejorando. Aún hay días difíciles, pero siento que estoy recuperando el control y la energía poco a poco.';
+  }
+
+  Map<String, dynamic> _getMomentDataByType(String type, String category, math.Random random) {
+    final positiveMoments = {
+      'trabajo': [
+        {'emoji': '✅', 'text': 'Bug resuelto en tiempo récord', 'intensity': 7, 'location': 'Oficina'},
+        {'emoji': '🚀', 'text': 'Feature implementada sin problemas', 'intensity': 8, 'location': 'Casa'},
+        {'emoji': '💡', 'text': 'Idea brillante para optimización', 'intensity': 6, 'location': 'Cafetería'},
+        {'emoji': '🎯', 'text': 'Milestone alcanzado antes de deadline', 'intensity': 9, 'location': 'Oficina'},
+      ],
+      'personal': [
+        {'emoji': '😊', 'text': 'Llamada sorpresa de un viejo amigo', 'intensity': 7, 'location': 'Casa'},
+        {'emoji': '🌱', 'text': 'Mi planta finalmente tiene una nueva hoja', 'intensity': 5, 'location': 'Casa'},
+        {'emoji': '📚', 'text': 'Terminé un libro muy interesante', 'intensity': 6, 'location': 'Parque'},
+        {'emoji': '🎵', 'text': 'Descubrí una canción perfecta para programar', 'intensity': 6, 'location': 'Casa'},
+      ],
+      'salud': [
+        {'emoji': '💪', 'text': 'Nuevo record personal en el gym', 'intensity': 8, 'location': 'Gimnasio'},
+        {'emoji': '🧘', 'text': 'Meditación especialmente relajante', 'intensity': 7, 'location': 'Casa'},
+        {'emoji': '🥗', 'text': 'Comida saludable y deliciosa', 'intensity': 6, 'location': 'Restaurante'},
+        {'emoji': '😴', 'text': 'Desperté naturalmente sin alarma', 'intensity': 7, 'location': 'Casa'},
+      ],
+    };
+
+    final negativeMoments = {
+      'trabajo': [
+        {'emoji': '😤', 'text': 'Reunión que podría haber sido un email', 'intensity': 4, 'location': 'Oficina'},
+        {'emoji': '🐛', 'text': 'Bug misterioso que no logro resolver', 'intensity': 6, 'location': 'Casa'},
+        {'emoji': '⏰', 'text': 'Deadline muy ajustado causando estrés', 'intensity': 7, 'location': 'Oficina'},
+        {'emoji': '💻', 'text': 'Sistema caído justo cuando más lo necesitaba', 'intensity': 5, 'location': 'Oficina'},
+      ],
+      'personal': [
+        {'emoji': '🌧️', 'text': 'Lluvia inesperada sin paraguas', 'intensity': 3, 'location': 'Calle'},
+        {'emoji': '📱', 'text': 'Batería del móvil murió en momento crítico', 'intensity': 4, 'location': 'Transporte'},
+        {'emoji': '🚌', 'text': 'Perdí el autobús por 30 segundos', 'intensity': 4, 'location': 'Parada'},
+        {'emoji': '☕', 'text': 'Se acabó el café justo cuando lo necesitaba', 'intensity': 5, 'location': 'Casa'},
+      ],
+      'salud': [
+        {'emoji': '😴', 'text': 'Noche de sueño irregular', 'intensity': 5, 'location': 'Casa'},
+        {'emoji': '🤕', 'text': 'Dolor de espalda por mala postura', 'intensity': 4, 'location': 'Oficina'},
+        {'emoji': '😵', 'text': 'Dolor de cabeza por demasiada pantalla', 'intensity': 5, 'location': 'Casa'},
+      ],
+    };
+
+    final neutralMoments = {
+      'trabajo': [
+        {'emoji': '💼', 'text': 'Día normal de desarrollo', 'intensity': 5, 'location': 'Oficina'},
+        {'emoji': '📊', 'text': 'Review de código rutinaria', 'intensity': 5, 'location': 'Casa'},
+      ],
+      'personal': [
+        {'emoji': '🚶', 'text': 'Paseo tranquilo por el barrio', 'intensity': 5, 'location': 'Barrio'},
+        {'emoji': '🛒', 'text': 'Compras semanales en el super', 'intensity': 5, 'location': 'Supermercado'},
+      ],
+    };
+
+    Map<String, List<Map<String, dynamic>>> momentsMap;
+
+    switch (type) {
+      case 'positive':
+        momentsMap = positiveMoments;
+        break;
+      case 'negative':
+        momentsMap = negativeMoments;
+        break;
+      default:
+        momentsMap = neutralMoments;
     }
-    if (phaseName == 'Fase de Crecimiento') {
-      return 'Me siento genial. Lleno de energía y motivación. He sido muy productivo y he disfrutado de mis actividades personales.';
+
+    final categoryMoments = momentsMap[category] ?? momentsMap['personal']!;
+    final selectedMoment = categoryMoments[random.nextInt(categoryMoments.length)];
+
+    return {
+      'emoji': selectedMoment['emoji'],
+      'text': selectedMoment['text'],
+      'intensity': selectedMoment['intensity'],
+      'location': selectedMoment['location'],
+    };
+  }
+
+  // Métodos helper adicionales
+  double _getSeasonalFactor(DateTime date) {
+    // Factor estacional simple
+    final month = date.month;
+    if (month >= 6 && month <= 8) return 0.3; // Verano
+    if (month >= 12 || month <= 2) return -0.2; // Invierno
+    return 0.0; // Primavera/Otoño
+  }
+
+  String _generateGratitudeItems(double mood, math.Random random) {
+    final items = [
+      'Salud y energía para enfrentar el día',
+      'Familia que me apoya incondicionalmente',
+      'Trabajo que me permite crecer',
+      'Amigos que hacen la vida más divertida',
+      'Oportunidad de aprender cosas nuevas',
+      'Hogar cómodo donde descansar',
+      'Comida deliciosa en la mesa',
+      'Tecnología que facilita mi trabajo',
+      'Momento presente y tranquilidad',
+      'Capacidad de reflexionar y mejorar',
+    ];
+
+    final count = mood > 7 ? 3 : mood > 4 ? 2 : 1;
+    final selected = <String>[];
+
+    for (int i = 0; i < count; i++) {
+      final item = items[random.nextInt(items.length)];
+      if (!selected.contains(item)) selected.add(item);
     }
-    return 'Un día normal, con sus altibajos, pero en general bien.';
+
+    return selected.join(', ');
   }
 
   // ✅ MÉTODO PARA AI COACH
@@ -1954,12 +2259,11 @@ class OptimizedDatabaseService {
 
 }
 
-
 // ============================================================================
-// CLASES DE DATOS AUXILIARES
+// CLASE HELPER PARA PERÍODOS DE VIDA
 // ============================================================================
 
-class _PersonalityPhase {
+class _LifePeriod {
   final String name;
   final int startDay;
   final int endDay;
@@ -1967,15 +2271,5 @@ class _PersonalityPhase {
   final double baseEnergy;
   final double baseStress;
 
-  _PersonalityPhase(this.name, this.startDay, this.endDay, this.baseMood, this.baseEnergy, this.baseStress);
-}
-
-class _MomentData {
-  final String emoji;
-  final String text;
-  final String type;
-  final int intensity;
-  final String category;
-
-  _MomentData(this.emoji, this.text, this.type, this.intensity, this.category);
+  _LifePeriod(this.name, this.startDay, this.endDay, this.baseMood, this.baseEnergy, this.baseStress);
 }
