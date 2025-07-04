@@ -10,10 +10,41 @@ import 'package:flutter/services.dart';
 
 // Providers
 import '../../providers/optimized_providers.dart';
-import '../../providers/image_moments_provider.dart'; // <-- AÑADIDO: Provider de imágenes
+import '../../providers/image_moments_provider.dart';
 
 // Modelos
 import '../../../data/models/optimized_models.dart';
+
+// Pantalla de Destino
+import 'home_screen_v2.dart';
+
+// ============================================================================
+// 🎨 PALETA DE COLORES (BASADA EN GOALSCOLORS)
+// ============================================================================
+class QuickMomentsColors {
+  static const Color backgroundPrimary = Color(0xFF000000);
+  static const Color backgroundCard = Color(0xFF0F0F0F);
+  static const Color backgroundSecondary = Color(0xFF1A1A1A);
+
+  static const List<Color> primaryGradient = [
+    Color(0xFF1e3a8a), // Azul oscuro
+    Color(0xFF581c87), // Morado oscuro
+  ];
+
+  static const List<Color> accentGradient = [
+    Color(0xFF3b82f6), // Azul
+    Color(0xFF8b5cf6), // Morado
+  ];
+
+  static const Color textPrimary = Color(0xFFFFFFFF);
+  static const Color textSecondary = Color(0xFFB3B3B3);
+  static const Color textTertiary = Color(0xFF666666);
+
+  static const Color positive = Color(0xFF10b981);
+  static const Color neutral = Color(0xFFf59e0b);
+  static const Color negative = Color(0xFFef4444);
+}
+
 
 class QuickMomentsScreen extends StatefulWidget {
   final bool startWithCamera;
@@ -213,11 +244,8 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
     }
 
     try {
-      // Mostrar loading
       _showLoadingDialog();
 
-      // NOTA: Se asume que `addMoment` ahora devuelve el momento creado (OptimizedInteractiveMomentModel?)
-      // en lugar de un booleano, para poder obtener el ID del nuevo momento.
       final newMoment = await momentsProvider.addMoment(
         userId: authProvider.currentUser!.id,
         emoji: _selectedEmoji,
@@ -228,9 +256,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         contextLocation: _location.trim().isEmpty ? null : _location.trim(),
       );
 
-      // Si el momento se creó correctamente
       if (newMoment != null && newMoment.id != null) {
-        // Y si hay una imagen seleccionada, la guardamos
         if (_selectedImage != null) {
           await imageProvider.saveImageForMoment(
             imageFile: _selectedImage!,
@@ -240,10 +266,14 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
 
         Navigator.pop(context); // Cerrar loading
 
-        // FIX: El método correcto es heavyImpact() o mediumImpact().
         HapticFeedback.heavyImpact();
-        Navigator.pop(context, true); // Volver con éxito
         _showSuccessSnackBar('¡Momento guardado exitosamente!');
+
+        // NAVEGACIÓN A HOME SCREEN V2
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const HomeScreenV2()),
+              (Route<dynamic> route) => false,
+        );
 
       } else {
         Navigator.pop(context); // Cerrar loading
@@ -263,7 +293,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => const Dialog(
+      builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
         child: Center(
           child: CircularProgressIndicator(
@@ -279,7 +309,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.red.shade700,
+        backgroundColor: QuickMomentsColors.negative,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -290,7 +320,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
-        backgroundColor: Colors.green.shade700,
+        backgroundColor: QuickMomentsColors.positive,
         behavior: SnackBarBehavior.floating,
       ),
     );
@@ -303,7 +333,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: QuickMomentsColors.backgroundPrimary,
       body: SafeArea(
         child: SlideTransition(
           position: Tween<Offset>(
@@ -317,7 +347,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
               Expanded(
                 child: PageView(
                   controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(), // Desactivar swipe
+                  physics: const NeverScrollableScrollPhysics(),
                   onPageChanged: (index) {
                     setState(() {
                       _currentStep = index;
@@ -325,9 +355,9 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                     _updateProgress();
                   },
                   children: [
-                    _buildStep1(), // Captura del momento
-                    _buildStep2(), // Descripción
-                    _buildStep3(), // Contexto
+                    _buildStep1(),
+                    _buildStep2(),
+                    _buildStep3(),
                   ],
                 ),
               ),
@@ -352,27 +382,27 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
             children: [
               IconButton(
                 onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.close, color: Colors.white),
+                icon: const Icon(Icons.close, color: QuickMomentsColors.textPrimary),
               ),
               Expanded(
                 child: Text(
                   _stepTitles[_currentStep],
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: QuickMomentsColors.textPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
                   ),
                   textAlign: TextAlign.center,
                 ),
               ),
-              const SizedBox(width: 48), // Spacer para centrar
+              const SizedBox(width: 48),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             'Paso ${_currentStep + 1} de $_totalSteps',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+            style: const TextStyle(
+              color: QuickMomentsColors.textSecondary,
               fontSize: 14,
             ),
           ),
@@ -388,11 +418,12 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
       child: AnimatedBuilder(
         animation: _progressController,
         builder: (context, child) {
-          return LinearProgressIndicator(
-            value: _progressController.value,
-            backgroundColor: Colors.white.withOpacity(0.2),
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
+          return ClipRRect(
             borderRadius: BorderRadius.circular(2),
+            child: LinearProgressIndicator(
+              value: _progressController.value,
+              backgroundColor: QuickMomentsColors.backgroundSecondary,
+            ),
           );
         },
       ),
@@ -409,18 +440,10 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
       child: Column(
         children: [
           const SizedBox(height: 20),
-
-          // Área de foto
           _buildPhotoSection(),
-
           const SizedBox(height: 30),
-
-          // Selector de emoji
           _buildEmojiSelector(),
-
           const SizedBox(height: 30),
-
-          // Selector de tipo
           _buildTypeSelector(),
         ],
       ),
@@ -432,9 +455,9 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
       height: 200,
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Colors.grey.shade900,
+        color: QuickMomentsColors.backgroundCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        border: Border.all(color: QuickMomentsColors.textTertiary.withOpacity(0.2)),
       ),
       child: _selectedImage != null
           ? _buildSelectedImage()
@@ -482,14 +505,14 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
       children: [
         const Icon(
           Icons.camera_alt_outlined,
-          color: Colors.white54,
+          color: QuickMomentsColors.textSecondary,
           size: 48,
         ),
         const SizedBox(height: 12),
         const Text(
           'Añade una foto (opcional)',
           style: TextStyle(
-            color: Colors.white54,
+            color: QuickMomentsColors.textSecondary,
             fontSize: 16,
           ),
         ),
@@ -524,19 +547,19 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.blue.withOpacity(0.2),
+          color: QuickMomentsColors.accentGradient[0].withOpacity(0.2),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: Colors.blue.withOpacity(0.3)),
+          border: Border.all(color: QuickMomentsColors.accentGradient[0].withOpacity(0.3)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.blue, size: 18),
+            Icon(icon, color: QuickMomentsColors.accentGradient[0], size: 18),
             const SizedBox(width: 6),
             Text(
               label,
-              style: const TextStyle(
-                color: Colors.blue,
+              style: TextStyle(
+                color: QuickMomentsColors.accentGradient[0],
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
               ),
@@ -556,7 +579,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         const Text(
           'Elige un emoji representativo',
           style: TextStyle(
-            color: Colors.white,
+            color: QuickMomentsColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
@@ -579,11 +602,11 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                 height: 50,
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? Colors.blue.withOpacity(0.3)
-                      : Colors.grey.shade800,
+                      ? QuickMomentsColors.accentGradient[0].withOpacity(0.3)
+                      : QuickMomentsColors.backgroundCard,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isSelected ? Colors.blue : Colors.transparent,
+                    color: isSelected ? QuickMomentsColors.accentGradient[0] : Colors.transparent,
                     width: 2,
                   ),
                 ),
@@ -608,7 +631,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         const Text(
           '¿Cómo te sientes?',
           style: TextStyle(
-            color: Colors.white,
+            color: QuickMomentsColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
@@ -616,11 +639,11 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         const SizedBox(height: 12),
         Row(
           children: [
-            _buildTypeOption('positive', '😊 Positivo', Colors.green),
+            _buildTypeOption('positive', '😊 Positivo', QuickMomentsColors.positive),
             const SizedBox(width: 12),
-            _buildTypeOption('neutral', '😐 Neutral', Colors.orange),
+            _buildTypeOption('neutral', '😐 Neutral', QuickMomentsColors.neutral),
             const SizedBox(width: 12),
-            _buildTypeOption('negative', '😔 Negativo', Colors.red),
+            _buildTypeOption('negative', '😔 Negativo', QuickMomentsColors.negative),
           ],
         ),
       ],
@@ -642,7 +665,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           decoration: BoxDecoration(
             color: isSelected
                 ? color.withOpacity(0.3)
-                : Colors.grey.shade800,
+                : QuickMomentsColors.backgroundCard,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: isSelected ? color : Colors.transparent,
@@ -652,7 +675,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           child: Text(
             label,
             style: TextStyle(
-              color: isSelected ? color : Colors.white70,
+              color: isSelected ? color : QuickMomentsColors.textSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -674,58 +697,50 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 20),
-
           const Text(
             'Describe tu momento',
             style: TextStyle(
-              color: Colors.white,
+              color: QuickMomentsColors.textPrimary,
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
           ),
-
           const SizedBox(height: 8),
-
-          Text(
+          const Text(
             'Cuéntanos qué pasó y cómo te hizo sentir',
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: QuickMomentsColors.textSecondary,
               fontSize: 14,
             ),
           ),
-
           const SizedBox(height: 20),
-
-          // Campo de descripción
-          Container(
-            decoration: BoxDecoration(
-              color: Colors.grey.shade900,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
-            ),
-            child: TextField(
-              controller: _descriptionController,
-              onChanged: (value) {
-                setState(() {
-                  _description = value;
-                });
-              },
-              maxLines: 4,
-              maxLength: 200,
-              style: const TextStyle(color: Colors.white),
-              decoration: const InputDecoration(
-                hintText: 'Ej: "Terminé mi proyecto más rápido de lo esperado y me siento muy orgulloso del resultado..."',
-                hintStyle: TextStyle(color: Colors.white54),
-                border: InputBorder.none,
-                contentPadding: EdgeInsets.all(16),
-                counterText: '',
+          TextField(
+            controller: _descriptionController,
+            onChanged: (value) {
+              setState(() {
+                _description = value;
+              });
+            },
+            maxLines: 4,
+            maxLength: 200,
+            style: const TextStyle(color: QuickMomentsColors.textPrimary),
+            decoration: InputDecoration(
+              hintText: 'Ej: "Terminé mi proyecto más rápido de lo esperado y me siento muy orgulloso del resultado..."',
+              hintStyle: const TextStyle(color: QuickMomentsColors.textTertiary),
+              filled: true,
+              fillColor: QuickMomentsColors.backgroundCard,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
               ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide(color: QuickMomentsColors.accentGradient[1]),
+              ),
+              counterText: '',
             ),
           ),
-
           const SizedBox(height: 30),
-
-          // Selector de intensidad
           _buildIntensitySelector(),
         ],
       ),
@@ -739,19 +754,17 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         const Text(
           'Intensidad de la experiencia',
           style: TextStyle(
-            color: Colors.white,
+            color: QuickMomentsColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
         ),
-
         const SizedBox(height: 16),
-
         Row(
           children: [
             const Text(
               'Leve',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: QuickMomentsColors.textSecondary, fontSize: 12),
             ),
             Expanded(
               child: Slider(
@@ -759,8 +772,8 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                 min: 1,
                 max: 10,
                 divisions: 9,
-                activeColor: Colors.blue,
-                inactiveColor: Colors.white24,
+                activeColor: QuickMomentsColors.accentGradient[0],
+                inactiveColor: QuickMomentsColors.backgroundSecondary,
                 onChanged: (value) {
                   setState(() {
                     _intensity = value.round();
@@ -773,22 +786,21 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
             ),
             const Text(
               'Intensa',
-              style: TextStyle(color: Colors.white54, fontSize: 12),
+              style: TextStyle(color: QuickMomentsColors.textSecondary, fontSize: 12),
             ),
           ],
         ),
-
         Center(
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.2),
+              color: QuickMomentsColors.accentGradient[0].withOpacity(0.2),
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
               '$_intensity/10',
-              style: const TextStyle(
-                color: Colors.blue,
+              style: TextStyle(
+                color: QuickMomentsColors.accentGradient[0],
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -810,18 +822,10 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 20),
-
-          // Selector de categoría
           _buildCategorySelector(),
-
           const SizedBox(height: 30),
-
-          // Campo de ubicación
           _buildLocationField(),
-
           const SizedBox(height: 30),
-
-          // Resumen del momento
           _buildMomentSummary(),
         ],
       ),
@@ -844,7 +848,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         const Text(
           'Categoría del momento',
           style: TextStyle(
-            color: Colors.white,
+            color: QuickMomentsColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
@@ -866,12 +870,12 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? Colors.blue.withOpacity(0.3)
-                      : Colors.grey.shade800,
+                      ? QuickMomentsColors.accentGradient[0].withOpacity(0.3)
+                      : QuickMomentsColors.backgroundCard,
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: isSelected ? Colors.blue : Colors.transparent,
-                    width: 2,
+                    color: isSelected ? QuickMomentsColors.accentGradient[0] : QuickMomentsColors.textTertiary.withOpacity(0.2),
+                    width: isSelected ? 2 : 1,
                   ),
                 ),
                 child: Row(
@@ -885,7 +889,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                     Text(
                       entry.value['name']!,
                       style: TextStyle(
-                        color: isSelected ? Colors.blue : Colors.white70,
+                        color: isSelected ? QuickMomentsColors.accentGradient[0] : QuickMomentsColors.textSecondary,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -907,32 +911,33 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         const Text(
           'Ubicación (opcional)',
           style: TextStyle(
-            color: Colors.white,
+            color: QuickMomentsColors.textPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w500,
           ),
         ),
         const SizedBox(height: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey.shade900,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.white.withOpacity(0.2)),
-          ),
-          child: TextField(
-            controller: _locationController,
-            onChanged: (value) {
-              setState(() {
-                _location = value;
-              });
-            },
-            style: const TextStyle(color: Colors.white),
-            decoration: const InputDecoration(
-              hintText: 'Ej: En casa, en la oficina, en el parque...',
-              hintStyle: TextStyle(color: Colors.white54),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16),
-              prefixIcon: Icon(Icons.location_on, color: Colors.white54),
+        TextField(
+          controller: _locationController,
+          onChanged: (value) {
+            setState(() {
+              _location = value;
+            });
+          },
+          style: const TextStyle(color: QuickMomentsColors.textPrimary),
+          decoration: InputDecoration(
+            hintText: 'Ej: En casa, en la oficina, en el parque...',
+            hintStyle: const TextStyle(color: QuickMomentsColors.textTertiary),
+            prefixIcon: const Icon(Icons.location_on_outlined, color: QuickMomentsColors.textTertiary),
+            filled: true,
+            fillColor: QuickMomentsColors.backgroundCard,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: QuickMomentsColors.accentGradient[1]),
             ),
           ),
         ),
@@ -944,9 +949,9 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey.shade900,
+        color: QuickMomentsColors.backgroundCard,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.withOpacity(0.3)),
+        border: Border.all(color: QuickMomentsColors.accentGradient[0].withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -954,7 +959,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           const Text(
             'Resumen de tu momento',
             style: TextStyle(
-              color: Colors.white,
+              color: QuickMomentsColors.textPrimary,
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -971,7 +976,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                 child: Text(
                   _description.isEmpty ? 'Sin descripción' : _description,
                   style: TextStyle(
-                    color: _description.isEmpty ? Colors.white54 : Colors.white,
+                    color: _description.isEmpty ? QuickMomentsColors.textSecondary : QuickMomentsColors.textPrimary,
                     fontSize: 14,
                   ),
                   maxLines: 2,
@@ -984,7 +989,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           Text(
             'Tipo: $_momentType • Intensidad: $_intensity/10 • Categoría: $_category',
             style: const TextStyle(
-              color: Colors.white70,
+              color: QuickMomentsColors.textSecondary,
               fontSize: 12,
             ),
           ),
@@ -1007,8 +1012,8 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
               child: OutlinedButton(
                 onPressed: _previousStep,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white54),
+                  foregroundColor: QuickMomentsColors.textPrimary,
+                  side: const BorderSide(color: QuickMomentsColors.textTertiary),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -1027,13 +1032,13 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                   ? (_currentStep == _totalSteps - 1 ? _saveMoment : _nextStep)
                   : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
+                backgroundColor: QuickMomentsColors.accentGradient[1],
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                disabledBackgroundColor: Colors.blue.withOpacity(0.5),
+                disabledBackgroundColor: QuickMomentsColors.accentGradient[1].withOpacity(0.5),
               ),
               child: Text(
                 _currentStep == _totalSteps - 1 ? 'Guardar momento' : 'Continuar',
