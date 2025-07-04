@@ -133,42 +133,23 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     _floatingController.repeat(reverse: true);
   }
 
-  void _loadInitialData() async {
+  Future<void> _loadInitialData() async {
     final authProvider = Provider.of<OptimizedAuthProvider>(context, listen: false);
     final user = authProvider.currentUser;
 
     if (user != null) {
-      // Preload data for better performance
-      await _preloadHomeScreenData(user.id);
+      await Future.wait([
+        Provider.of<OptimizedDailyEntriesProvider>(context, listen: false).loadEntries(user.id),
+        Provider.of<OptimizedMomentsProvider>(context, listen: false).loadMoments(user.id),
+        Provider.of<GoalsProvider>(context, listen: false).loadUserGoals(user.id),
+        Provider.of<OptimizedAnalyticsProvider>(context, listen: false).loadCompleteAnalytics(user.id),
+      ]);
 
-      Provider.of<OptimizedMomentsProvider>(context, listen: false)
-          .loadTodayMoments(user.id);
-      Provider.of<OptimizedAnalyticsProvider>(context, listen: false)
-          .loadCompleteAnalytics(user.id);
-      Provider.of<GoalsProvider>(context, listen: false)
-          .loadUserGoals(user.id);
-    }
-  }
+      if (!mounted) return;
 
-  // ============================================================================
-  // 🚀 MÉTODO 5: PRELOAD HOME SCREEN DATA
-  // ============================================================================
-  Future<void> _preloadHomeScreenData(int userId) async {
-    try {
-      // Pre-cargar datos críticos para la home
-      final futures = [
-        Provider.of<OptimizedAnalyticsProvider>(context, listen: false)
-            .loadCompleteAnalytics(userId),
-        Provider.of<OptimizedMomentsProvider>(context, listen: false)
-            .loadTodayMoments(userId),
-        Provider.of<GoalsProvider>(context, listen: false)
-            .loadUserGoals(userId),
-      ];
-
-      await Future.wait(futures);
-    } catch (e) {
-      // Error handling sin interrumpir la experiencia
-      print('Error preloading data: $e');
+      setState(() {
+        // State update might not be needed if providers handle notifications
+      });
     }
   }
 
@@ -210,32 +191,21 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                   children: [
                     // 1. HEADER CON FOTO GRANDE Y BIENVENIDA
                     _buildMinimalHeader(user),
-
                     const SizedBox(height: 24),
-
                     // 🆕 WELLBEING SCORE DE HOY
                     _buildTodaysWellbeingScore(analyticsProvider),
-
                     const SizedBox(height: 24),
-
                     // 2. FACE CARD CON MOMENTOS DEL DÍA
                     _buildMomentsFaceCard(momentsProvider),
-
                     const SizedBox(height: 24),
-
                     // 3. GRÁFICO SEMANAL MEJORADO
                     _buildEnhancedWeeklyChart(analyticsProvider),
-
                     const SizedBox(height: 24),
-
                     // 4. GOALS CERCA DE COMPLETARSE
                     _buildGoalsNearCompletion(goalsProvider),
-
                     const SizedBox(height: 24),
-
                     // 5. RECOMENDACIONES CONTEXTUALES MEJORADAS
                     _buildContextualRecommendations(user, analyticsProvider),
-
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -390,7 +360,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                       height: 80,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        gradient: LinearGradient(
+                        gradient: const LinearGradient(
                           colors: MinimalColors.primaryGradient,
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
@@ -447,9 +417,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         'Bienestar de Hoy',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                           color: MinimalColors.textSecondary,
@@ -488,7 +458,6 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  // Método helper para obtener el score de bienestar de hoy
   Map<String, dynamic> _getTodaysWellbeingScore(OptimizedAnalyticsProvider analyticsProvider) {
     final wellbeingStatus = analyticsProvider.getWellbeingStatus();
 
@@ -537,19 +506,16 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              // Momentos positivos
               _buildMomentCounter(
                 icon: Icons.sentiment_very_satisfied_rounded,
                 count: positiveMoments,
                 label: 'Positivos',
                 gradient: const [Color(0xFF10b981), Color(0xFF059669)],
               ),
-
-              // Línea divisoria
               Container(
                 width: 1,
                 height: 40,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: MinimalColors.primaryGradient,
                     begin: Alignment.topCenter,
@@ -557,8 +523,6 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                   ),
                 ),
               ),
-
-              // Momentos negativos
               _buildMomentCounter(
                 icon: Icons.sentiment_dissatisfied_rounded,
                 count: negativeMoments,
@@ -716,10 +680,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 20),
-
-                // Gráfico mejorado con animaciones
                 SizedBox(
                   height: 120,
                   child: Row(
@@ -728,10 +689,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     children: _buildEnhancedWeeklyBars(analyticsProvider),
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
-                // Días de la semana con indicadores
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: ['L', 'M', 'X', 'J', 'V', 'S', 'D']
@@ -756,9 +714,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                           Container(
                             width: 4,
                             height: 4,
-                            decoration: BoxDecoration(
+                            decoration: const BoxDecoration(
                               shape: BoxShape.circle,
-                              gradient: const LinearGradient(
+                              gradient: LinearGradient(
                                 colors: MinimalColors.accentGradient,
                               ),
                             ),
@@ -778,8 +736,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
 
   List<Widget> _buildEnhancedWeeklyBars(OptimizedAnalyticsProvider analyticsProvider) {
     final moodData = analyticsProvider.getMoodChartData();
+    // ✅ CORREGIDO
     final values = moodData.isNotEmpty
-        ? moodData.take(7).map((data) => data['mood'] as double? ?? 5.0).toList()
+        ? moodData.take(7).map((data) => (data['mood'] as num? ?? 5.0).toDouble()).toList()
         : [7.5, 8.2, 6.8, 9.1, 7.3, 8.5, 6.9];
 
     return values.asMap().entries.map((entry) {
@@ -819,7 +778,6 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     }).toList();
   }
 
-  // Método helper para obtener progreso semanal
   Map<String, dynamic> _getWeeklyProgress(OptimizedAnalyticsProvider analyticsProvider) {
     final moodData = analyticsProvider.getMoodChartData();
 
@@ -831,7 +789,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       };
     }
 
-    final values = moodData.take(7).map((data) => data['mood'] as double? ?? 5.0).toList();
+    // ✅ CORREGIDO
+    final values = moodData.take(7).map((data) => (data['mood'] as num? ?? 5.0).toDouble()).toList();
     final average = values.isNotEmpty ? values.reduce((a, b) => a + b) / values.length : 0.0;
 
     String trend;
@@ -1019,7 +978,6 @@ class _HomeScreenV2State extends State<HomeScreenV2>
 
           const SizedBox(height: 12),
 
-          // Barra de progreso animada
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Stack(
@@ -1072,11 +1030,10 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  // Método helper para obtener goals cerca de completarse
   List _getGoalsNearCompletion(GoalsProvider goalsProvider) {
     return goalsProvider.activeGoals
-        .where((goal) => goal.progress >= 0.8) // 80% o más
-        .take(2) // Máximo 2 para no sobrecargar
+        .where((goal) => goal.progress >= 0.8)
+        .take(2)
         .toList();
   }
 
@@ -1374,19 +1331,18 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
-  // Método helper para obtener recomendaciones contextuales
   List<Map<String, dynamic>> _getContextualRecommendations(OptimizedAnalyticsProvider analyticsProvider) {
     final hour = DateTime.now().hour;
     final wellbeingStatus = analyticsProvider.getWellbeingStatus();
-    final stressLevel = wellbeingStatus['stress'] as double? ?? 5.0;
-    final mood = wellbeingStatus['mood'] as double? ?? 5.0;
-    final energy = wellbeingStatus['energy'] as double? ?? 5.0;
+
+    // ✅ CORREGIDO
+    final stressLevel = (wellbeingStatus['stress'] as num? ?? 5.0).toDouble();
+    final mood = (wellbeingStatus['mood'] as num? ?? 5.0).toDouble();
+    final energy = (wellbeingStatus['energy'] as num? ?? 5.0).toDouble();
 
     List<Map<String, dynamic>> contextualRecommendations = [];
 
-    // Recomendaciones basadas en la hora del día
-    if (hour >= 6 && hour < 12) {
-      // Mañana
+    if (hour >= 6 && hour < 12) { // Mañana
       if (energy < 6) {
         contextualRecommendations.add({
           'title': 'Energiza tu mañana',
@@ -1402,8 +1358,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           'context': '🌅 Inicio perfecto',
         });
       }
-    } else if (hour >= 12 && hour < 18) {
-      // Tarde
+    } else if (hour >= 12 && hour < 18) { // Tarde
       if (stressLevel >= 7) {
         contextualRecommendations.add({
           'title': 'Pausa de respiración',
@@ -1419,8 +1374,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           'context': '📞 Momento de conexión',
         });
       }
-    } else {
-      // Noche
+    } else { // Noche
       if (mood < 6) {
         contextualRecommendations.add({
           'title': 'Reflexión nocturna',
@@ -1438,11 +1392,10 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       }
     }
 
-    // Agregar recomendaciones del provider original como respaldo
     final originalRecommendations = analyticsProvider.getTopRecommendations();
     contextualRecommendations.addAll(originalRecommendations.take(2));
 
-    return contextualRecommendations.take(3).toList();
+    return contextualRecommendations.toSet().toList().take(3).toList(); // .toSet() to remove duplicates
   }
 
   IconData _getRecommendationIcon(String type) {

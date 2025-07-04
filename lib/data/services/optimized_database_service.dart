@@ -1976,37 +1976,47 @@ Físicamente me siento bien - he mantenido mi rutina de ejercicio y eso definiti
     };
   }
 
+  // lib/data/services/optimized_database_service.dart
+// ✅ MÉTODO _generateSimpleGoals COMPLETAMENTE ARREGLADO
+
+  // ============================================================================
+  // ✅ ARREGLADO: GENERADOR DE OBJETIVOS CON TIPOS CORRECTOS
+  // ============================================================================
+
+  // In lib/data/services/optimized_database_service.dart
+
   Future<void> _generateSimpleGoals(int userId, Database db) async {
     _logger.i('🎯 Generando objetivos BÁSICOS...');
 
-    final goals = [
+    // Using a List<Map<String, Object>> for stricter type safety.
+    final List<Map<String, Object>> goals = [
       {
-        'title': 'Ejercicio Regular',
-        'description': 'Hacer ejercicio al menos 3 veces por semana',
-        'type': 'health',
-        'target_value': 3.0,
-        'current_value': 2.0,
+        'title': 'Consistencia Diaria',
+        'description': 'Mantener el hábito de reflexión diaria todos los días.',
+        'type': 'consistency', // ✅ TIPO VÁLIDO
+        'target_value': 7.0,
+        'current_value': 5.0,
       },
       {
-        'title': 'Meditación Diaria',
-        'description': 'Meditar 10 minutos cada día',
-        'type': 'mindfulness',
-        'target_value': 10.0,
-        'current_value': 6.0,
+        'title': 'Mejora del Estado de Ánimo',
+        'description': 'Mantener un nivel de ánimo estable y positivo.',
+        'type': 'mood', // ✅ TIPO VÁLIDO
+        'target_value': 8.0,
+        'current_value': 6.5,
       },
       {
-        'title': 'Lectura Mensual',
-        'description': 'Leer 2 libros este mes',
-        'type': 'learning',
-        'target_value': 2.0,
-        'current_value': 1.0,
+        'title': 'Capturar Momentos Positivos',
+        'description': 'Registrar al menos 3 momentos positivos por día.',
+        'type': 'positiveMoments', // ✅ TIPO VÁLIDO
+        'target_value': 21.0, // Target for a week
+        'current_value': 15.0,
       },
       {
-        'title': 'Proyecto Personal',
-        'description': 'Completar el proyecto de app móvil',
-        'type': 'career',
-        'target_value': 100.0,
-        'current_value': 75.0,
+        'title': 'Reducción de Estrés',
+        'description': 'Mantener niveles bajos de estrés consistentemente.',
+        'type': 'stressReduction', // ✅ TIPO VÁLIDO
+        'target_value': 3.0, // Lower is better
+        'current_value': 4.5,
       },
     ];
 
@@ -2014,22 +2024,168 @@ Físicamente me siento bien - he mantenido mi rutina de ejercicio y eso definiti
 
     for (final goal in goals) {
       try {
-        await db.insert('user_goals', {
-          'user_id': userId,
-          'title': goal['title'],
-          'description': goal['description'],
-          'type': goal['type'],
-          'target_value': goal['target_value'],
-          'current_value': goal['current_value'],
-          'status': 'active',
-          'created_at': createdAt,
-        });
+        await db.insert(
+          'user_goals',
+          {
+            'user_id': userId,
+            'title': goal['title'] as String,
+            'description': goal['description'] as String,
+            'type': goal['type'] as String, // Ensure it's a string
+            'target_value': goal['target_value'] as double,
+            'current_value': goal['current_value'] as double,
+            'status': 'active', // Always a string
+            'created_at': createdAt,
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
       } catch (e) {
-        _logger.e('❌ Error insertando objetivo: $e');
+        _logger.e('❌ Error insertando objetivo ${goal['title']}: $e');
       }
     }
+  }
+  // ============================================================================
+  // ✅ MÉTODO HELPER PARA VALIDAR TIPOS DE GOALS
+  // ============================================================================
 
-    _logger.i('✅ Objetivos básicos generados');
+  /// Valida si un tipo de goal es permitido por la base de datos
+  bool _isValidGoalType(String type) {
+    const validTypes = ['consistency', 'mood', 'positiveMoments', 'stressReduction'];
+    return validTypes.contains(type);
+  }
+
+  /// Convierte tipos legacy a tipos válidos
+  String _normalizeGoalType(String type) {
+    switch (type.toLowerCase()) {
+      case 'health':
+      case 'exercise':
+      case 'fitness':
+        return 'consistency';
+      case 'mindfulness':
+      case 'meditation':
+      case 'wellbeing':
+        return 'mood';
+      case 'learning':
+      case 'education':
+      case 'growth':
+        return 'positiveMoments';
+      case 'career':
+      case 'work':
+      case 'productivity':
+        return 'stressReduction';
+      default:
+      // Si ya es un tipo válido, devolverlo tal como está
+        return _isValidGoalType(type) ? type : 'consistency';
+    }
+  }
+
+  // ============================================================================
+  // ✅ MÉTODO PÚBLICO PARA CREAR GOALS CON VALIDACIÓN
+  // ============================================================================
+
+  /// Crea un nuevo goal con validación de tipos
+  Future<int?> createGoalSafe({
+    required int userId,
+    required String title,
+    required String description,
+    required String type,
+    required double targetValue,
+    double currentValue = 0.0,
+    String status = 'active',
+  }) async {
+    try {
+      final db = await database;
+
+      // ✅ Normalizar y validar el tipo
+      final normalizedType = _normalizeGoalType(type);
+
+      if (!_isValidGoalType(normalizedType)) {
+        throw Exception('Tipo de objetivo no válido: $type. Tipos permitidos: consistency, mood, positiveMoments, stressReduction');
+      }
+
+      final goalData = {
+        'user_id': userId,
+        'title': title,
+        'description': description,
+        'type': normalizedType, // ✅ Tipo validado y normalizado
+        'target_value': targetValue,
+        'current_value': currentValue,
+        'status': status,
+        'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      };
+
+      final goalId = await db.insert('user_goals', goalData);
+      _logger.i('✅ Goal creado con ID: $goalId, tipo: $normalizedType');
+
+      return goalId;
+    } catch (e) {
+      _logger.e('❌ Error creando goal: $e');
+      return null;
+    }
+  }
+
+  // ============================================================================
+  // ✅ RESTO DE MÉTODOS DE GOALS (SIN CAMBIOS NECESARIOS)
+  // ============================================================================
+
+  /// Obtener goals del usuario
+  Future<List<Map<String, dynamic>>> getUserGoals(int userId) async {
+    try {
+      final db = await database;
+      return await db.query(
+        'user_goals',
+        where: 'user_id = ?',
+        whereArgs: [userId],
+        orderBy: 'created_at DESC',
+      );
+    } catch (e) {
+      _logger.e('❌ Error obteniendo goals: $e');
+      return [];
+    }
+  }
+
+  /// Actualizar progreso de un goal
+  Future<bool> updateGoalProgress(int goalId, double newValue) async {
+    try {
+      final db = await database;
+      final rowsAffected = await db.update(
+        'user_goals',
+        {
+          'current_value': newValue,
+          'updated_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        },
+        where: 'id = ?',
+        whereArgs: [goalId],
+      );
+
+      return rowsAffected > 0;
+    } catch (e) {
+      _logger.e('❌ Error actualizando progreso del goal: $e');
+      return false;
+    }
+  }
+
+  /// Marcar goal como completado
+  Future<bool> completeGoal(int goalId) async {
+    try {
+      final db = await database;
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+      final rowsAffected = await db.update(
+        'user_goals',
+        {
+          'status': 'completed',
+          'completed_at': now,
+          'updated_at': now,
+        },
+        where: 'id = ?',
+        whereArgs: [goalId],
+      );
+
+      return rowsAffected > 0;
+    } catch (e) {
+      _logger.e('❌ Error completando goal: $e');
+      return false;
+    }
   }
   Future<void> _generateEnhancedHistoricalData(int userId, Database db) async {
     _logger.i('📈 Generando datos históricos MEJORADOS...');
@@ -2467,19 +2623,25 @@ Físicamente me siento bien - he mantenido mi rutina de ejercicio y eso definiti
   // Fix these methods in your OptimizedDatabaseService
 
   /// Obtener objetivos por tipo
+  // lib/data/services/optimized_database_service.dart
+
+  /// Obtener objetivos por tipo
   Future<List<GoalModel>> getGoalsByType(int userId, GoalType type) async {
     try {
       final db = await database;
       final results = await db.query(
         'user_goals',
         where: 'user_id = ? AND type = ?',
-        whereArgs: [userId, type.name], // ✅ Use type.name instead of type.toString()
+        // CORRECT: Use .name to get the simple string 'consistency', 'mood', etc.
+        whereArgs: [userId, type.name],
         orderBy: 'created_at DESC',
       );
 
+      // This assumes GoalModel.fromDatabase can correctly parse the map
       return results.map((row) => GoalModel.fromDatabase(row)).toList();
     } catch (e) {
-      throw Exception('Error obteniendo objetivos por tipo: $e');
+      _logger.e('Error getting goals by type: $e');
+      throw Exception('Error getting goals by type: $e');
     }
   }
 
@@ -2490,13 +2652,16 @@ Físicamente me siento bien - he mantenido mi rutina de ejercicio y eso definiti
       final results = await db.query(
         'user_goals',
         where: 'user_id = ? AND status = ?',
-        whereArgs: [userId, status.name], // ✅ Use status.name instead of status.toString()
+        // CORRECT: Use .name to get the simple string 'active', 'completed', etc.
+        whereArgs: [userId, status.name],
         orderBy: 'created_at DESC',
       );
 
+      // This assumes GoalModel.fromDatabase can correctly parse the map
       return results.map((row) => GoalModel.fromDatabase(row)).toList();
     } catch (e) {
-      throw Exception('Error obteniendo objetivos por estado: $e');
+      _logger.e('Error getting goals by status: $e');
+      throw Exception('Error getting goals by status: $e');
     }
   }
 

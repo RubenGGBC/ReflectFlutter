@@ -1734,13 +1734,20 @@ class GoalsProvider with ChangeNotifier {
   }
 
   /// Cargar objetivos del usuario
+  // lib/presentation/providers/optimized_providers.dart
+
+  /// Cargar objetivos del usuario
   Future<void> loadUserGoals(int userId) async {
     _logger.d('🎯 Cargando objetivos para usuario: $userId');
     _setLoading(true);
     _clearError();
 
     try {
-      _goals = await _databaseService.getUserGoals(userId);
+      // CORRECTED LINE:
+      // Simply await the result, as getUserGoals already returns the correct type.
+      _goals = (await _databaseService.getUserGoals(userId))
+          .map((map) => GoalModel.fromDatabase(map))
+          .toList();
       _logger.i('✅ Cargados ${_goals.length} objetivos');
     } catch (e) {
       _logger.e('❌ Error cargando objetivos: $e');
