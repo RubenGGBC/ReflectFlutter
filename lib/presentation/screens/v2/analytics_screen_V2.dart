@@ -1,11 +1,12 @@
 // lib/presentation/screens/v2/analytics_screen_v2.dart
 // ============================================================================
-// ANALYTICS SCREEN V2 - ESTILO MINIMALISTA CON GRADIENTES AZUL-MORADO - ARREGLADA
+// ANALYTICS SCREEN V2 - ESTILO MINIMALISTA CON GRADIENTES AZUL-MORADO
 // ============================================================================
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
+import 'package:fl_chart/fl_chart.dart';
 
 // Providers optimizados
 import '../../providers/optimized_providers.dart';
@@ -68,7 +69,7 @@ class AnalyticsScreenV2 extends StatefulWidget {
 }
 
 class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
-    with TickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+    with TickerProviderStateMixin {
 
   late TabController _tabController;
   late AnimationController _fadeController;
@@ -84,9 +85,6 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
   int _selectedPeriod = 30;
   final List<int> _periodOptions = [7, 30, 90];
   final List<String> _periodLabels = ['7 días', '30 días', '90 días'];
-
-  @override
-  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -163,202 +161,38 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
 
   @override
   Widget build(BuildContext context) {
-    super.build(context);
-
     return Scaffold(
       backgroundColor: AnalyticsColors.backgroundPrimary,
-      body: Consumer<OptimizedAnalyticsProvider>(
-        builder: (context, analyticsProvider, child) {
-          // ✅ ARREGLADO: Manejo de estados de carga
-          if (analyticsProvider.isLoading) {
-            return _buildLoadingState();
-          }
+      body: SafeArea(
+        child: Consumer<OptimizedAnalyticsProvider>(
+          builder: (context, analyticsProvider, child) {
+            return FadeTransition(
+              opacity: _fadeAnimation,
+              child: Column(
+                children: [
+                  // Header simplificado como card
+                  _buildSimpleHeader(),
 
-          if (analyticsProvider.errorMessage != null) {
-            return _buildErrorState(analyticsProvider.errorMessage!);
-          }
+                  const SizedBox(height: 16),
 
-          return CustomScrollView(
-            slivers: [
-              // App Bar con animación
-              _buildAnimatedAppBar(),
+                  // Tab bar mejorado
+                  _buildEnhancedTabBar(),
 
-              // Contenido principal
-              SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    // Selector de período mejorado
-                    _buildPeriodSelector(),
+                  const SizedBox(height: 20),
 
-                    const SizedBox(height: 24),
-
-                    // Header con métricas principales
-                    _buildMainHeader(analyticsProvider),
-
-                    const SizedBox(height: 24),
-
-                    // Tabs mejoradas
-                    _buildTabBar(),
-
-                    // Contenido de las tabs
-                    _buildTabContent(analyticsProvider),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  // ============================================================================
-  // ESTADOS DE CARGA Y ERROR - ARREGLADOS
-  // ============================================================================
-  Widget _buildLoadingState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          AnimatedBuilder(
-            animation: _pulseAnimation,
-            builder: (context, child) {
-              return Transform.scale(
-                scale: _pulseAnimation.value,
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: AnalyticsColors.accentGradient,
+                  // Contenido de tabs
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildTrendsTab(analyticsProvider),
+                        _buildPatternsTab(analyticsProvider),
+                        _buildPredictionTab(analyticsProvider),
+                        _buildInsightsTab(analyticsProvider),
+                      ],
                     ),
                   ),
-                  child: const Icon(
-                    Icons.analytics_rounded,
-                    color: Colors.white,
-                    size: 40,
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Analizando tus datos...',
-            style: TextStyle(
-              fontSize: 18,
-              color: AnalyticsColors.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Esto puede tomar unos segundos',
-            style: TextStyle(
-              fontSize: 14,
-              color: AnalyticsColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorState(String error) {
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.all(32),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: AnalyticsColors.backgroundCard,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: AnalyticsColors.chartGradient2[0].withOpacity(0.3),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: AnalyticsColors.chartGradient2[0],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Error al cargar datos',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AnalyticsColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              error,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: AnalyticsColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _loadInitialData,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AnalyticsColors.accentGradient[0],
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              ),
-              child: const Text('Reintentar'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ============================================================================
-  // APP BAR ANIMADO
-  // ============================================================================
-  Widget _buildAnimatedAppBar() {
-    return SliverAppBar(
-      backgroundColor: AnalyticsColors.backgroundPrimary,
-      elevation: 0,
-      floating: true,
-      snap: true,
-      expandedHeight: 100,
-      flexibleSpace: FlexibleSpaceBar(
-        titlePadding: const EdgeInsets.only(left: 24, bottom: 16),
-        title: AnimatedBuilder(
-          animation: _shimmerAnimation,
-          builder: (context, child) {
-            return ShaderMask(
-              shaderCallback: (bounds) => LinearGradient(
-                colors: [
-                  Colors.white,
-                  Colors.white.withOpacity(0.7),
-                  Colors.white,
                 ],
-                stops: [
-                  (_shimmerAnimation.value - 0.3).clamp(0.0, 1.0),
-                  _shimmerAnimation.value.clamp(0.0, 1.0),
-                  (_shimmerAnimation.value + 0.3).clamp(0.0, 1.0),
-                ],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ).createShader(bounds),
-              child: const Text(
-                'Analytics',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
               ),
             );
           },
@@ -368,51 +202,127 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
   }
 
   // ============================================================================
-  // SELECTOR DE PERÍODO MEJORADO
+  // HEADER SIMPLIFICADO COMO CARD
   // ============================================================================
-  Widget _buildPeriodSelector() {
+  Widget _buildSimpleHeader() {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(4),
+      margin: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AnalyticsColors.backgroundCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AnalyticsColors.accentGradient[0].withOpacity(0.3),
+          color: AnalyticsColors.primaryGradient[0].withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.primaryGradient[1].withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: AnalyticsColors.primaryGradient,
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.analytics_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Analytics Avanzados',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AnalyticsColors.textPrimary,
+                      ),
+                    ),
+                    Text(
+                      'Descubre patrones en tu bienestar',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: AnalyticsColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          // Selector de período
+          _buildPeriodSelector(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPeriodSelector() {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        color: AnalyticsColors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: AnalyticsColors.primaryGradient[0].withOpacity(0.2),
+          width: 1,
         ),
       ),
       child: Row(
         children: _periodOptions.asMap().entries.map((entry) {
           final index = entry.key;
-          final period = entry.value;
-          final isSelected = _selectedPeriod == period;
+          final days = entry.value;
+          final label = _periodLabels[index];
+          final isSelected = _selectedPeriod == days;
 
           return Expanded(
             child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedPeriod = period;
-                });
-                _loadInitialData();
-              },
+              onTap: () => _updatePeriod(days),
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(vertical: 12),
+                duration: const Duration(milliseconds: 300),
+                margin: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   gradient: isSelected
-                      ? const LinearGradient(colors: AnalyticsColors.accentGradient)
+                      ? const LinearGradient(colors: AnalyticsColors.primaryGradient)
                       : null,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: isSelected ? [
+                    BoxShadow(
+                      color: AnalyticsColors.primaryGradient[1].withOpacity(0.3),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ] : null,
                 ),
-                child: Text(
-                  _periodLabels[index],
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    color: isSelected
-                        ? Colors.white
-                        : AnalyticsColors.textSecondary,
+                child: Center(
+                  child: Text(
+                    label,
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : AnalyticsColors.textSecondary,
+                      fontSize: 14,
+                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                    ),
                   ),
                 ),
               ),
@@ -424,220 +334,283 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
   }
 
   // ============================================================================
-  // HEADER PRINCIPAL CON MÉTRICAS
+  // TAB BAR MEJORADO
   // ============================================================================
-  Widget _buildMainHeader(OptimizedAnalyticsProvider analyticsProvider) {
-    final summary = analyticsProvider.getDashboardSummary();
-
+  Widget _buildEnhancedTabBar() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 24),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: AnalyticsColors.primaryGradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: AnalyticsColors.primaryGradient[1].withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-            spreadRadius: 5,
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              AnimatedBuilder(
-                animation: _shimmerAnimation,
-                builder: (context, child) {
-                  return ShaderMask(
-                    shaderCallback: (bounds) => LinearGradient(
-                      colors: [
-                        Colors.white,
-                        Colors.white.withOpacity(0.7),
-                        Colors.white,
-                      ],
-                      stops: [
-                        (_shimmerAnimation.value - 0.3).clamp(0.0, 1.0),
-                        _shimmerAnimation.value.clamp(0.0, 1.0),
-                        (_shimmerAnimation.value + 0.3).clamp(0.0, 1.0),
-                      ],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ).createShader(bounds),
-                    child: const Icon(
-                      Icons.analytics_rounded,
-                      color: Colors.white,
-                      size: 32,
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(width: 16),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Analytics Avanzados',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    Text(
-                      'Insights de tu bienestar',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.white70,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ), a
-          const SizedBox(height: 24),
-          // ✅ ARREGLADO: Métricas principales con datos reales
-          Row(
-            children: [
-              Expanded(
-                child: _buildSummaryMetric(
-                  'Días Activos',
-                  (summary['total_entries'] ?? 0).toString(),
-                  AnalyticsColors.chartGradient1[0],
-                ),
-              ),
-              Expanded(
-                child: _buildSummaryMetric(
-                  'Promedio General',
-                  (summary['overall_score'] ?? 0.0).toStringAsFixed(1),
-                  AnalyticsColors.chartGradient2[0],
-                ),
-              ),
-              Expanded(
-                child: _buildSummaryMetric(
-                  'Tendencia',
-                  summary['trend_emoji'] ?? '📊',
-                  AnalyticsColors.chartGradient3[0],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryMetric(String label, String value, Color color) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 12,
-            color: Colors.white70,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  // ============================================================================
-  // TAB BAR MEJORADA
-  // ============================================================================
-  Widget _buildTabBar() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 24),
+      padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: AnalyticsColors.backgroundCard,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AnalyticsColors.accentGradient[0].withOpacity(0.3),
+          color: AnalyticsColors.primaryGradient[0].withOpacity(0.3),
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.primaryGradient[1].withOpacity(0.2),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: TabBar(
         controller: _tabController,
         indicator: BoxDecoration(
-          gradient: const LinearGradient(colors: AnalyticsColors.accentGradient),
-          borderRadius: BorderRadius.circular(12),
+          gradient: const LinearGradient(
+            colors: AnalyticsColors.accentGradient,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: AnalyticsColors.accentGradient[1].withOpacity(0.4),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
-        indicatorSize: TabBarIndicatorSize.tab,
-        indicatorPadding: const EdgeInsets.all(4),
         labelColor: Colors.white,
         unselectedLabelColor: AnalyticsColors.textSecondary,
-        labelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.normal,
-        ),
+        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.normal),
         tabs: const [
-          Tab(text: 'Resumen'),
-          Tab(text: 'Patrones'),
-          Tab(text: 'Insights'),
-          Tab(text: 'Predicciones'),
+          Tab(text: '📈 Tendencias'),
+          Tab(text: '🕐 Patrones'),
+          Tab(text: '🔮 Predicción'),
+          Tab(text: '💡 Insights'),
         ],
       ),
     );
   }
 
   // ============================================================================
-  // CONTENIDO DE TABS
+  // TAB 1: TENDENCIAS Y COMPARACIONES
   // ============================================================================
-  Widget _buildTabContent(OptimizedAnalyticsProvider analyticsProvider) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.8,
-      margin: const EdgeInsets.only(top: 24),
-      child: TabBarView(
-        controller: _tabController,
-        children: [
-          _buildSummaryTab(analyticsProvider),
-          _buildPatternsTab(analyticsProvider),
-          _buildInsightsTab(analyticsProvider),
-          _buildPredictionsTab(analyticsProvider),
-        ],
-      ),
-    );
-  }
-
-  // ============================================================================
-  // TAB 1: RESUMEN
-  // ============================================================================
-  Widget _buildSummaryTab(OptimizedAnalyticsProvider analyticsProvider) {
+  Widget _buildTrendsTab(OptimizedAnalyticsProvider analyticsProvider) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          _buildMoodChart(analyticsProvider),
+          // Comparación semanal con datos reales
+          _buildWeeklyComparisonCard(analyticsProvider),
+
           const SizedBox(height: 20),
-          _buildWeeklyComparison(analyticsProvider),
+
+          // Gráfico de mood con datos reales
+          _buildDetailedMoodChart(analyticsProvider),
+
           const SizedBox(height: 20),
-          _buildStreakCard(analyticsProvider),
+
+          // Métricas de tendencia con datos reales
+          _buildTrendMetrics(analyticsProvider),
+
+          const SizedBox(height: 20),
+
+          // Análisis del día actual
+          _buildCurrentDayAnalysis(analyticsProvider),
+
+          const SizedBox(height: 20),
+
+          // Quick stats de mood
+          _buildQuickMoodStats(analyticsProvider),
         ],
       ),
     );
   }
 
-  Widget _buildMoodChart(OptimizedAnalyticsProvider analyticsProvider) {
+  Widget _buildWeeklyComparisonCard(OptimizedAnalyticsProvider analyticsProvider) {
+    final weeklyData = analyticsProvider.getWeeklyComparison();
+    final hasData = weeklyData['has_data'] as bool? ?? false;
+
+    if (!hasData) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AnalyticsColors.backgroundCard,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: AnalyticsColors.textTertiary.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              Icons.insights_rounded,
+              color: AnalyticsColors.textTertiary,
+              size: 48,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              weeklyData['message'] ?? 'Necesitas más datos para comparación semanal',
+              style: const TextStyle(
+                color: AnalyticsColors.textSecondary,
+                fontSize: 16,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // 🛠️ FIX: Cast to 'num?' first, then convert to 'double' to prevent type errors.
+    final moodChange = (weeklyData['mood_change'] as num?)?.toDouble() ?? 0.0;
+    final energyChange = (weeklyData['energy_change'] as num?)?.toDouble() ?? 0.0;
+    final stressChange = (weeklyData['stress_change'] as num?)?.toDouble() ?? 0.0;
+
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _pulseAnimation.value,
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AnalyticsColors.backgroundCard,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: AnalyticsColors.chartGradient1[0].withOpacity(0.3),
+                width: 1,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: AnalyticsColors.chartGradient1[1].withOpacity(0.3),
+                  blurRadius: 25,
+                  offset: const Offset(0, 12),
+                  spreadRadius: 3,
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: AnalyticsColors.chartGradient1,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.compare_arrows_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Comparación Semanal',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AnalyticsColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // Cambios en métricas
+                _buildChangeMetric(
+                  'Estado de Ánimo',
+                  moodChange,
+                  Icons.sentiment_satisfied_alt,
+                  AnalyticsColors.chartGradient1[0],
+                ),
+                const SizedBox(height: 12),
+                _buildChangeMetric(
+                  'Nivel de Energía',
+                  energyChange,
+                  Icons.battery_charging_full,
+                  AnalyticsColors.chartGradient3[0],
+                ),
+                const SizedBox(height: 12),
+                _buildChangeMetric(
+                  'Nivel de Estrés',
+                  stressChange,
+                  Icons.psychology,
+                  AnalyticsColors.chartGradient2[0],
+                  isStress: true,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildChangeMetric(String label, double change, IconData icon, Color color, {bool isStress = false}) {
+    final isPositive = isStress ? change < 0 : change > 0;
+    final changeText = '${change >= 0 ? '+' : ''}${change.toStringAsFixed(1)}';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AnalyticsColors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: color.withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                color: AnalyticsColors.textPrimary,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: isPositive
+                  ? AnalyticsColors.chartGradient3[0].withOpacity(0.2)
+                  : AnalyticsColors.chartGradient2[0].withOpacity(0.2),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  isPositive ? Icons.trending_up : Icons.trending_down,
+                  color: isPositive
+                      ? AnalyticsColors.chartGradient3[0]
+                      : AnalyticsColors.chartGradient2[0],
+                  size: 16,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  changeText,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isPositive
+                        ? AnalyticsColors.chartGradient3[0]
+                        : AnalyticsColors.chartGradient2[0],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailedMoodChart(OptimizedAnalyticsProvider analyticsProvider) {
     final moodData = analyticsProvider.getMoodChartData();
 
     return Container(
@@ -647,7 +620,15 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: AnalyticsColors.accentGradient[0].withOpacity(0.3),
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.accentGradient[1].withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -660,91 +641,140 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
               color: AnalyticsColors.textPrimary,
             ),
           ),
+
           const SizedBox(height: 20),
-          // ✅ ARREGLADO: Chart simple con datos reales
-          SizedBox(
-            height: 200,
-            child: moodData.isEmpty
-                ? _buildEmptyChart()
-                : _buildSimpleMoodChart(moodData),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildEmptyChart() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.show_chart,
-            size: 64,
-            color: AnalyticsColors.textSecondary.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No hay datos suficientes',
-            style: TextStyle(
-              fontSize: 16,
-              color: AnalyticsColors.textSecondary,
-            ),
-          ),
-          Text(
-            'Completa más reflexiones para ver gráficos',
-            style: TextStyle(
-              fontSize: 12,
-              color: AnalyticsColors.textTertiary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSimpleMoodChart(List<Map<String, dynamic>> moodData) {
-    final maxValue = moodData.map((e) => e['mood'] as double? ?? 0.0).reduce(math.max);
-    final minValue = moodData.map((e) => e['mood'] as double? ?? 0.0).reduce(math.min);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: moodData.asMap().entries.map((entry) {
-          final index = entry.key;
-          final data = entry.value;
-          final mood = data['mood'] as double? ?? 0.0;
-          final normalizedHeight = maxValue > 0 ? (mood / maxValue) * 150 : 0.0;
-
-          return AnimatedContainer(
-            duration: Duration(milliseconds: 500 + (index * 100)),
-            width: 20,
-            height: normalizedHeight,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: mood >= 7
-                    ? AnalyticsColors.chartGradient3
-                    : mood >= 5
-                    ? AnalyticsColors.chartGradient1
-                    : AnalyticsColors.chartGradient2,
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
+          if (moodData.isEmpty)
+            Container(
+              height: 200,
+              decoration: BoxDecoration(
+                color: AnalyticsColors.backgroundSecondary,
+                borderRadius: BorderRadius.circular(12),
               ),
-              borderRadius: BorderRadius.circular(10),
+              child: const Center(
+                child: Text(
+                  'No hay suficientes datos para mostrar el gráfico',
+                  style: TextStyle(
+                    color: AnalyticsColors.textSecondary,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            )
+          else
+            SizedBox(
+              height: 200,
+              child: LineChart(
+                LineChartData(
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: 2,
+                    getDrawingHorizontalLine: (value) {
+                      return FlLine(
+                        color: AnalyticsColors.textTertiary.withOpacity(0.2),
+                        strokeWidth: 1,
+                      );
+                    },
+                  ),
+                  titlesData: FlTitlesData(
+                    show: true,
+                    rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 30,
+                        interval: moodData.length > 7 ? moodData.length / 7 : 1,
+                        getTitlesWidget: (value, meta) {
+                          if (value.toInt() >= 0 && value.toInt() < moodData.length) {
+                            final date = DateTime.parse(moodData[value.toInt()]['date']);
+                            return Text(
+                              '${date.day}/${date.month}',
+                              style: const TextStyle(
+                                color: AnalyticsColors.textTertiary,
+                                fontSize: 10,
+                              ),
+                            );
+                          }
+                          return const Text('');
+                        },
+                      ),
+                    ),
+                    leftTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        interval: 2,
+                        reservedSize: 30,
+                        getTitlesWidget: (value, meta) {
+                          return Text(
+                            value.toInt().toString(),
+                            style: const TextStyle(
+                              color: AnalyticsColors.textSecondary,
+                              fontSize: 12,
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  borderData: FlBorderData(show: false),
+                  minX: 0,
+                  maxX: moodData.length.toDouble() - 1,
+                  minY: 0,
+                  maxY: 10,
+                  lineBarsData: [
+                    // Línea de Mood
+                    LineChartBarData(
+                      spots: moodData.asMap().entries.map((entry) {
+                        return FlSpot(
+                          entry.key.toDouble(),
+                          (entry.value['mood'] as num).toDouble(),
+                        );
+                      }).toList(),
+                      isCurved: true,
+                      gradient: const LinearGradient(
+                        colors: AnalyticsColors.accentGradient,
+                      ),
+                      barWidth: 3,
+                      isStrokeCapRound: true,
+                      dotData: FlDotData(
+                        show: true,
+                        getDotPainter: (spot, percent, barData, index) {
+                          return FlDotCirclePainter(
+                            radius: 4,
+                            color: AnalyticsColors.accentGradient[1],
+                            strokeWidth: 2,
+                            strokeColor: AnalyticsColors.backgroundCard,
+                          );
+                        },
+                      ),
+                      belowBarData: BarAreaData(
+                        show: true,
+                        gradient: LinearGradient(
+                          colors: AnalyticsColors.accentGradient
+                              .map((color) => color.withOpacity(0.2))
+                              .toList(),
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          );
-        }).toList(),
+        ],
       ),
     );
   }
 
-  Widget _buildWeeklyComparison(OptimizedAnalyticsProvider analyticsProvider) {
+  Widget _buildTrendMetrics(OptimizedAnalyticsProvider analyticsProvider) {
     final summary = analyticsProvider.getDashboardSummary();
-    final totalEntries = summary['total_entries'] as int? ?? 0;
-    final overallScore = summary['overall_score'] as double? ?? 0.0;
+    // 🛠️ FIX: Safe casting for totalEntries and overallScore
+    final totalEntries = (summary['total_entries'] as num?)?.toInt() ?? 0;
+    final overallScore = (summary['overall_score'] as num?)?.toDouble() ?? 0.0;
+    final trendEmoji = summary['trend_emoji'] ?? '📊';
 
     return Row(
       children: [
@@ -752,7 +782,7 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
           child: _buildTrendMetricCard(
             'Entradas Totales',
             totalEntries.toString(),
-            '📈 +$totalEntries',
+            trendEmoji,
             AnalyticsColors.chartGradient3,
           ),
         ),
@@ -761,7 +791,7 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
           child: _buildTrendMetricCard(
             'Puntuación Promedio',
             overallScore.toStringAsFixed(1),
-            '📊 ${overallScore >= 5 ? '+' : ''}${(overallScore - 5).toStringAsFixed(1)}',
+            '📊 /10',
             AnalyticsColors.chartGradient2,
           ),
         ),
@@ -819,10 +849,11 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
     );
   }
 
-  Widget _buildStreakCard(OptimizedAnalyticsProvider analyticsProvider) {
-    final streakData = analyticsProvider.getStreakData();
-    final currentStreak = streakData['current_streak'] as int? ?? 0;
-    final longestStreak = streakData['longest_streak'] as int? ?? 0;
+  Widget _buildCurrentDayAnalysis(OptimizedAnalyticsProvider analyticsProvider) {
+    final wellbeingStatus = analyticsProvider.getWellbeingStatus();
+    // 🛠️ FIX: Safe casting for score
+    final score = (wellbeingStatus['score'] as num?)?.toInt() ?? 0;
+    final hasEntry = score > 0;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -830,8 +861,20 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
         color: AnalyticsColors.backgroundCard,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AnalyticsColors.chartGradient3[0].withOpacity(0.3),
+          color: hasEntry
+              ? AnalyticsColors.chartGradient3[0].withOpacity(0.3)
+              : AnalyticsColors.chartGradient2[0].withOpacity(0.3),
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: hasEntry
+                ? AnalyticsColors.chartGradient3[1].withOpacity(0.2)
+                : AnalyticsColors.chartGradient2[1].withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -841,18 +884,22 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: AnalyticsColors.chartGradient3),
+                  gradient: LinearGradient(
+                    colors: hasEntry
+                        ? AnalyticsColors.chartGradient3
+                        : AnalyticsColors.chartGradient2,
+                  ),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
-                  Icons.local_fire_department,
+                child: Icon(
+                  hasEntry ? Icons.check_circle_rounded : Icons.access_time_rounded,
                   color: Colors.white,
-                  size: 24,
+                  size: 20,
                 ),
               ),
               const SizedBox(width: 12),
               const Text(
-                'Racha de Reflexiones',
+                'Estado Actual de Bienestar',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -861,81 +908,54 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      '$currentStreak',
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: AnalyticsColors.chartGradient3[0],
-                      ),
+
+          const SizedBox(height: 16),
+
+          Text(
+            wellbeingStatus['message'] ?? '',
+            style: const TextStyle(
+              fontSize: 16,
+              color: AnalyticsColors.textPrimary,
+              height: 1.4,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AnalyticsColors.backgroundSecondary,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Text(wellbeingStatus['emoji'] ?? '💡', style: const TextStyle(fontSize: 20)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Nivel: ${wellbeingStatus['level'] ?? 'Sin datos'}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AnalyticsColors.textSecondary,
+                      height: 1.3,
                     ),
-                    Text(
-                      'Días actuales',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AnalyticsColors.textSecondary,
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-              Container(
-                width: 1,
-                height: 60,
-                color: AnalyticsColors.textTertiary,
-              ),
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      '$longestStreak',
-                      style: TextStyle(
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        color: AnalyticsColors.chartGradient3[1],
-                      ),
-                    ),
-                    Text(
-                      'Récord personal',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: AnalyticsColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  // ============================================================================
-  // TAB 2: PATRONES
-  // ============================================================================
-  Widget _buildPatternsTab(OptimizedAnalyticsProvider analyticsProvider) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          _buildCorrelationsCard(analyticsProvider),
-          const SizedBox(height: 20),
-          _buildHourlyPatternsCard(analyticsProvider),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCorrelationsCard(OptimizedAnalyticsProvider analyticsProvider) {
-    final correlations = _getWellnessCorrelations();
+  Widget _buildQuickMoodStats(OptimizedAnalyticsProvider analyticsProvider) {
+    final wellbeingStatus = analyticsProvider.getWellbeingStatus();
+    // 🛠️ FIX: Safe casting for mood, energy, and stress
+    final avgMood = (wellbeingStatus['mood'] as num?)?.toDouble() ?? 0.0;
+    final avgEnergy = (wellbeingStatus['energy'] as num?)?.toDouble() ?? 0.0;
+    final avgStress = (wellbeingStatus['stress'] as num?)?.toDouble() ?? 0.0;
 
     return Container(
       padding: const EdgeInsets.all(24),
@@ -944,21 +964,291 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: AnalyticsColors.lightGradient[0].withOpacity(0.3),
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.lightGradient[1].withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Correlaciones de Bienestar',
+            'Métricas Detalladas',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: AnalyticsColors.textPrimary,
             ),
           ),
+          const SizedBox(height: 20),
+          _buildStatRow('Estado de Ánimo', avgMood, Icons.sentiment_satisfied_alt),
           const SizedBox(height: 16),
-          ...correlations.map((correlation) => _buildCorrelationItem(correlation)),
+          _buildStatRow('Nivel de Energía', avgEnergy, Icons.battery_charging_full),
+          const SizedBox(height: 16),
+          _buildStatRow('Nivel de Estrés', avgStress, Icons.psychology, isStress: true),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, double value, IconData icon, {bool isStress = false}) {
+    final color = isStress
+        ? (value <= 3 ? AnalyticsColors.chartGradient3[0] :
+    value <= 6 ? AnalyticsColors.chartGradient1[0] : AnalyticsColors.chartGradient2[0])
+        : (value >= 7 ? AnalyticsColors.chartGradient3[0] :
+    value >= 4 ? AnalyticsColors.chartGradient1[0] : AnalyticsColors.chartGradient2[0]);
+
+    return Row(
+      children: [
+        Icon(icon, color: color, size: 24),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: AnalyticsColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 4),
+              LinearProgressIndicator(
+                value: value / 10,
+                backgroundColor: AnalyticsColors.backgroundSecondary,
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+                minHeight: 6,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 16),
+        Text(
+          value.toStringAsFixed(1),
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================================
+  // TAB 2: PATRONES Y HORAS PICO
+  // ============================================================================
+  Widget _buildPatternsTab(OptimizedAnalyticsProvider analyticsProvider) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          _buildPeakPerformanceCard(analyticsProvider),
+
+          const SizedBox(height: 20),
+
+          _buildMoodCorrelationsCard(analyticsProvider),
+
+          const SizedBox(height: 20),
+
+          _buildHourlyPatternsCard(analyticsProvider),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPeakPerformanceCard(OptimizedAnalyticsProvider analyticsProvider) {
+    final peakHours = _getPeakPerformanceHours(analyticsProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AnalyticsColors.backgroundCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AnalyticsColors.lightGradient[0].withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.lightGradient[1].withOpacity(0.3),
+            blurRadius: 25,
+            offset: const Offset(0, 12),
+            spreadRadius: 3,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              AnimatedBuilder(
+                animation: _shimmerAnimation,
+                builder: (context, child) {
+                  return Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AnalyticsColors.lightGradient[0],
+                          AnalyticsColors.lightGradient[1],
+                          AnalyticsColors.lightGradient[0],
+                        ],
+                        stops: [
+                          (_shimmerAnimation.value - 0.3).clamp(0.0, 1.0),
+                          _shimmerAnimation.value.clamp(0.0, 1.0),
+                          (_shimmerAnimation.value + 0.3).clamp(0.0, 1.0),
+                        ],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.schedule_rounded,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Análisis de Patrones Horarios',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AnalyticsColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          ...peakHours.map((hour) => _buildPeakHourItem(hour)).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPeakHourItem(Map<String, dynamic> hour) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AnalyticsColors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AnalyticsColors.lightGradient[0].withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: AnalyticsColors.lightGradient,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                hour['emoji'],
+                style: const TextStyle(fontSize: 20),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  hour['timeRange'],
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: AnalyticsColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  hour['description'],
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AnalyticsColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: AnalyticsColors.lightGradient[0].withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '${hour['score']}/10',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: AnalyticsColors.lightGradient[0],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMoodCorrelationsCard(OptimizedAnalyticsProvider analyticsProvider) {
+    final correlations = _getMoodCorrelations(analyticsProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AnalyticsColors.backgroundCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AnalyticsColors.chartGradient2[0].withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.chartGradient2[1].withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Factores que Influyen en tu Bienestar',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AnalyticsColors.textPrimary,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          ...correlations.map((correlation) => _buildCorrelationItem(correlation)).toList(),
         ],
       ),
     );
@@ -973,6 +1263,7 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: AnalyticsColors.chartGradient2[0].withOpacity(0.2),
+          width: 1,
         ),
       ),
       child: Row(
@@ -981,7 +1272,9 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
             correlation['emoji'],
             style: const TextStyle(fontSize: 24),
           ),
+
           const SizedBox(width: 16),
+
           Expanded(
             child: Text(
               correlation['description'],
@@ -991,6 +1284,7 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
               ),
             ),
           ),
+
           Container(
             width: 60,
             height: 8,
@@ -1000,7 +1294,7 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
             ),
             child: FractionallySizedBox(
               alignment: Alignment.centerLeft,
-              widthFactor: correlation['strength'],
+              widthFactor: (correlation['strength'] as num).toDouble(),
               child: Container(
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(
@@ -1017,152 +1311,190 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
   }
 
   Widget _buildHourlyPatternsCard(OptimizedAnalyticsProvider analyticsProvider) {
+    final hourlyData = _getHourlyPatternData(analyticsProvider);
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: AnalyticsColors.backgroundCard,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: AnalyticsColors.chartGradient1[0].withOpacity(0.3),
+          color: AnalyticsColors.chartGradient3[0].withOpacity(0.3),
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.chartGradient3[1].withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Patrones por Hora del Día',
+            'Actividad por Hora del Día',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: AnalyticsColors.textPrimary,
             ),
           ),
+
           const SizedBox(height: 20),
-          _buildHourlyChart(),
+
+          // Heatmap visual mejorado
+          SizedBox(
+            height: 100,
+            child: Row(
+              children: List.generate(24, (hour) {
+                final intensity = hourlyData[hour] ?? 0.0;
+                return Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 1),
+                    decoration: BoxDecoration(
+                      color: AnalyticsColors.chartGradient3[0].withOpacity(intensity),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    child: Center(
+                      child: intensity > 0.5
+                          ? Text(
+                        hour.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                          : null,
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          const Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                '00:00',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AnalyticsColors.textSecondary,
+                ),
+              ),
+              Text(
+                '12:00',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AnalyticsColors.textSecondary,
+                ),
+              ),
+              Text(
+                '23:59',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AnalyticsColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildHourlyChart() {
-    final hourlyData = _getHourlyMoodData();
-
-    return Container(
-      height: 150,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: hourlyData.asMap().entries.map((entry) {
-          final index = entry.key;
-          final value = entry.value;
-          final height = (value / 10.0) * 120;
-
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              AnimatedContainer(
-                duration: Duration(milliseconds: 500 + (index * 50)),
-                width: 16,
-                height: height,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: AnalyticsColors.chartGradient1,
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '${index * 4}h',
-                style: TextStyle(
-                  fontSize: 10,
-                  color: AnalyticsColors.textSecondary,
-                ),
-              ),
-            ],
-          );
-        }).toList(),
-      ),
-    );
-  }
-
   // ============================================================================
-  // TAB 3: INSIGHTS
+  // TAB 3: PREDICCIÓN Y ANÁLISIS FUTURO
   // ============================================================================
-  Widget _buildInsightsTab(OptimizedAnalyticsProvider analyticsProvider) {
-    final insights = analyticsProvider.getHighlightedInsights();
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: insights.map((insight) => Container(
-          margin: const EdgeInsets.only(bottom: 16),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: AnalyticsColors.backgroundCard,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: AnalyticsColors.lightGradient[0].withOpacity(0.3),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    insight['emoji'] ?? '💡',
-                    style: const TextStyle(fontSize: 24),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      insight['title'] ?? 'Insight',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AnalyticsColors.textPrimary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                insight['message'] ?? 'No hay mensaje disponible',
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: AnalyticsColors.textSecondary,
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
-        )).toList(),
-      ),
-    );
-  }
-
-  // ============================================================================
-  // TAB 4: PREDICCIONES
-  // ============================================================================
-  Widget _buildPredictionsTab(OptimizedAnalyticsProvider analyticsProvider) {
-    final prediction = _getWellnessPrediction(analyticsProvider);
-
+  Widget _buildPredictionTab(OptimizedAnalyticsProvider analyticsProvider) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          Container(
-            padding: const EdgeInsets.all(32),
-            decoration: BoxDecoration(
-              color: AnalyticsColors.backgroundCard,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: AnalyticsColors.primaryGradient[0].withOpacity(0.3),
+          _buildWellbeingPredictionCard(analyticsProvider),
+
+          const SizedBox(height: 20),
+
+          _buildDashboardSummaryCard(analyticsProvider),
+
+          const SizedBox(height: 20),
+
+          _buildAIInsightsCard(analyticsProvider),
+
+          const SizedBox(height: 20),
+
+          _buildStressAlertsCard(analyticsProvider),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWellbeingPredictionCard(OptimizedAnalyticsProvider analyticsProvider) {
+    final prediction = _getWellbeingPrediction(analyticsProvider);
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AnalyticsColors.backgroundCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AnalyticsColors.primaryGradient[0].withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.primaryGradient[1].withOpacity(0.4),
+            blurRadius: 30,
+            offset: const Offset(0, 15),
+            spreadRadius: 5,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: AnalyticsColors.primaryGradient,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.psychology_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
               ),
+              const SizedBox(width: 12),
+              const Text(
+                'Predicción de Bienestar',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AnalyticsColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 20),
+
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: AnalyticsColors.primaryGradient.map((c) => c.withOpacity(0.1)).toList(),
+              ),
+              borderRadius: BorderRadius.circular(16),
             ),
             child: Column(
               children: [
@@ -1170,7 +1502,9 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
                   prediction['emoji'],
                   style: const TextStyle(fontSize: 48),
                 ),
+
                 const SizedBox(height: 12),
+
                 Text(
                   prediction['prediction'],
                   style: const TextStyle(
@@ -1179,7 +1513,9 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
                     color: AnalyticsColors.textPrimary,
                   ),
                 ),
+
                 const SizedBox(height: 8),
+
                 Text(
                   'Basado en $_selectedPeriod días de datos',
                   style: const TextStyle(
@@ -1187,7 +1523,9 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
                     color: AnalyticsColors.textSecondary,
                   ),
                 ),
+
                 const SizedBox(height: 16),
+
                 Text(
                   prediction['recommendation'],
                   style: const TextStyle(
@@ -1205,61 +1543,855 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
     );
   }
 
+  Widget _buildDashboardSummaryCard(OptimizedAnalyticsProvider analyticsProvider) {
+    final summary = analyticsProvider.getDashboardSummary();
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AnalyticsColors.backgroundCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AnalyticsColors.accentGradient[0].withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.accentGradient[1].withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Resumen Ejecutivo',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AnalyticsColors.textPrimary,
+            ),
+          ),
+
+          const SizedBox(height: 20),
+
+          Row(
+            children: [
+              Expanded(
+                child: _buildSummaryMetric(
+                  'Días Activos',
+                  ((summary['total_entries'] as num?)?.toInt() ?? 0).toString(),
+                  AnalyticsColors.chartGradient1[0],
+                ),
+              ),
+              Expanded(
+                child: _buildSummaryMetric(
+                  'Promedio General',
+                  ((summary['overall_score'] as num?)?.toDouble() ?? 0.0).toStringAsFixed(1),
+                  AnalyticsColors.chartGradient2[0],
+                ),
+              ),
+              Expanded(
+                child: _buildSummaryMetric(
+                  'Tendencia',
+                  summary['trend_emoji'] ?? '📊',
+                  AnalyticsColors.chartGradient3[0],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryMetric(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            color: AnalyticsColors.textSecondary,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAIInsightsCard(OptimizedAnalyticsProvider analyticsProvider) {
+    final insights = analyticsProvider.getHighlightedInsights();
+    final primaryInsight = insights.isNotEmpty ? insights.first : null;
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AnalyticsColors.backgroundCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AnalyticsColors.lightGradient[0].withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.lightGradient[1].withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              AnimatedBuilder(
+                animation: _pulseAnimation,
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _pulseAnimation.value,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: AnalyticsColors.lightGradient,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.auto_awesome_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Insights de IA',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: AnalyticsColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          if (primaryInsight != null)
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AnalyticsColors.backgroundSecondary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    primaryInsight['emoji'] ?? '🧠',
+                    style: const TextStyle(fontSize: 24),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          primaryInsight['title'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AnalyticsColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          primaryInsight['description'] ?? '',
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: AnalyticsColors.textSecondary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AnalyticsColors.backgroundSecondary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                '🧠 Continúa registrando tu progreso diario para obtener insights personalizados de IA.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AnalyticsColors.textPrimary,
+                  height: 1.4,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStressAlertsCard(OptimizedAnalyticsProvider analyticsProvider) {
+    final stressAlerts = analyticsProvider.getStressAlerts();
+    final requiresAttention = stressAlerts['requires_attention'] as bool? ?? false;
+
+    if (!requiresAttention) {
+      return Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AnalyticsColors.backgroundCard,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: AnalyticsColors.chartGradient3[0].withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: AnalyticsColors.chartGradient3,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.check_circle_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Text(
+                'Estrés bajo - ¡Continúa así!',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AnalyticsColors.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AnalyticsColors.backgroundCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AnalyticsColors.chartGradient2[0].withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.chartGradient2[1].withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: AnalyticsColors.chartGradient2,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  stressAlerts['alert_icon'] ?? '⚠️',
+                  style: const TextStyle(fontSize: 20),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  stressAlerts['alert_title'] ?? 'Alerta de Estrés',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AnalyticsColors.textPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          const Text(
+            'Recomendaciones:',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AnalyticsColors.textPrimary,
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          ...((stressAlerts['recommendations'] as List?) ?? [])
+              .map((recommendation) => Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 6),
+                  width: 4,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AnalyticsColors.chartGradient2[0],
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    recommendation.toString(),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AnalyticsColors.textSecondary,
+                      height: 1.4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ))
+              .toList(),
+        ],
+      ),
+    );
+  }
+
   // ============================================================================
-  // MÉTODOS HELPER - ARREGLADOS CON DATOS SIMULADOS REALISTAS
+  // TAB 4: INSIGHTS DETALLADOS
   // ============================================================================
-  List<Map<String, dynamic>> _getWellnessCorrelations() {
-    return [
+  Widget _buildInsightsTab(OptimizedAnalyticsProvider analyticsProvider) {
+    final insights = analyticsProvider.getInsights();
+    final highlightedInsights = analyticsProvider.getHighlightedInsights();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          // Insights destacados
+          ...highlightedInsights.map((insight) => _buildHighlightedInsightCard(insight)).toList(),
+
+          if (highlightedInsights.isNotEmpty) const SizedBox(height: 20),
+
+          // Insights generales
+          ...insights.map((insight) => _buildInsightCard(insight)).toList(),
+
+          const SizedBox(height: 20),
+
+          _buildRecommendationsCard(analyticsProvider),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHighlightedInsightCard(Map<String, String> insight) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: AnalyticsColors.primaryGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.primaryGradient[1].withOpacity(0.4),
+            blurRadius: 25,
+            offset: const Offset(0, 12),
+            spreadRadius: 3,
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Text(
+            insight['emoji'] ?? '💡',
+            style: const TextStyle(fontSize: 40),
+          ),
+
+          const SizedBox(width: 20),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  insight['title'] ?? 'Insight Destacado',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  insight['description'] ?? 'Descripción del insight',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInsightCard(Map<String, String> insight) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AnalyticsColors.backgroundCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AnalyticsColors.accentGradient[0].withOpacity(0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.accentGradient[1].withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: const LinearGradient(
+                colors: AnalyticsColors.accentGradient,
+              ),
+            ),
+            child: Center(
+              child: Text(
+                insight['icon'] ?? '📊',
+                style: const TextStyle(fontSize: 24),
+              ),
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  insight['title'] ?? 'Insight',
+                  style: const TextStyle(
+                    color: AnalyticsColors.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  insight['description'] ?? 'Descripción',
+                  style: const TextStyle(
+                    color: AnalyticsColors.textSecondary,
+                    fontSize: 14,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecommendationsCard(OptimizedAnalyticsProvider analyticsProvider) {
+    final recommendations = analyticsProvider.getTopRecommendations();
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AnalyticsColors.backgroundCard,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: AnalyticsColors.lightGradient[0].withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AnalyticsColors.lightGradient[1].withOpacity(0.2),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Recomendaciones Personalizadas',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AnalyticsColors.textPrimary,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          if (recommendations.isEmpty)
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AnalyticsColors.backgroundSecondary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: Text(
+                  'Continúa registrando tu progreso para obtener recomendaciones personalizadas',
+                  style: TextStyle(
+                    color: AnalyticsColors.textSecondary,
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          else
+            ...recommendations.take(3).map((rec) => _buildRecommendationItem(rec)).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecommendationItem(Map<String, dynamic> recommendation) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AnalyticsColors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AnalyticsColors.lightGradient[0].withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: AnalyticsColors.lightGradient,
+              ),
+            ),
+            child: const Icon(
+              Icons.lightbulb_rounded,
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  recommendation['title'] ?? 'Recomendación',
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AnalyticsColors.textPrimary,
+                  ),
+                ),
+                if (recommendation['description'] != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    recommendation['description'],
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AnalyticsColors.textSecondary,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================================
+  // MÉTODOS HELPER MEJORADOS CON DATOS REALES
+  // ============================================================================
+
+  List<Map<String, dynamic>> _getPeakPerformanceHours(OptimizedAnalyticsProvider analyticsProvider) {
+    final moodData = analyticsProvider.getMoodChartData();
+
+    if (moodData.isEmpty) {
+      return [
+        {
+          'timeRange': 'Sin datos',
+          'description': 'Registra más entradas para identificar patrones',
+          'score': 0.0,
+          'emoji': '📊',
+        },
+      ];
+    }
+
+    // Analizar datos por hora del día
+    final hourlyStats = <int, List<double>>{};
+
+    for (final entry in moodData) {
+      final date = DateTime.parse(entry['date']);
+      final hour = date.hour;
+      final mood = (entry['mood'] as num).toDouble();
+
+      hourlyStats.putIfAbsent(hour, () => []).add(mood);
+    }
+
+    // Calcular promedios por hora
+    final hourlyAverages = hourlyStats.map((hour, moods) {
+      final avg = moods.reduce((a, b) => a + b) / moods.length;
+      return MapEntry(hour, avg);
+    });
+
+    // Identificar las mejores horas
+    final sortedHours = hourlyAverages.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    final peakHours = <Map<String, dynamic>>[];
+
+    // Tomar las 3 mejores horas si hay suficientes datos
+    for (int i = 0; i < math.min(3, sortedHours.length); i++) {
+      final hour = sortedHours[i].key;
+      final score = sortedHours[i].value;
+
+      String timeRange;
+      String description;
+      String emoji;
+
+      if (hour >= 5 && hour < 12) {
+        timeRange = '${hour}:00 - ${hour + 2}:00 AM';
+        description = 'Mañana productiva';
+        emoji = '🌅';
+      } else if (hour >= 12 && hour < 17) {
+        timeRange = '${hour}:00 - ${hour + 2}:00 PM';
+        description = 'Tarde activa';
+        emoji = '☀️';
+      } else if (hour >= 17 && hour < 22) {
+        timeRange = '${hour}:00 - ${hour + 2}:00 PM';
+        description = 'Noche tranquila';
+        emoji = '🌙';
+      } else {
+        timeRange = '${hour}:00 - ${hour + 2}:00';
+        description = 'Horario nocturno';
+        emoji = '🌃';
+      }
+
+      peakHours.add({
+        'timeRange': timeRange,
+        'description': description,
+        'score': score.toStringAsFixed(1),
+        'emoji': emoji,
+      });
+    }
+
+    return peakHours.isNotEmpty ? peakHours : [
       {
-        'emoji': '😴',
-        'description': 'El sueño de calidad mejora el estado de ánimo en un 70%',
-        'strength': 0.7,
-      },
-      {
-        'emoji': '🏃‍♀️',
-        'description': 'El ejercicio regular aumenta la energía en un 65%',
-        'strength': 0.65,
-      },
-      {
-        'emoji': '🧘',
-        'description': 'La meditación reduce el estrés en un 55%',
-        'strength': 0.55,
-      },
-      {
-        'emoji': '💧',
-        'description': 'La hidratación afecta la concentración en un 45%',
-        'strength': 0.45,
+        'timeRange': 'Analizando...',
+        'description': 'Necesitas más datos para identificar patrones',
+        'score': '0.0',
+        'emoji': '📈',
       },
     ];
   }
 
-  List<double> _getHourlyMoodData() {
-    // Simular datos por cada 4 horas del día
-    return [5.2, 6.8, 7.5, 8.2, 7.8, 6.5]; // 0h, 4h, 8h, 12h, 16h, 20h
+  List<Map<String, dynamic>> _getMoodCorrelations(OptimizedAnalyticsProvider analyticsProvider) {
+    final wellbeingStatus = analyticsProvider.getWellbeingStatus();
+    final correlations = <Map<String, dynamic>>[];
+
+    // 🛠️ FIX: Safe casting for mood, energy, and stress
+    final mood = (wellbeingStatus['mood'] as num?)?.toDouble() ?? 5.0;
+    final energy = (wellbeingStatus['energy'] as num?)?.toDouble() ?? 5.0;
+    final stress = (wellbeingStatus['stress'] as num?)?.toDouble() ?? 5.0;
+
+    // Correlación sueño-mood
+    if (mood >= 7) {
+      correlations.add({
+        'emoji': '😴',
+        'description': 'Tu buen estado de ánimo sugiere buena calidad de sueño',
+        'strength': 0.8,
+      });
+    } else if (mood < 5) {
+      correlations.add({
+        'emoji': '😴',
+        'description': 'Mejorar el sueño podría elevar tu estado de ánimo',
+        'strength': 0.6,
+      });
+    }
+
+    // Correlación ejercicio-energía
+    if (energy >= 7) {
+      correlations.add({
+        'emoji': '🏃‍♀️',
+        'description': 'Tu alta energía sugiere buena actividad física',
+        'strength': 0.75,
+      });
+    } else {
+      correlations.add({
+        'emoji': '🏃‍♀️',
+        'description': 'Más ejercicio podría aumentar tus niveles de energía',
+        'strength': 0.5,
+      });
+    }
+
+    // Correlación estrés-bienestar
+    if (stress <= 3) {
+      correlations.add({
+        'emoji': '🧘',
+        'description': 'Tu bajo estrés contribuye positivamente a tu bienestar',
+        'strength': 0.85,
+      });
+    } else if (stress >= 7) {
+      correlations.add({
+        'emoji': '🧘',
+        'description': 'Reducir el estrés es clave para mejorar tu bienestar',
+        'strength': 0.9,
+      });
+    }
+
+    return correlations;
   }
 
-  Map<String, dynamic> _getWellnessPrediction(OptimizedAnalyticsProvider analyticsProvider) {
-    final summary = analyticsProvider.getDashboardSummary();
-    final overallScore = summary['overall_score'] as double? ?? 5.0;
+  Map<int, double> _getHourlyPatternData(OptimizedAnalyticsProvider analyticsProvider) {
+    final moodData = analyticsProvider.getMoodChartData();
+    final hourlyIntensity = <int, double>{};
 
-    if (overallScore >= 7.5) {
+    if (moodData.isEmpty) {
+      // Retornar datos vacíos si no hay información
+      for (int i = 0; i < 24; i++) {
+        hourlyIntensity[i] = 0.0;
+      }
+      return hourlyIntensity;
+    }
+
+    // Contar entradas por hora
+    final hourlyCounts = <int, int>{};
+    for (final entry in moodData) {
+      final date = DateTime.parse(entry['date']);
+      final hour = date.hour;
+      hourlyCounts[hour] = (hourlyCounts[hour] ?? 0) + 1;
+    }
+
+    // Normalizar a intensidad 0-1
+    final maxCount = hourlyCounts.values.isEmpty ? 1 : hourlyCounts.values.reduce(math.max);
+
+    for (int i = 0; i < 24; i++) {
+      final count = hourlyCounts[i] ?? 0;
+      hourlyIntensity[i] = count / maxCount;
+    }
+
+    return hourlyIntensity;
+  }
+
+  Map<String, dynamic> _getWellbeingPrediction(OptimizedAnalyticsProvider analyticsProvider) {
+    final wellbeingStatus = analyticsProvider.getWellbeingStatus();
+    final streakData = analyticsProvider.getStreakData();
+    final summary = analyticsProvider.getDashboardSummary();
+
+    // 🛠️ FIX: Safe casting for all numeric values
+    final currentScore = (wellbeingStatus['score'] as num?)?.toInt() ?? 5;
+    final currentStreak = (streakData['current'] as num?)?.toInt() ?? 0;
+    final totalEntries = (summary['total_entries'] as num?)?.toInt() ?? 0;
+
+    // Lógica de predicción mejorada basada en múltiples factores
+    if (currentScore >= 8 && currentStreak >= 7) {
       return {
+        'prediction': 'Excelente',
         'emoji': '🌟',
-        'prediction': 'Tendencia Excelente',
-        'recommendation': 'Continúa con tus hábitos actuales. Tu bienestar está en una tendencia muy positiva.',
+        'recommendation': 'Tu consistencia de $currentStreak días está dando frutos. Mantén estos hábitos positivos.',
       };
-    } else if (overallScore >= 6.0) {
+    } else if (currentScore >= 6 && currentStreak >= 3) {
       return {
+        'prediction': 'En buen camino',
         'emoji': '📈',
-        'prediction': 'Mejora Constante',
-        'recommendation': 'Estás en el camino correcto. Considera añadir más actividades que disfrutes.',
+        'recommendation': 'Con $currentStreak días de racha, estás construyendo buenos hábitos. Sigue así para ver mejoras.',
+      };
+    } else if (totalEntries < 5) {
+      return {
+        'prediction': 'Necesitas más datos',
+        'emoji': '🌱',
+        'recommendation': 'Con solo $totalEntries registros, necesitas más consistencia para predicciones precisas.',
       };
     } else {
       return {
+        'prediction': 'Oportunidad de mejora',
         'emoji': '💪',
-        'prediction': 'Oportunidad de Crecimiento',
-        'recommendation': 'Es un buen momento para enfocarte en hábitos que te hagan sentir mejor.',
+        'recommendation': 'Enfócate en la consistencia diaria. Pequeños pasos llevan a grandes cambios.',
       };
     }
+  }
+
+  void _updatePeriod(int days) {
+    setState(() {
+      _selectedPeriod = days;
+    });
+    _loadInitialData();
   }
 }

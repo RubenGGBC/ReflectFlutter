@@ -5,7 +5,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:math' as math;
 
 // Providers
 import '../../providers/optimized_providers.dart';
@@ -13,8 +12,53 @@ import '../../providers/optimized_providers.dart';
 // Modelos
 import '../../../data/models/optimized_models.dart';
 
-// Componentes
-import '../components/modern_design_system.dart';
+// ============================================================================
+// 🎨 PALETA DE COLORES MODERNA (BASADA EN ANALYTICSCOLORS)
+// ============================================================================
+class GoalsColors {
+  // Fondo principal - Negro profundo
+  static const Color backgroundPrimary = Color(0xFF000000);
+  static const Color backgroundCard = Color(0xFF0F0F0F);
+  static const Color backgroundSecondary = Color(0xFF1A1A1A);
+
+  // Gradientes Azul Oscuro a Morado
+  static const List<Color> primaryGradient = [
+    Color(0xFF1e3a8a), // Azul oscuro
+    Color(0xFF581c87), // Morado oscuro
+  ];
+
+  static const List<Color> accentGradient = [
+    Color(0xFF3b82f6), // Azul
+    Color(0xFF8b5cf6), // Morado
+  ];
+
+  static const List<Color> lightGradient = [
+    Color(0xFF60a5fa), // Azul claro
+    Color(0xFFa855f7), // Morado claro
+  ];
+
+  // Gradientes adicionales para gráficos
+  static const List<Color> chartGradient1 = [
+    Color(0xFF06b6d4), // Cyan
+    Color(0xFF3b82f6), // Azul
+  ];
+
+  static const List<Color> chartGradient2 = [
+    Color(0xFF8b5cf6), // Morado
+    Color(0xFFec4899), // Rosa
+  ];
+
+  static const List<Color> chartGradient3 = [
+    Color(0xFF10b981), // Verde
+    Color(0xFF06b6d4), // Cyan
+  ];
+
+  // Colores de texto
+  static const Color textPrimary = Color(0xFFFFFFFF);
+  static const Color textSecondary = Color(0xFFB3B3B3);
+  static const Color textTertiary = Color(0xFF666666);
+}
+
 
 class GoalsScreen extends StatefulWidget {
   const GoalsScreen({super.key});
@@ -114,17 +158,17 @@ class _GoalsScreenState extends State<GoalsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0B),
+      backgroundColor: GoalsColors.backgroundPrimary,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF1A1A2E),
-              Color(0xFF16213E),
-              Color(0xFF0F3460),
+              GoalsColors.primaryGradient[0].withOpacity(0.5),
+              GoalsColors.backgroundPrimary,
             ],
+            stops: const [0.0, 0.4],
           ),
         ),
         child: SafeArea(
@@ -132,6 +176,8 @@ class _GoalsScreenState extends State<GoalsScreen>
             opacity: _fadeAnimation,
             child: RefreshIndicator(
               onRefresh: () async => _loadGoals(),
+              backgroundColor: GoalsColors.backgroundCard,
+              color: GoalsColors.accentGradient[1],
               child: CustomScrollView(
                 slivers: [
                   // Header personalizado
@@ -162,8 +208,8 @@ class _GoalsScreenState extends State<GoalsScreen>
         scale: _fabAnimation,
         child: FloatingActionButton.extended(
           onPressed: () => _showAddGoalBottomSheet(),
-          backgroundColor: const Color(0xFFFFD700),
-          foregroundColor: Colors.black,
+          backgroundColor: GoalsColors.chartGradient2[1],
+          foregroundColor: Colors.white,
           icon: const Icon(Icons.add_task),
           label: const Text(
             'New Goal',
@@ -193,12 +239,12 @@ class _GoalsScreenState extends State<GoalsScreen>
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFFFD700).withOpacity(0.2),
+                      color: GoalsColors.accentGradient[1].withOpacity(0.2),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.flag_outlined,
-                      color: Color(0xFFFFD700),
+                      color: GoalsColors.accentGradient[1],
                       size: 28,
                     ),
                   ),
@@ -210,7 +256,7 @@ class _GoalsScreenState extends State<GoalsScreen>
                         Text(
                           'My Goals',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: GoalsColors.textPrimary,
                             fontSize: 28,
                             fontWeight: FontWeight.bold,
                           ),
@@ -218,7 +264,7 @@ class _GoalsScreenState extends State<GoalsScreen>
                         Text(
                           'Track your progress and achieve greatness',
                           style: TextStyle(
-                            color: Colors.white70,
+                            color: GoalsColors.textSecondary,
                             fontSize: 14,
                           ),
                         ),
@@ -229,7 +275,7 @@ class _GoalsScreenState extends State<GoalsScreen>
                     onPressed: () => _showGoalsSettings(),
                     icon: const Icon(
                       Icons.tune,
-                      color: Colors.white70,
+                      color: GoalsColors.textSecondary,
                     ),
                   ),
                 ],
@@ -260,7 +306,7 @@ class _GoalsScreenState extends State<GoalsScreen>
                       'Active Goals',
                       activeGoals.length.toString(),
                       Icons.trending_up,
-                      const Color(0xFF4ECDC4),
+                      GoalsColors.chartGradient1[0],
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -269,7 +315,7 @@ class _GoalsScreenState extends State<GoalsScreen>
                       'Completed',
                       completedGoals.length.toString(),
                       Icons.check_circle,
-                      const Color(0xFFFFD700),
+                      GoalsColors.chartGradient3[0],
                     ),
                   ),
                 ],
@@ -289,9 +335,9 @@ class _GoalsScreenState extends State<GoalsScreen>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
+        color: GoalsColors.backgroundCard,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: GoalsColors.textTertiary.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.3),
@@ -325,15 +371,15 @@ class _GoalsScreenState extends State<GoalsScreen>
           Text(
             value,
             style: const TextStyle(
-              color: Colors.white,
+              color: GoalsColors.textPrimary,
               fontSize: 32,
               fontWeight: FontWeight.bold,
             ),
           ),
           Text(
             title,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+            style: const TextStyle(
+              color: GoalsColors.textSecondary,
               fontSize: 14,
             ),
           ),
@@ -346,9 +392,9 @@ class _GoalsScreenState extends State<GoalsScreen>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
+        color: GoalsColors.backgroundCard,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: GoalsColors.textTertiary.withOpacity(0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -358,7 +404,7 @@ class _GoalsScreenState extends State<GoalsScreen>
               const Text(
                 'Overall Progress',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: GoalsColors.textPrimary,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -366,8 +412,8 @@ class _GoalsScreenState extends State<GoalsScreen>
               const Spacer(),
               Text(
                 '${(progress * 100).round()}%',
-                style: const TextStyle(
-                  color: Color(0xFFFFD700),
+                style: TextStyle(
+                  color: GoalsColors.chartGradient2[1],
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -378,11 +424,14 @@ class _GoalsScreenState extends State<GoalsScreen>
           AnimatedBuilder(
             animation: _progressAnimation,
             builder: (context, child) {
-              return LinearProgressIndicator(
-                value: progress * _progressAnimation.value,
-                backgroundColor: Colors.white.withOpacity(0.1),
-                valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
-                minHeight: 8,
+              return ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: progress * _progressAnimation.value,
+                  backgroundColor: GoalsColors.backgroundSecondary,
+                  valueColor: AlwaysStoppedAnimation<Color>(GoalsColors.chartGradient2[1]),
+                  minHeight: 8,
+                ),
               );
             },
           ),
@@ -393,8 +442,8 @@ class _GoalsScreenState extends State<GoalsScreen>
                 : progress > 0.5
                 ? "Great progress, keep it up! 💪"
                 : "Every step counts. You've got this! 🌱",
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.8),
+            style: const TextStyle(
+              color: GoalsColors.textSecondary,
               fontSize: 14,
             ),
           ),
@@ -407,12 +456,12 @@ class _GoalsScreenState extends State<GoalsScreen>
     return Consumer<GoalsProvider>(
       builder: (context, goalsProvider, child) {
         if (goalsProvider.isLoading) {
-          return const SliverToBoxAdapter(
+          return SliverToBoxAdapter(
             child: Center(
               child: Padding(
-                padding: EdgeInsets.all(40),
+                padding: const EdgeInsets.all(40),
                 child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFFFD700)),
+                  valueColor: AlwaysStoppedAnimation<Color>(GoalsColors.chartGradient2[1]),
                 ),
               ),
             ),
@@ -457,15 +506,16 @@ class _GoalsScreenState extends State<GoalsScreen>
   }
 
   Widget _buildGoalCard(goal) {
+    final color = _getGoalTypeColor(goal.type);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
+        color: GoalsColors.backgroundCard,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: goal.isCompleted
-              ? const Color(0xFFFFD700).withOpacity(0.5)
-              : Colors.white.withOpacity(0.1),
+              ? GoalsColors.chartGradient3[0].withOpacity(0.5)
+              : GoalsColors.textTertiary.withOpacity(0.2),
         ),
         boxShadow: [
           BoxShadow(
@@ -484,12 +534,12 @@ class _GoalsScreenState extends State<GoalsScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: _getGoalTypeColor(goal.type).withOpacity(0.2),
+                  color: color.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
                   _getGoalTypeIcon(goal.type),
-                  color: _getGoalTypeColor(goal.type),
+                  color: color,
                   size: 20,
                 ),
               ),
@@ -501,7 +551,7 @@ class _GoalsScreenState extends State<GoalsScreen>
                     Text(
                       goal.title,
                       style: TextStyle(
-                        color: Colors.white,
+                        color: GoalsColors.textPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         decoration: goal.isCompleted
@@ -512,8 +562,8 @@ class _GoalsScreenState extends State<GoalsScreen>
                     const SizedBox(height: 4),
                     Text(
                       goal.description,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
+                      style: const TextStyle(
+                        color: GoalsColors.textSecondary,
                         fontSize: 14,
                       ),
                       maxLines: 2,
@@ -523,20 +573,20 @@ class _GoalsScreenState extends State<GoalsScreen>
                 ),
               ),
               PopupMenuButton<String>(
-                icon: Icon(
+                icon: const Icon(
                   Icons.more_vert,
-                  color: Colors.white.withOpacity(0.7),
+                  color: GoalsColors.textSecondary,
                 ),
-                color: const Color(0xFF2D3748),
+                color: GoalsColors.backgroundSecondary,
                 onSelected: (value) => _handleGoalAction(goal, value),
                 itemBuilder: (context) => [
                   const PopupMenuItem(
                     value: 'edit',
                     child: Row(
                       children: [
-                        Icon(Icons.edit, color: Colors.white70),
+                        Icon(Icons.edit, color: GoalsColors.textSecondary),
                         SizedBox(width: 8),
-                        Text('Edit', style: TextStyle(color: Colors.white)),
+                        Text('Edit', style: TextStyle(color: GoalsColors.textPrimary)),
                       ],
                     ),
                   ),
@@ -546,12 +596,12 @@ class _GoalsScreenState extends State<GoalsScreen>
                       children: [
                         Icon(
                           goal.isCompleted ? Icons.refresh : Icons.check_circle,
-                          color: Colors.white70,
+                          color: GoalsColors.textSecondary,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           goal.isCompleted ? 'Reactivate' : 'Complete',
-                          style: const TextStyle(color: Colors.white),
+                          style: const TextStyle(color: GoalsColors.textPrimary),
                         ),
                       ],
                     ),
@@ -583,17 +633,17 @@ class _GoalsScreenState extends State<GoalsScreen>
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
+                        const Text(
                           'Progress',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
+                            color: GoalsColors.textSecondary,
                             fontSize: 12,
                           ),
                         ),
                         Text(
                           '${goal.currentValue.toStringAsFixed(1)} / ${goal.targetValue.toStringAsFixed(1)}',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
+                          style: const TextStyle(
+                            color: GoalsColors.textSecondary,
                             fontSize: 12,
                           ),
                         ),
@@ -603,13 +653,14 @@ class _GoalsScreenState extends State<GoalsScreen>
                     AnimatedBuilder(
                       animation: _progressAnimation,
                       builder: (context, child) {
-                        return LinearProgressIndicator(
-                          value: goal.progress * _progressAnimation.value,
-                          backgroundColor: Colors.white.withOpacity(0.1),
-                          valueColor: AlwaysStoppedAnimation<Color>(
-                            _getGoalTypeColor(goal.type),
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(3),
+                          child: LinearProgressIndicator(
+                            value: goal.progress * _progressAnimation.value,
+                            backgroundColor: GoalsColors.backgroundSecondary,
+                            valueColor: AlwaysStoppedAnimation<Color>(color),
+                            minHeight: 6,
                           ),
-                          minHeight: 6,
                         );
                       },
                     ),
@@ -620,13 +671,13 @@ class _GoalsScreenState extends State<GoalsScreen>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: _getGoalTypeColor(goal.type).withOpacity(0.2),
+                  color: color.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   '${(goal.progress * 100).round()}%',
                   style: TextStyle(
-                    color: _getGoalTypeColor(goal.type),
+                    color: color,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -640,24 +691,24 @@ class _GoalsScreenState extends State<GoalsScreen>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFFFD700).withOpacity(0.1),
+                color: GoalsColors.chartGradient3[0].withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
-                  color: const Color(0xFFFFD700).withOpacity(0.3),
+                  color: GoalsColors.chartGradient3[0].withOpacity(0.3),
                 ),
               ),
               child: Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.celebration,
-                    color: Color(0xFFFFD700),
+                    color: GoalsColors.chartGradient3[0],
                     size: 16,
                   ),
                   const SizedBox(width: 8),
                   Text(
                     'Goal completed! Great job! 🎉',
-                    style: const TextStyle(
-                      color: Color(0xFFFFD700),
+                    style: TextStyle(
+                      color: GoalsColors.chartGradient3[0],
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -676,32 +727,32 @@ class _GoalsScreenState extends State<GoalsScreen>
       margin: const EdgeInsets.all(20),
       padding: const EdgeInsets.all(40),
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A2E),
+        color: GoalsColors.backgroundCard,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: GoalsColors.textTertiary.withOpacity(0.2)),
       ),
       child: Column(
         children: [
           Icon(
             Icons.flag_outlined,
             size: 64,
-            color: Colors.white.withOpacity(0.3),
+            color: GoalsColors.textTertiary,
           ),
           const SizedBox(height: 16),
           const Text(
             'No Goals Yet',
             style: TextStyle(
-              color: Colors.white,
+              color: GoalsColors.textPrimary,
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          const Text(
             'Set your first goal and start your journey towards personal growth.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: GoalsColors.textSecondary,
               fontSize: 16,
             ),
           ),
@@ -709,8 +760,8 @@ class _GoalsScreenState extends State<GoalsScreen>
           ElevatedButton.icon(
             onPressed: () => _showAddGoalBottomSheet(),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFFFD700),
-              foregroundColor: Colors.black,
+              backgroundColor: GoalsColors.chartGradient2[1],
+              foregroundColor: GoalsColors.textPrimary,
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -728,19 +779,16 @@ class _GoalsScreenState extends State<GoalsScreen>
   }
 
   Color _getGoalTypeColor(goalType) {
-    // Asumiendo que goalType tiene un toString() method
     final typeString = goalType.toString();
-
-    if (typeString.contains('consistency')) return const Color(0xFF4ECDC4);
-    if (typeString.contains('mood')) return const Color(0xFFFFD700);
-    if (typeString.contains('positiveMoments')) return const Color(0xFF45B7D1);
-    if (typeString.contains('stressReduction')) return const Color(0xFF96CEB4);
-    return const Color(0xFF9B59B6);
+    if (typeString.contains('consistency')) return GoalsColors.chartGradient1[0];
+    if (typeString.contains('mood')) return GoalsColors.chartGradient2[1];
+    if (typeString.contains('positiveMoments')) return GoalsColors.lightGradient[0];
+    if (typeString.contains('stressReduction')) return GoalsColors.chartGradient3[0];
+    return GoalsColors.accentGradient[1];
   }
 
   IconData _getGoalTypeIcon(goalType) {
     final typeString = goalType.toString();
-
     if (typeString.contains('consistency')) return Icons.timeline;
     if (typeString.contains('mood')) return Icons.sentiment_satisfied;
     if (typeString.contains('positiveMoments')) return Icons.star;
@@ -758,11 +806,10 @@ class _GoalsScreenState extends State<GoalsScreen>
   }
 
   void _showGoalsSettings() {
-    // Implementar configuraciones de objetivos
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Goals settings coming soon!'),
-        backgroundColor: Color(0xFF4ECDC4),
+      SnackBar(
+        content: const Text('Goals settings coming soon!'),
+        backgroundColor: GoalsColors.accentGradient[1],
       ),
     );
   }
@@ -799,14 +846,14 @@ class _GoalsScreenState extends State<GoalsScreen>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: GoalsColors.backgroundCard,
         title: const Text(
           'Delete Goal',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: GoalsColors.textPrimary),
         ),
         content: Text(
           'Are you sure you want to delete "${goal.title}"? This action cannot be undone.',
-          style: TextStyle(color: Colors.white.withOpacity(0.8)),
+          style: const TextStyle(color: GoalsColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -856,28 +903,28 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
       'label': 'Consistency',
       'description': 'Track daily habits and routines',
       'icon': Icons.timeline,
-      'color': Color(0xFF4ECDC4),
+      'color': GoalsColors.chartGradient1[0],
     },
     {
       'value': 'mood',
       'label': 'Mood Improvement',
       'description': 'Improve your average mood score',
       'icon': Icons.sentiment_satisfied,
-      'color': Color(0xFFFFD700),
+      'color': GoalsColors.chartGradient2[1],
     },
     {
       'value': 'positiveMoments',
       'label': 'Positive Moments',
       'description': 'Increase positive daily moments',
       'icon': Icons.star,
-      'color': Color(0xFF45B7D1),
+      'color': GoalsColors.lightGradient[0],
     },
     {
       'value': 'stressReduction',
       'label': 'Stress Reduction',
       'description': 'Lower your stress levels',
       'icon': Icons.spa,
-      'color': Color(0xFF96CEB4),
+      'color': GoalsColors.chartGradient3[0],
     },
   ];
 
@@ -912,7 +959,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
       decoration: const BoxDecoration(
-        color: Color(0xFF1A1A2E),
+        color: GoalsColors.backgroundSecondary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: DraggableScrollableSheet(
@@ -933,7 +980,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
+                      color: GoalsColors.textTertiary,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -944,7 +991,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                 Text(
                   widget.existingGoal != null ? 'Edit Goal' : 'Create New Goal',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: GoalsColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -974,7 +1021,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                 const Text(
                   'Goal Type',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: GoalsColors.textPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1002,7 +1049,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.pop(context),
                         style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: Colors.white.withOpacity(0.3)),
+                          side: const BorderSide(color: GoalsColors.textTertiary),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -1010,7 +1057,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                         ),
                         child: const Text(
                           'Cancel',
-                          style: TextStyle(color: Colors.white),
+                          style: TextStyle(color: GoalsColors.textPrimary),
                         ),
                       ),
                     ),
@@ -1019,8 +1066,8 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _saveGoal,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFFFD700),
-                          foregroundColor: Colors.black,
+                          backgroundColor: GoalsColors.chartGradient2[1],
+                          foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -1033,7 +1080,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
                             valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.black,
+                              Colors.white,
                             ),
                           ),
                         )
@@ -1068,7 +1115,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
         Text(
           label,
           style: const TextStyle(
-            color: Colors.white,
+            color: GoalsColors.textPrimary,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -1078,20 +1125,20 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
           controller: controller,
           maxLines: maxLines,
           keyboardType: keyboardType,
-          style: const TextStyle(color: Colors.white),
+          style: const TextStyle(color: GoalsColors.textPrimary),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-            prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.7)),
+            hintStyle: const TextStyle(color: GoalsColors.textSecondary),
+            prefixIcon: const Icon(Icons.title, color: GoalsColors.textSecondary),
             filled: true,
-            fillColor: Colors.white.withOpacity(0.1),
+            fillColor: GoalsColors.backgroundCard,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Color(0xFFFFD700)),
+              borderSide: BorderSide(color: GoalsColors.accentGradient[1]),
             ),
           ),
         ),
@@ -1101,6 +1148,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
 
   Widget _buildGoalTypeOption(Map<String, dynamic> type) {
     final isSelected = _selectedType == type['value'];
+    final color = type['color'] as Color;
 
     return GestureDetector(
       onTap: () => setState(() => _selectedType = type['value']),
@@ -1109,13 +1157,13 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? type['color'].withOpacity(0.2)
-              : Colors.white.withOpacity(0.05),
+              ? color.withOpacity(0.2)
+              : GoalsColors.backgroundCard,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
-                ? type['color']
-                : Colors.white.withOpacity(0.1),
+                ? color
+                : GoalsColors.textTertiary.withOpacity(0.2),
           ),
         ),
         child: Row(
@@ -1123,12 +1171,12 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: type['color'].withOpacity(0.2),
+                color: color.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 type['icon'],
-                color: type['color'],
+                color: color,
                 size: 20,
               ),
             ),
@@ -1140,7 +1188,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                   Text(
                     type['label'],
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: GoalsColors.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -1148,8 +1196,8 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                   const SizedBox(height: 4),
                   Text(
                     type['description'],
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                    style: const TextStyle(
+                      color: GoalsColors.textSecondary,
                       fontSize: 12,
                     ),
                   ),
@@ -1159,7 +1207,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
             if (isSelected)
               Icon(
                 Icons.check_circle,
-                color: type['color'],
+                color: color,
                 size: 24,
               ),
           ],
@@ -1218,7 +1266,7 @@ class _AddGoalBottomSheetState extends State<AddGoalBottomSheet> {
                   ? 'Goal updated successfully!'
                   : 'Goal created successfully!',
             ),
-            backgroundColor: const Color(0xFF4ECDC4),
+            backgroundColor: GoalsColors.chartGradient3[0],
           ),
         );
       }
