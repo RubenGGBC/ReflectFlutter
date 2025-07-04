@@ -502,7 +502,7 @@ class _AnalyticsScreenV2State extends State<AnalyticsScreenV2>
                 ),
               ),
             ],
-          ),
+          ), a
           const SizedBox(height: 24),
           // ✅ ARREGLADO: Métricas principales con datos reales
           Row(
