@@ -485,6 +485,8 @@ class OptimizedDailyEntriesProvider with ChangeNotifier {
 // INTERACTIVE MOMENTS PROVIDER OPTIMIZADO
 // ============================================================================
 
+
+
 class OptimizedMomentsProvider with ChangeNotifier {
   final OptimizedDatabaseService _databaseService;
   final Logger _logger = Logger();
@@ -552,7 +554,11 @@ class OptimizedMomentsProvider with ChangeNotifier {
   }
 
   /// Añadir nuevo momento
-  Future<bool> addMoment({
+  // ========================================================================
+  // FIX: Cambiado el tipo de retorno de Future<bool>
+  // a Future<OptimizedInteractiveMomentModel?>
+  // ========================================================================
+  Future<OptimizedInteractiveMomentModel?> addMoment({
     required int userId,
     required String emoji,
     required String text,
@@ -597,15 +603,23 @@ class OptimizedMomentsProvider with ChangeNotifier {
 
         _logger.i('✅ Momento añadido exitosamente');
         notifyListeners();
-        return true;
+
+        // ========================================================================
+        // FIX: Devolver el objeto del momento guardado en lugar de 'true'
+        // ========================================================================
+        return savedMoment;
       } else {
         _setError('No se pudo guardar el momento');
-        return false;
+
+        // ========================================================================
+        // FIX: Devolver null en caso de error en lugar de 'false'
+        // ========================================================================
+        return null;
       }
     } catch (e) {
       _logger.e('❌ Error añadiendo momento: $e');
       _setError('Error añadiendo momento');
-      return false;
+      return null;
     } finally {
       _setLoading(false);
     }
@@ -669,9 +683,15 @@ class OptimizedMomentsProvider with ChangeNotifier {
   Future<bool> clearTodayMoments(int userId) async {
     _logger.i('🗑️ Limpiando momentos de hoy');
     try {
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
       // Aquí implementarías el método clearTodayMoments en el database service
+      // await _databaseService.clearMomentsBetween(userId, startOfDay, endOfDay);
+
       _todayMoments.clear();
-      _moments.removeWhere((m) => m.entryDate.isAtSameMomentAs(DateTime.now()));
+      _moments.removeWhere((m) => m.timestamp.isAfter(startOfDay) && m.timestamp.isBefore(endOfDay));
       notifyListeners();
       return true;
     } catch (e) {
@@ -695,10 +715,6 @@ class OptimizedMomentsProvider with ChangeNotifier {
     notifyListeners();
   }
 }
-
-// ============================================================================
-// ANALYTICS PROVIDER OPTIMIZADO
-// ============================================================================
 
 
 
