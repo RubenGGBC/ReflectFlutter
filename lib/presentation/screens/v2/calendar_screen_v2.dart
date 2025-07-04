@@ -1,10 +1,54 @@
-// lib/presentation/screens/v2/calendar_screen_v2.dart
-// Pantalla de calendario completamente arreglada
+// ============================================================================
+// calendar_screen_v2.dart - CALENDARIO CON ESTILO VISUAL MEJORADO
+// ============================================================================
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../providers/optimized_providers.dart'; // ✅ IMPORT ARREGLADO
-import '../components/modern_design_system.dart';
+
+// Providers optimizados
+import '../../providers/optimized_providers.dart';
+
+// Pantallas relacionadas
+import 'daily_detail_screen_v2.dart';
+import 'daily_review_screen_v2.dart';
+
+// ============================================================================
+// PALETA DE COLORES CONSISTENTE
+// ============================================================================
+class CalendarColors {
+  // Fondo principal - Negro profundo
+  static const Color backgroundPrimary = Color(0xFF000000);
+  static const Color backgroundCard = Color(0xFF0F0F0F);
+  static const Color backgroundSecondary = Color(0xFF1A1A1A);
+
+  // Gradientes Azul Oscuro a Morado
+  static const List<Color> primaryGradient = [
+    Color(0xFF1e3a8a), // Azul oscuro
+    Color(0xFF581c87), // Morado oscuro
+  ];
+
+  static const List<Color> accentGradient = [
+    Color(0xFF3b82f6), // Azul
+    Color(0xFF8b5cf6), // Morado
+  ];
+
+  static const List<Color> lightGradient = [
+    Color(0xFF60a5fa), // Azul claro
+    Color(0xFFa855f7), // Morado claro
+  ];
+
+  // Colores específicos del calendario
+  static const Color textPrimary = Color(0xFFFFFFFF);
+  static const Color textSecondary = Color(0xFFB3FFFFFF);
+  static const Color textHint = Color(0xFF66FFFFFF);
+
+  // Estados de mood
+  static const Color moodExcellent = Color(0xFF10b981);
+  static const Color moodGood = Color(0xFF3b82f6);
+  static const Color moodNeutral = Color(0xFFf59e0b);
+  static const Color moodBad = Color(0xFFef4444);
+}
 
 class CalendarScreenV2 extends StatefulWidget {
   const CalendarScreenV2({super.key});
@@ -13,115 +57,366 @@ class CalendarScreenV2 extends StatefulWidget {
   State<CalendarScreenV2> createState() => _CalendarScreenV2State();
 }
 
-class _CalendarScreenV2State extends State<CalendarScreenV2> {
+class _CalendarScreenV2State extends State<CalendarScreenV2>
+    with TickerProviderStateMixin {
+
+  // ============================================================================
+  // ESTADO Y CONTROLADORES
+  // ============================================================================
+
   DateTime _selectedDate = DateTime.now();
   DateTime _focusedMonth = DateTime.now();
+  late AnimationController _headerController;
+  late AnimationController _calendarController;
+  late AnimationController _statsController;
+
+  // Estado de vista
+  bool _showYearView = false;
+  int _selectedYear = DateTime.now().year;
 
   @override
   void initState() {
     super.initState();
+    _setupAnimations();
     _loadData();
   }
 
+  @override
+  void dispose() {
+    _headerController.dispose();
+    _calendarController.dispose();
+    _statsController.dispose();
+    super.dispose();
+  }
+
+  // ============================================================================
+  // CONFIGURACIÓN
+  // ============================================================================
+
+  void _setupAnimations() {
+    _headerController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _calendarController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _statsController = AnimationController(
+      duration: const Duration(milliseconds: 1000),
+      vsync: this,
+    );
+
+    // Iniciar animaciones
+    _headerController.forward();
+    Future.delayed(const Duration(milliseconds: 200), () {
+      _calendarController.forward();
+    });
+    Future.delayed(const Duration(milliseconds: 400), () {
+      _statsController.forward();
+    });
+  }
+
   void _loadData() {
-    final authProvider = context.read<OptimizedAuthProvider>(); // ✅ PROVIDER ARREGLADO
+    final authProvider = context.read<OptimizedAuthProvider>();
     final user = authProvider.currentUser;
 
     if (user != null) {
-      context.read<OptimizedAnalyticsProvider>().loadCompleteAnalytics(user.id, days: 90); // ✅ PROVIDER ARREGLADO
+      context.read<OptimizedDailyEntriesProvider>().loadEntries(user.id);
+      context.read<OptimizedAnalyticsProvider>().loadCompleteAnalytics(user.id, days: 365);
     }
   }
+
+  // ============================================================================
+  // UI PRINCIPAL
+  // ============================================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ModernColors.darkPrimary,
-      appBar: AppBar(
-        backgroundColor: ModernColors.darkPrimary,
-        elevation: 0,
-        title: const Text(
-          'Calendario',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+      backgroundColor: CalendarColors.backgroundPrimary,
+      body: SafeArea(
+        child: Column(
+          children: [
+            _buildHeader(),
+            Expanded(
+              child: _showYearView ? _buildYearView() : _buildMonthView(),
+            ),
+          ],
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: Consumer<OptimizedAnalyticsProvider>( // ✅ PROVIDER ARREGLADO
-        builder: (context, analytics, child) {
-          if (analytics.isLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      floatingActionButton: _buildFloatingActionButton(),
+    );
+  }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  // ============================================================================
+  // HEADER
+  // ============================================================================
+
+  Widget _buildHeader() {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, -1),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: _headerController, curve: Curves.easeOutCubic)),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: CalendarColors.primaryGradient,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          children: [
+            Row(
               children: [
-                _buildMonthHeader(),
-                const SizedBox(height: 24),
-                _buildCalendarGrid(analytics),
-                const SizedBox(height: 24),
-                _buildSelectedDayDetails(analytics),
-                const SizedBox(height: 24),
-                _buildMonthStats(analytics),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        '📅 Mi Calendario',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        _showYearView
+                            ? 'Año $_selectedYear'
+                            : _getMonthYearText(_focusedMonth),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _buildViewToggle(),
               ],
             ),
-          );
-        },
+
+            const SizedBox(height: 16),
+
+            // Navegación de mes/año
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  onPressed: _previousPeriod,
+                  icon: const Icon(Icons.chevron_left, color: Colors.white, size: 32),
+                ),
+
+                GestureDetector(
+                  onTap: _showDatePicker,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _showYearView
+                          ? '$_selectedYear'
+                          : _getMonthYearText(_focusedMonth),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+
+                IconButton(
+                  onPressed: _nextPeriod,
+                  icon: const Icon(Icons.chevron_right, color: Colors.white, size: 32),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildMonthHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+  Widget _buildViewToggle() {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _showYearView = !_showYearView;
+        });
+        HapticFeedback.lightImpact();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(16),
         ),
-        borderRadius: BorderRadius.circular(12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _showYearView ? Icons.calendar_month : Icons.calendar_view_month,
+              color: Colors.white,
+              size: 18,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              _showYearView ? 'Mes' : 'Año',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1);
-              });
-            },
-            icon: const Icon(Icons.chevron_left, color: Colors.white),
+    );
+  }
+
+  // ============================================================================
+  // VISTA DE MES
+  // ============================================================================
+
+  Widget _buildMonthView() {
+    return Consumer2<OptimizedDailyEntriesProvider, OptimizedAnalyticsProvider>(
+      builder: (context, entriesProvider, analyticsProvider, child) {
+        return FadeTransition(
+          opacity: _calendarController,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildMonthStats(entriesProvider),
+                const SizedBox(height: 20),
+                _buildCalendarGrid(entriesProvider),
+                const SizedBox(height: 20),
+                _buildSelectedDateInfo(entriesProvider),
+              ],
+            ),
           ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMonthStats(OptimizedDailyEntriesProvider entriesProvider) {
+    final monthEntries = entriesProvider.entries.where((entry) {
+      return entry.entryDate.year == _focusedMonth.year &&
+          entry.entryDate.month == _focusedMonth.month;
+    }).toList();
+
+    final avgMood = monthEntries.isNotEmpty
+        ? monthEntries.map((e) => e.moodScore ?? 5).reduce((a, b) => a + b) / monthEntries.length
+        : 0.0;
+
+    final daysWithReflections = monthEntries.length;
+    final daysInMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0).day;
+
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: _statsController, curve: Curves.easeOutCubic)),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: CalendarColors.backgroundCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Text(
+              'Estadísticas del Mes',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            Row(
+              children: [
+                Expanded(child: _buildStatCard('📊', 'Promedio', '${avgMood.toStringAsFixed(1)}/10')),
+                const SizedBox(width: 12),
+                Expanded(child: _buildStatCard('📝', 'Reflexiones', '$daysWithReflections/$daysInMonth')),
+                const SizedBox(width: 12),
+                Expanded(child: _buildStatCard('🔥', 'Constancia', '${(daysWithReflections/daysInMonth*100).round()}%')),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard(String emoji, String label, String value) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(colors: CalendarColors.accentGradient.map((c) => c.withOpacity(0.1)).toList()),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: CalendarColors.accentGradient[0].withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 24)),
+          const SizedBox(height: 8),
           Text(
-            '${_getMonthName(_focusedMonth.month)} ${_focusedMonth.year}',
+            value,
             style: const TextStyle(
               color: Colors.white,
-              fontSize: 20,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1);
-              });
-            },
-            icon: const Icon(Icons.chevron_right, color: Colors.white),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 10,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCalendarGrid(OptimizedAnalyticsProvider analytics) {
-    final moodData = analytics.getMoodChartData();
+  Widget _buildCalendarGrid(OptimizedDailyEntriesProvider entriesProvider) {
     final daysInMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0).day;
-    final firstDayWeekday = DateTime(_focusedMonth.year, _focusedMonth.month, 1).weekday;
+    final firstDayOfMonth = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
+    final firstDayWeekday = firstDayOfMonth.weekday;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: ModernColors.surfaceDark,
-        borderRadius: BorderRadius.circular(12),
+        color: CalendarColors.backgroundCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Column(
         children: [
@@ -129,16 +424,29 @@ class _CalendarScreenV2State extends State<CalendarScreenV2> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: ['L', 'M', 'X', 'J', 'V', 'S', 'D']
-                .map((day) => Text(
-              day,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontWeight: FontWeight.bold,
+                .map((day) => Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: CalendarColors.lightGradient.map((c) => c.withOpacity(0.2)).toList()),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  day,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
               ),
             ))
                 .toList(),
           ),
+
           const SizedBox(height: 16),
+
           // Grid de días
           GridView.builder(
             shrinkWrap: true,
@@ -146,8 +454,10 @@ class _CalendarScreenV2State extends State<CalendarScreenV2> {
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 7,
               childAspectRatio: 1,
+              crossAxisSpacing: 4,
+              mainAxisSpacing: 4,
             ),
-            itemCount: 42, // 6 semanas
+            itemCount: 42, // 6 semanas máximo
             itemBuilder: (context, index) {
               final dayNumber = index - firstDayWeekday + 2;
 
@@ -156,42 +466,11 @@ class _CalendarScreenV2State extends State<CalendarScreenV2> {
               }
 
               final dayDate = DateTime(_focusedMonth.year, _focusedMonth.month, dayNumber);
-              final hasData = _hasDataForDate(dayDate, moodData);
-              final moodScore = _getMoodForDate(dayDate, moodData);
-              final isSelected = dayDate.day == _selectedDate.day &&
-                  dayDate.month == _selectedDate.month &&
-                  dayDate.year == _selectedDate.year;
+              final entry = _getEntryForDate(dayDate, entriesProvider.entries);
+              final isSelected = _isSameDay(dayDate, _selectedDate);
+              final isToday = _isSameDay(dayDate, DateTime.now());
 
-              return GestureDetector(
-                onTap: () {
-                  setState(() {
-                    _selectedDate = dayDate;
-                  });
-                },
-                child: Container(
-                  margin: const EdgeInsets.all(2),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? ModernColors.accentBlue
-                        : hasData
-                        ? _getMoodColor(moodScore).withOpacity(0.3)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                    border: hasData
-                        ? Border.all(color: _getMoodColor(moodScore), width: 1)
-                        : null,
-                  ),
-                  child: Center(
-                    child: Text(
-                      dayNumber.toString(),
-                      style: TextStyle(
-                        color: isSelected ? Colors.white : Colors.white70,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                  ),
-                ),
-              );
+              return _buildDayCell(dayNumber, entry, isSelected, isToday, dayDate);
             },
           ),
         ],
@@ -199,50 +478,245 @@ class _CalendarScreenV2State extends State<CalendarScreenV2> {
     );
   }
 
-  Widget _buildSelectedDayDetails(OptimizedAnalyticsProvider analytics) {
-    final moodData = analytics.getMoodChartData();
-    final dayData = _getDataForDate(_selectedDate, moodData);
+  Widget _buildDayCell(int dayNumber, dynamic entry, bool isSelected, bool isToday, DateTime dayDate) {
+    Color backgroundColor = Colors.transparent;
+    Color borderColor = Colors.white24;
+    Color textColor = Colors.white70;
+
+    if (isSelected) {
+      backgroundColor = CalendarColors.accentGradient[0];
+      borderColor = CalendarColors.accentGradient[1];
+      textColor = Colors.white;
+    } else if (isToday) {
+      borderColor = CalendarColors.lightGradient[0];
+      textColor = CalendarColors.lightGradient[0];
+    } else if (entry != null) {
+      final moodScore = entry.moodScore ?? 5;
+      backgroundColor = _getMoodColor(moodScore).withOpacity(0.3);
+      borderColor = _getMoodColor(moodScore);
+      textColor = Colors.white;
+    }
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedDate = dayDate;
+        });
+        HapticFeedback.lightImpact();
+
+        if (entry != null) {
+          _showDayDetail(dayDate);
+        }
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
+          boxShadow: isSelected ? [
+            BoxShadow(
+              color: CalendarColors.accentGradient[0].withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ] : null,
+        ),
+        child: Stack(
+          children: [
+            Center(
+              child: Text(
+                dayNumber.toString(),
+                style: TextStyle(
+                  color: textColor,
+                  fontWeight: isSelected || isToday ? FontWeight.bold : FontWeight.normal,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+
+            if (entry != null)
+              Positioned(
+                bottom: 2,
+                right: 2,
+                child: Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: _getMoodColor(entry.moodScore ?? 5),
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSelectedDateInfo(OptimizedDailyEntriesProvider entriesProvider) {
+    final entry = _getEntryForDate(_selectedDate, entriesProvider.entries);
+
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(1, 0),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: _statsController, curve: Curves.easeOutCubic)),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: CalendarColors.backgroundCard,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withOpacity(0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.event_note,
+                  color: CalendarColors.accentGradient[0],
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _formatSelectedDate(_selectedDate),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            if (entry != null) ...[
+              _buildEntryPreview(entry),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildActionButton(
+                      icon: Icons.visibility,
+                      label: 'Ver Detalle',
+                      onTap: () => _showDayDetail(_selectedDate),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildActionButton(
+                      icon: Icons.edit,
+                      label: 'Editar',
+                      onTap: () => _editReflection(_selectedDate),
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade800.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                ),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.edit_note,
+                      color: Colors.white54,
+                      size: 32,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Sin reflexión registrada',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildActionButton(
+                      icon: Icons.add,
+                      label: 'Crear Reflexión',
+                      onTap: () => _createReflection(_selectedDate),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEntryPreview(dynamic entry) {
+    final moodScore = entry.moodScore ?? 5;
 
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: ModernColors.surfaceDark,
+        gradient: LinearGradient(
+          colors: [
+            _getMoodColor(moodScore).withOpacity(0.1),
+            _getMoodColor(moodScore).withOpacity(0.05),
+          ],
+        ),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _getMoodColor(moodScore).withOpacity(0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Detalles del ${_selectedDate.day}/${_selectedDate.month}/${_selectedDate.year}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getMoodColor(moodScore),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${moodScore}/10',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _getMoodLabel(moodScore),
+                  style: TextStyle(
+                    color: _getMoodColor(moodScore),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          if (dayData != null) ...[
-            _buildDetailRow('Estado de ánimo', '${(dayData['mood'] as double? ?? 0.0).toStringAsFixed(1)}/10', _getMoodColor(dayData['mood'] as double? ?? 0.0)),
-            _buildDetailRow('Nivel de energía', '${(dayData['energy'] as double? ?? 0.0).toStringAsFixed(1)}/10', Colors.yellow),
-            _buildDetailRow('Nivel de estrés', '${(dayData['stress'] as double? ?? 0.0).toStringAsFixed(1)}/10', Colors.red),
-          ] else ...[
-            const Text(
-              'No hay registro para este día',
-              style: TextStyle(
+
+          if (entry.freeReflection.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Text(
+              entry.freeReflection,
+              style: const TextStyle(
                 color: Colors.white70,
-                fontStyle: FontStyle.italic,
+                fontSize: 14,
+                height: 1.4,
               ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                _showCreateEntryDialog();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: ModernColors.accentBlue,
-              ),
-              child: const Text('Crear Registro'),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ],
@@ -250,55 +724,101 @@ class _CalendarScreenV2State extends State<CalendarScreenV2> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, Color color) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.white70),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
+  Widget _buildActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: CalendarColors.accentGradient),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildMonthStats(OptimizedAnalyticsProvider analytics) {
-    final summary = analytics.getDashboardSummary();
+  // ============================================================================
+  // VISTA DE AÑO
+  // ============================================================================
+
+  Widget _buildYearView() {
+    return Consumer<OptimizedDailyEntriesProvider>(
+      builder: (context, entriesProvider, child) {
+        return FadeTransition(
+          opacity: _calendarController,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildYearStats(entriesProvider),
+                const SizedBox(height: 20),
+                _buildMonthsGrid(entriesProvider),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildYearStats(OptimizedDailyEntriesProvider entriesProvider) {
+    final yearEntries = entriesProvider.entries.where((entry) {
+      return entry.entryDate.year == _selectedYear;
+    }).toList();
+
+    final avgMood = yearEntries.isNotEmpty
+        ? yearEntries.map((e) => e.moodScore ?? 5).reduce((a, b) => a + b) / yearEntries.length
+        : 0.0;
+
+    final totalDays = 365;
+    final reflectionDays = yearEntries.length;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: ModernColors.surfaceDark,
-        borderRadius: BorderRadius.circular(12),
+        color: CalendarColors.backgroundCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Estadísticas del Mes',
-            style: TextStyle(
+          Text(
+            'Resumen del Año $_selectedYear',
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
+
           const SizedBox(height: 16),
+
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatItem('📊', 'Entradas', '${summary['total_entries'] ?? 0}'),
-              _buildStatItem('🔥', 'Racha', '${summary['current_streak'] ?? 0} días'),
-              _buildStatItem('😊', 'Mood Avg', '${(summary['avg_mood'] as double? ?? 0.0).toStringAsFixed(1)}/10'),
+              Expanded(child: _buildStatCard('📈', 'Promedio Anual', '${avgMood.toStringAsFixed(1)}/10')),
+              const SizedBox(width: 12),
+              Expanded(child: _buildStatCard('📅', 'Días Registrados', '$reflectionDays')),
+              const SizedBox(width: 12),
+              Expanded(child: _buildStatCard('🏆', 'Consistencia', '${(reflectionDays/totalDays*100).round()}%')),
             ],
           ),
         ],
@@ -306,100 +826,287 @@ class _CalendarScreenV2State extends State<CalendarScreenV2> {
     );
   }
 
-  Widget _buildStatItem(String emoji, String label, String value) {
-    return Column(
-      children: [
-        Text(emoji, style: const TextStyle(fontSize: 24)),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+  Widget _buildMonthsGrid(OptimizedDailyEntriesProvider entriesProvider) {
+    final months = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ];
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        childAspectRatio: 1.2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      itemCount: 12,
+      itemBuilder: (context, index) {
+        final monthNumber = index + 1;
+        final monthEntries = entriesProvider.entries.where((entry) {
+          return entry.entryDate.year == _selectedYear &&
+              entry.entryDate.month == monthNumber;
+        }).toList();
+
+        final avgMood = monthEntries.isNotEmpty
+            ? monthEntries.map((e) => e.moodScore ?? 5).reduce((a, b) => a + b) / monthEntries.length
+            : 0.0;
+
+        return GestureDetector(
+          onTap: () {
+            setState(() {
+              _focusedMonth = DateTime(_selectedYear, monthNumber);
+              _showYearView = false;
+            });
+            HapticFeedback.lightImpact();
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: CalendarColors.backgroundCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              gradient: monthEntries.isNotEmpty
+                  ? LinearGradient(
+                colors: [
+                  _getMoodColor(avgMood.round()).withOpacity(0.1),
+                  _getMoodColor(avgMood.round()).withOpacity(0.05),
+                ],
+              )
+                  : null,
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  months[index],
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+
+                const SizedBox(height: 8),
+
+                if (monthEntries.isNotEmpty) ...[
+                  Text(
+                    '${avgMood.toStringAsFixed(1)}/10',
+                    style: TextStyle(
+                      color: _getMoodColor(avgMood.round()),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '${monthEntries.length} días',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 10,
+                    ),
+                  ),
+                ] else ...[
+                  const Icon(
+                    Icons.remove_circle_outline,
+                    color: Colors.white54,
+                    size: 20,
+                  ),
+                  const Text(
+                    'Sin datos',
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
-  bool _hasDataForDate(DateTime date, List<Map<String, dynamic>> moodData) {
-    return moodData.any((data) {
-      final entryDate = DateTime.parse(data['date'] as String);
-      return entryDate.year == date.year &&
-          entryDate.month == date.month &&
-          entryDate.day == date.day;
+  // ============================================================================
+  // FLOATING ACTION BUTTON
+  // ============================================================================
+
+  Widget _buildFloatingActionButton() {
+    // FIX: Replaced 'children' with 'label' and passed the widget directly.
+    return FloatingActionButton.extended(
+      onPressed: () => _createReflection(DateTime.now()),
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      label: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: CalendarColors.accentGradient),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: CalendarColors.accentGradient[0].withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.add, color: Colors.white),
+            SizedBox(width: 8),
+            Text(
+              'Nueva Reflexión',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ============================================================================
+  // LÓGICA DE NEGOCIO Y NAVEGACIÓN
+  // ============================================================================
+
+  void _previousPeriod() {
+    setState(() {
+      if (_showYearView) {
+        _selectedYear--;
+      } else {
+        _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1);
+      }
+    });
+    HapticFeedback.lightImpact();
+  }
+
+  void _nextPeriod() {
+    setState(() {
+      if (_showYearView) {
+        _selectedYear++;
+      } else {
+        _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1);
+      }
+    });
+    HapticFeedback.lightImpact();
+  }
+
+  void _showDatePicker() {
+    showDatePicker(
+      context: context,
+      initialDate: _showYearView ? DateTime(_selectedYear) : _focusedMonth,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: CalendarColors.accentGradient[0],
+              surface: CalendarColors.backgroundCard,
+              onSurface: Colors.white,
+            ),
+            dialogBackgroundColor: CalendarColors.backgroundSecondary,
+          ),
+          child: child!,
+        );
+      },
+    ).then((date) {
+      if (date != null) {
+        setState(() {
+          if (_showYearView) {
+            _selectedYear = date.year;
+          } else {
+            _focusedMonth = DateTime(date.year, date.month);
+          }
+        });
+      }
     });
   }
 
-  double _getMoodForDate(DateTime date, List<Map<String, dynamic>> moodData) {
-    try {
-      final data = moodData.firstWhere((data) {
-        final entryDate = DateTime.parse(data['date'] as String);
-        return entryDate.year == date.year &&
-            entryDate.month == date.month &&
-            entryDate.day == date.day;
-      });
-      return data['mood'] as double? ?? 0.0;
-    } catch (e) {
-      return 0.0;
-    }
+  void _showDayDetail(DateTime date) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DailyDetailScreenV2(date: date),
+      ),
+    );
   }
 
-  Map<String, dynamic>? _getDataForDate(DateTime date, List<Map<String, dynamic>> moodData) {
+  void _editReflection(DateTime date) {
+    // FIX: Removed 'date' parameter as DailyReviewScreenV2 does not accept it.
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const DailyReviewScreenV2(),
+      ),
+    );
+  }
+
+  void _createReflection(DateTime date) {
+    // FIX: Removed 'date' parameter as DailyReviewScreenV2 does not accept it.
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const DailyReviewScreenV2(),
+      ),
+    );
+  }
+
+  // ============================================================================
+  // HELPERS
+  // ============================================================================
+
+  dynamic _getEntryForDate(DateTime date, List<dynamic> entries) {
     try {
-      return moodData.firstWhere((data) {
-        final entryDate = DateTime.parse(data['date'] as String);
-        return entryDate.year == date.year &&
-            entryDate.month == date.month &&
-            entryDate.day == date.day;
-      });
+      return entries.firstWhere(
+            (entry) => _isSameDay(entry.entryDate, date),
+      );
     } catch (e) {
       return null;
     }
   }
 
-  Color _getMoodColor(double mood) {
-    if (mood >= 7) return Colors.green;
-    if (mood >= 5) return Colors.blue;
-    if (mood >= 3) return Colors.orange;
-    return Colors.red;
+  bool _isSameDay(DateTime date1, DateTime date2) {
+    return date1.year == date2.year &&
+        date1.month == date2.month &&
+        date1.day == date2.day;
   }
 
-  void _showCreateEntryDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: ModernColors.surfaceDark,
-        title: const Text(
-          'Crear Registro',
-          style: TextStyle(color: Colors.white),
-        ),
-        content: const Text(
-          'Esta funcionalidad será implementada próximamente.',
-          style: TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cerrar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getMonthName(int month) {
+  String _getMonthYearText(DateTime date) {
     const months = [
-      '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
       'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
     ];
-    return months[month];
+    return '${months[date.month - 1]} ${date.year}';
+  }
+
+  String _formatSelectedDate(DateTime date) {
+    const weekDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    const months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+    final dayName = weekDays[date.weekday - 1];
+    final monthName = months[date.month - 1];
+
+    return '$dayName, ${date.day} de $monthName de ${date.year}';
+  }
+
+  Color _getMoodColor(int score) {
+    if (score <= 3) return CalendarColors.moodBad;
+    if (score <= 5) return CalendarColors.moodNeutral;
+    if (score <= 7) return CalendarColors.moodGood;
+    return CalendarColors.moodExcellent;
+  }
+
+  String _getMoodLabel(int score) {
+    if (score <= 3) return 'Día difícil';
+    if (score <= 5) return 'Día regular';
+    if (score <= 7) return 'Buen día';
+    return 'Excelente día';
   }
 }

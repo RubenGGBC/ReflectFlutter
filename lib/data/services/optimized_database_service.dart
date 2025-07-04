@@ -171,64 +171,76 @@ class OptimizedDatabaseService {
       try {
         // TABLA USUARIOS - Optimizada para APK
         await txn.execute('''
-          CREATE TABLE users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            name TEXT NOT NULL,
-            avatar_emoji TEXT DEFAULT '🧘‍♀️',
-            profile_picture_path TEXT,
-            bio TEXT,
-            preferences TEXT DEFAULT '{}',
-            created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
-            last_login INTEGER,
-            is_active BOOLEAN DEFAULT 1
-          )
-        ''');
+        CREATE TABLE users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          email TEXT UNIQUE NOT NULL,
+          password_hash TEXT NOT NULL,
+          name TEXT NOT NULL,
+          avatar_emoji TEXT DEFAULT '🧘‍♀️',
+          profile_picture_path TEXT,
+          bio TEXT,
+          preferences TEXT DEFAULT '{}',
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+          last_login INTEGER,
+          is_active BOOLEAN DEFAULT 1
+        )
+      ''');
 
-        // TABLA ENTRADAS DIARIAS - Compatible con APK
+        // TABLA ENTRADAS DIARIAS - CON TODAS LAS COLUMNAS NECESARIAS
         await txn.execute('''
-          CREATE TABLE daily_entries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL,
-            entry_date TEXT NOT NULL,
-            free_reflection TEXT NOT NULL,
+        CREATE TABLE daily_entries (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          entry_date TEXT NOT NULL,
+          free_reflection TEXT NOT NULL,
 
-            -- Métricas básicas
-            mood_score INTEGER DEFAULT 5 CHECK (mood_score >= 1 AND mood_score <= 10),
-            energy_level INTEGER DEFAULT 5 CHECK (energy_level >= 1 AND energy_level <= 10),
-            stress_level INTEGER DEFAULT 5 CHECK (stress_level >= 1 AND stress_level <= 10),
-            worth_it INTEGER DEFAULT 1 CHECK (worth_it IN (0, 1)),
+          -- Métricas básicas
+          mood_score INTEGER DEFAULT 5 CHECK (mood_score >= 1 AND mood_score <= 10),
+          energy_level INTEGER DEFAULT 5 CHECK (energy_level >= 1 AND energy_level <= 10),
+          stress_level INTEGER DEFAULT 5 CHECK (stress_level >= 1 AND stress_level <= 10),
+          worth_it INTEGER DEFAULT 1 CHECK (worth_it IN (0, 1)),
 
-            -- Métricas avanzadas de analytics (agregadas dinámicamente si es necesario)
-            sleep_quality INTEGER CHECK (sleep_quality >= 1 AND sleep_quality <= 10),
-            anxiety_level INTEGER CHECK (anxiety_level >= 1 AND anxiety_level <= 10),
-            motivation_level INTEGER CHECK (motivation_level >= 1 AND motivation_level <= 10),
-            social_interaction INTEGER CHECK (social_interaction >= 1 AND social_interaction <= 10),
-            physical_activity INTEGER CHECK (physical_activity >= 1 AND physical_activity <= 10),
-            work_productivity INTEGER CHECK (work_productivity >= 1 AND work_productivity <= 10),
+          -- Campos de AI y análisis
+          overall_sentiment TEXT,
+          ai_summary TEXT,
+          word_count INTEGER DEFAULT 0,
 
-            -- Métricas cuantitativas
-            sleep_hours REAL CHECK (sleep_hours >= 0 AND sleep_hours <= 24),
-            water_intake INTEGER CHECK (water_intake >= 0),
-            meditation_minutes INTEGER CHECK (meditation_minutes >= 0),
-            exercise_minutes INTEGER CHECK (exercise_minutes >= 0),
-            screen_time_hours REAL CHECK (screen_time_hours >= 0),
+          -- Métricas avanzadas de bienestar
+          sleep_quality INTEGER CHECK (sleep_quality >= 1 AND sleep_quality <= 10),
+          anxiety_level INTEGER CHECK (anxiety_level >= 1 AND anxiety_level <= 10),
+          motivation_level INTEGER CHECK (motivation_level >= 1 AND motivation_level <= 10),
+          social_interaction INTEGER CHECK (social_interaction >= 1 AND social_interaction <= 10),
+          physical_activity INTEGER CHECK (physical_activity >= 1 AND physical_activity <= 10),
+          work_productivity INTEGER CHECK (work_productivity >= 1 AND work_productivity <= 10),
 
-            -- Campos de texto
-            gratitude_items TEXT,
-            positive_tags TEXT DEFAULT '[]',
-            negative_tags TEXT DEFAULT '[]',
+          -- Métricas cuantitativas
+          sleep_hours REAL CHECK (sleep_hours >= 0 AND sleep_hours <= 24),
+          water_intake INTEGER CHECK (water_intake >= 0 AND water_intake <= 20),
+          meditation_minutes INTEGER CHECK (meditation_minutes >= 0 AND meditation_minutes <= 600),
+          exercise_minutes INTEGER CHECK (exercise_minutes >= 0 AND exercise_minutes <= 600),
+          screen_time_hours REAL CHECK (screen_time_hours >= 0 AND screen_time_hours <= 24),
 
-            -- Timestamps
-            created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
-            updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+          -- Métricas adicionales
+          weather_mood_impact INTEGER CHECK (weather_mood_impact >= -5 AND weather_mood_impact <= 5),
+          social_battery INTEGER CHECK (social_battery >= 1 AND social_battery <= 10),
+          creative_energy INTEGER CHECK (creative_energy >= 1 AND creative_energy <= 10),
+          emotional_stability INTEGER CHECK (emotional_stability >= 1 AND emotional_stability <= 10),
+          focus_level INTEGER CHECK (focus_level >= 1 AND focus_level <= 10),
+          life_satisfaction INTEGER CHECK (life_satisfaction >= 1 AND life_satisfaction <= 10),
 
-            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-            UNIQUE(user_id, entry_date)
-          )
-        ''');
+          -- Campos de texto
+          gratitude_items TEXT,
+          positive_tags TEXT DEFAULT '[]',
+          negative_tags TEXT DEFAULT '[]',
 
+          -- Timestamps
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+          updated_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+          UNIQUE(user_id, entry_date)
+        )
+      ''');
         // TABLA MOMENTOS INTERACTIVOS - Optimizada
         await txn.execute('''
           CREATE TABLE interactive_moments (
@@ -2043,6 +2055,7 @@ Físicamente me siento bien - he mantenido mi rutina de ejercicio y eso definiti
       }
     }
   }
+
   // ============================================================================
   // ✅ MÉTODO HELPER PARA VALIDAR TIPOS DE GOALS
   // ============================================================================

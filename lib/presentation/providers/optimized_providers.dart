@@ -485,6 +485,8 @@ class OptimizedDailyEntriesProvider with ChangeNotifier {
 // INTERACTIVE MOMENTS PROVIDER OPTIMIZADO
 // ============================================================================
 
+
+
 class OptimizedMomentsProvider with ChangeNotifier {
   final OptimizedDatabaseService _databaseService;
   final Logger _logger = Logger();
@@ -552,7 +554,11 @@ class OptimizedMomentsProvider with ChangeNotifier {
   }
 
   /// Añadir nuevo momento
-  Future<bool> addMoment({
+  // ========================================================================
+  // FIX: Cambiado el tipo de retorno de Future<bool>
+  // a Future<OptimizedInteractiveMomentModel?>
+  // ========================================================================
+  Future<OptimizedInteractiveMomentModel?> addMoment({
     required int userId,
     required String emoji,
     required String text,
@@ -597,15 +603,23 @@ class OptimizedMomentsProvider with ChangeNotifier {
 
         _logger.i('✅ Momento añadido exitosamente');
         notifyListeners();
-        return true;
+
+        // ========================================================================
+        // FIX: Devolver el objeto del momento guardado en lugar de 'true'
+        // ========================================================================
+        return savedMoment;
       } else {
         _setError('No se pudo guardar el momento');
-        return false;
+
+        // ========================================================================
+        // FIX: Devolver null en caso de error en lugar de 'false'
+        // ========================================================================
+        return null;
       }
     } catch (e) {
       _logger.e('❌ Error añadiendo momento: $e');
       _setError('Error añadiendo momento');
-      return false;
+      return null;
     } finally {
       _setLoading(false);
     }
@@ -669,9 +683,15 @@ class OptimizedMomentsProvider with ChangeNotifier {
   Future<bool> clearTodayMoments(int userId) async {
     _logger.i('🗑️ Limpiando momentos de hoy');
     try {
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
       // Aquí implementarías el método clearTodayMoments en el database service
+      // await _databaseService.clearMomentsBetween(userId, startOfDay, endOfDay);
+
       _todayMoments.clear();
-      _moments.removeWhere((m) => m.entryDate.isAtSameMomentAs(DateTime.now()));
+      _moments.removeWhere((m) => m.timestamp.isAfter(startOfDay) && m.timestamp.isBefore(endOfDay));
       notifyListeners();
       return true;
     } catch (e) {
@@ -696,9 +716,7 @@ class OptimizedMomentsProvider with ChangeNotifier {
   }
 }
 
-// ============================================================================
-// ANALYTICS PROVIDER OPTIMIZADO
-// ============================================================================
+
 
 class OptimizedAnalyticsProvider with ChangeNotifier {
   final OptimizedDatabaseService _databaseService;
@@ -716,7 +734,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   // Getters específicos para compatibilidad
-  int get wellbeingScore => (_analytics['basic_stats']?['avg_wellbeing'] as double?)?.round() ?? 0;
+  int get wellbeingScore => ((_analytics['basic_stats']?['avg_wellbeing'] as num?)?.toDouble() ?? 0.0).round();
   String get wellbeingLevel {
     final score = wellbeingScore;
     if (score >= 8) return 'Excelente';
@@ -752,8 +770,9 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     final streakData = _analytics['streak_data'] as Map<String, dynamic>?;
 
     if (basicStats != null) {
-      final avgWellbeing = basicStats['avg_wellbeing'] as double? ?? 0.0;
-      final consistencyRate = basicStats['consistency_rate'] as double? ?? 0.0;
+      // FIX: Safer type casting
+      final avgWellbeing = (basicStats['avg_wellbeing'] as num?)?.toDouble() ?? 0.0;
+      final consistencyRate = (basicStats['consistency_rate'] as num?)?.toDouble() ?? 0.0;
 
       // Insight sobre bienestar
       if (avgWellbeing >= 7.0) {
@@ -782,10 +801,11 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
 
     // Insight sobre racha
     if (streakData != null) {
-      final currentStreak = streakData['current_streak'] as int? ?? 0;
+      final currentStreak = (streakData['current_streak'] as num?)?.toInt() ?? 0;
       if (currentStreak >= 7) {
         insights.add({
-          'icon': '�',
+          // FIX: Corrected broken emoji character
+          'icon': '🔥',
           'title': 'Racha Impresionante',
           'description': '$currentStreak días consecutivos registrando'
         });
@@ -794,14 +814,6 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
 
     return insights;
   }
-  // ============================================================================
-// MÉTODOS QUE TRABAJAN CON LOS DATOS QUE SÍ EXISTEN
-// ============================================================================
-
-// Añadir estos métodos al OptimizedAnalyticsProvider
-
-// Getter corregido para wellbeingScore
-
 
   /// Obtener insights destacados (basado en datos reales)
   List<Map<String, String>> getHighlightedInsights() {
@@ -812,10 +824,11 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     final streakData = _analytics['streak_data'] as Map<String, dynamic>?;
 
     if (basicStats != null) {
-      final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
-      final totalEntries = basicStats['total_entries'] as int? ?? 0;
-      final avgEnergy = basicStats['avg_energy'] as double? ?? 5.0;
-      final avgStress = basicStats['avg_stress'] as double? ?? 5.0;
+      // FIX: Safer type casting
+      final avgMood = (basicStats['avg_mood'] as num?)?.toDouble() ?? 5.0;
+      final totalEntries = (basicStats['total_entries'] as num?)?.toInt() ?? 0;
+      final avgEnergy = (basicStats['avg_energy'] as num?)?.toDouble() ?? 5.0;
+      final avgStress = (basicStats['avg_stress'] as num?)?.toDouble() ?? 5.0;
 
       // Insight sobre mood
       if (avgMood >= 7.0) {
@@ -874,7 +887,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
 
     // Insight sobre racha
     if (streakData != null) {
-      final currentStreak = streakData['current_streak'] as int? ?? 0;
+      final currentStreak = (streakData['current_streak'] as num?)?.toInt() ?? 0;
       if (currentStreak >= 7) {
         insights.add({
           'emoji': '🔥',
@@ -887,12 +900,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
 
     return insights;
   }
-  // ============================================================================
-// presentation/providers/analytics_extensions.dart - NUEVAS FUNCIONALIDADES
-// ============================================================================
 
-// Métodos adicionales para el OptimizedAnalyticsProvider
-// Agregar estos métodos al provider existente
 
   /// Predicción de bienestar para los próximos días basada en patrones
   Map<String, dynamic> getWellbeingPrediction() {
@@ -909,19 +917,18 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
       };
     }
 
-    final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
-    final avgEnergy = basicStats['avg_energy'] as double? ?? 5.0;
-    final avgStress = basicStats['avg_stress'] as double? ?? 5.0;
+    // FIX: Safer type casting
+    final avgMood = (basicStats['avg_mood'] as num?)?.toDouble() ?? 5.0;
 
     // Análisis de tendencia de los últimos 7 días
     final recentTrends = moodTrends.take(7).toList();
     double trendDirection = 0.0;
 
     if (recentTrends.length >= 3) {
-      final recent = recentTrends.take(3).map((t) => t['mood_score'] as double? ?? 5.0).toList();
-      final older = recentTrends.skip(3).map((t) => t['mood_score'] as double? ?? 5.0).toList();
+      final recent = recentTrends.take(3).map((t) => (t['mood_score'] as num?)?.toDouble() ?? 5.0).toList();
+      final older = recentTrends.skip(3).map((t) => (t['mood_score'] as num?)?.toDouble() ?? 5.0).toList();
 
-      if (older.isNotEmpty) {
+      if (older.isNotEmpty && recent.isNotEmpty) {
         final recentAvg = recent.reduce((a, b) => a + b) / recent.length;
         final olderAvg = older.reduce((a, b) => a + b) / older.length;
         trendDirection = recentAvg - olderAvg;
@@ -973,10 +980,11 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
       };
     }
 
-    final avgSleep = basicStats['avg_sleep_quality'] as double? ?? 5.0;
-    final avgPhysical = basicStats['avg_physical_activity'] as double? ?? 5.0;
-    final avgMeditation = basicStats['avg_meditation_minutes'] as double? ?? 0.0;
-    final avgSocial = basicStats['avg_social_interaction'] as double? ?? 5.0;
+    // FIX: Safer type casting
+    final avgSleep = (basicStats['avg_sleep_quality'] as num?)?.toDouble() ?? 5.0;
+    final avgPhysical = (basicStats['avg_physical_activity'] as num?)?.toDouble() ?? 5.0;
+    final avgMeditation = (basicStats['avg_meditation_minutes'] as num?)?.toDouble() ?? 0.0;
+    final avgSocial = (basicStats['avg_social_interaction'] as num?)?.toDouble() ?? 5.0;
 
     // Normalizar puntuaciones a 0-1
     final sleepScore = (avgSleep / 10.0).clamp(0.0, 1.0);
@@ -1025,20 +1033,16 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     final thisWeek = moodTrends.take(7).toList();
     final lastWeek = moodTrends.skip(7).take(7).toList();
 
-    final thisWeekMood = thisWeek.map((t) => t['mood_score'] as double? ?? 5.0)
-        .reduce((a, b) => a + b) / thisWeek.length;
-    final lastWeekMood = lastWeek.map((t) => t['mood_score'] as double? ?? 5.0)
-        .reduce((a, b) => a + b) / lastWeek.length;
+    // FIX: Safer type casting and check for empty lists before reducing
+    final thisWeekMood = thisWeek.isEmpty ? 5.0 : thisWeek.map((t) => (t['mood_score'] as num?)?.toDouble() ?? 5.0).reduce((a, b) => a + b) / thisWeek.length;
+    final lastWeekMood = lastWeek.isEmpty ? 5.0 : lastWeek.map((t) => (t['mood_score'] as num?)?.toDouble() ?? 5.0).reduce((a, b) => a + b) / lastWeek.length;
 
-    final thisWeekEnergy = thisWeek.map((t) => t['energy_level'] as double? ?? 5.0)
-        .reduce((a, b) => a + b) / thisWeek.length;
-    final lastWeekEnergy = lastWeek.map((t) => t['energy_level'] as double? ?? 5.0)
-        .reduce((a, b) => a + b) / lastWeek.length;
+    final thisWeekEnergy = thisWeek.isEmpty ? 5.0 : thisWeek.map((t) => (t['energy_level'] as num?)?.toDouble() ?? 5.0).reduce((a, b) => a + b) / thisWeek.length;
+    final lastWeekEnergy = lastWeek.isEmpty ? 5.0 : lastWeek.map((t) => (t['energy_level'] as num?)?.toDouble() ?? 5.0).reduce((a, b) => a + b) / lastWeek.length;
 
-    final thisWeekStress = thisWeek.map((t) => t['stress_level'] as double? ?? 5.0)
-        .reduce((a, b) => a + b) / thisWeek.length;
-    final lastWeekStress = lastWeek.map((t) => t['stress_level'] as double? ?? 5.0)
-        .reduce((a, b) => a + b) / lastWeek.length;
+    final thisWeekStress = thisWeek.isEmpty ? 5.0 : thisWeek.map((t) => (t['stress_level'] as num?)?.toDouble() ?? 5.0).reduce((a, b) => a + b) / thisWeek.length;
+    final lastWeekStress = lastWeek.isEmpty ? 5.0 : lastWeek.map((t) => (t['stress_level'] as num?)?.toDouble() ?? 5.0).reduce((a, b) => a + b) / lastWeek.length;
+
 
     return {
       'has_data': true,
@@ -1058,6 +1062,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     };
   }
 
+
   /// Recomendaciones personalizadas basadas en IA
   List<Map<String, dynamic>> getPersonalizedRecommendations() {
     final recommendations = <Map<String, dynamic>>[];
@@ -1067,7 +1072,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     final stressAlerts = getStressAlerts();
     final prediction = getWellbeingPrediction();
 
-    final currentScore = wellbeingStatus['score'] as int? ?? 5;
+    // FIX: Safer type casting
     final stressLevel = stressAlerts['level'] as String? ?? 'sin datos';
     final trend = prediction['trend'] as String? ?? 'stable';
 
@@ -1085,7 +1090,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     }
 
     // Recomendaciones basadas en hábitos
-    final sleepScore = habitsAnalysis['sleep_score'] as double? ?? 0.5;
+    final sleepScore = (habitsAnalysis['sleep_score'] as num?)?.toDouble() ?? 0.5;
     if (sleepScore < 0.6) {
       recommendations.add({
         'icon': '😴',
@@ -1112,7 +1117,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     }
 
     // Recomendación de ejercicio
-    final exerciseScore = habitsAnalysis['exercise_score'] as double? ?? 0.5;
+    final exerciseScore = (habitsAnalysis['exercise_score'] as num?)?.toDouble() ?? 0.5;
     if (exerciseScore < 0.6) {
       recommendations.add({
         'icon': '🏃‍♀️',
@@ -1126,7 +1131,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     }
 
     // Recomendación social
-    final socialScore = habitsAnalysis['social_score'] as double? ?? 0.5;
+    final socialScore = (habitsAnalysis['social_score'] as num?)?.toDouble() ?? 0.5;
     if (socialScore < 0.5) {
       recommendations.add({
         'icon': '👥',
@@ -1153,9 +1158,10 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     final moodTrends = _analytics['mood_trends'] as List? ?? [];
 
     return moodTrends.take(30).map((trend) {
-      final mood = trend['mood_score'] as double? ?? 5.0;
-      final energy = trend['energy_level'] as double? ?? 5.0;
-      final stress = trend['stress_level'] as double? ?? 5.0;
+      // FIX: Safer type casting
+      final mood = (trend['mood_score'] as num?)?.toDouble() ?? 5.0;
+      final energy = (trend['energy_level'] as num?)?.toDouble() ?? 5.0;
+      final stress = (trend['stress_level'] as num?)?.toDouble() ?? 5.0;
       final date = DateTime.tryParse(trend['entry_date'] as String? ?? '') ?? DateTime.now();
 
       String emoji;
@@ -1192,7 +1198,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
 
     final streakData = getStreakData();
     final habitsAnalysis = getHealthyHabitsAnalysis();
-    final currentStreak = streakData['current'] as int? ?? 0;
+    final currentStreak = (streakData['current'] as num?)?.toInt() ?? 0;
 
     // Challenge de racha
     if (currentStreak < 7) {
@@ -1210,7 +1216,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     }
 
     // Challenge de meditación
-    final meditationScore = habitsAnalysis['meditation_score'] as double? ?? 0.0;
+    final meditationScore = (habitsAnalysis['meditation_score'] as num?)?.toDouble() ?? 0.0;
     if (meditationScore < 0.5) {
       challenges.add({
         'id': 'meditation_week',
@@ -1226,7 +1232,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     }
 
     // Challenge de actividad física
-    final exerciseScore = habitsAnalysis['exercise_score'] as double? ?? 0.0;
+    final exerciseScore = (habitsAnalysis['exercise_score'] as num?)?.toDouble() ?? 0.0;
     if (exerciseScore < 0.7) {
       challenges.add({
         'id': 'active_week',
@@ -1252,10 +1258,10 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
 
     if (basicStats == null) return null;
 
-    final currentStreak = streakData?['current_streak'] as int? ?? 0;
-    final totalEntries = basicStats['total_entries'] as int? ?? 0;
-    final totalMeditation = basicStats['total_meditation'] as int? ?? 0;
-    final totalExercise = basicStats['total_exercise'] as int? ?? 0;
+    // FIX: Safer type casting
+    final currentStreak = (streakData?['current_streak'] as num?)?.toInt() ?? 0;
+    final totalEntries = (basicStats['total_entries'] as num?)?.toInt() ?? 0;
+    final totalMeditation = (basicStats['total_meditation'] as num?)?.toInt() ?? 0;
 
     // Logros basados en rachas
     if (currentStreak < 3) {
@@ -1340,9 +1346,10 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
       };
     }
 
-    final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
-    final avgEnergy = basicStats['avg_energy'] as double? ?? 5.0;
-    final avgStress = basicStats['avg_stress'] as double? ?? 5.0;
+    // FIX: Safer type casting
+    final avgMood = (basicStats['avg_mood'] as num?)?.toDouble() ?? 5.0;
+    final avgEnergy = (basicStats['avg_energy'] as num?)?.toDouble() ?? 5.0;
+    final avgStress = (basicStats['avg_stress'] as num?)?.toDouble() ?? 5.0;
 
     // Calcular score combinado (mood + energía - estrés)
     final combinedScore = (avgMood + avgEnergy + (10 - avgStress)) / 3;
@@ -1386,9 +1393,10 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     return moodTrends.map((trend) {
       return {
         'date': trend['entry_date'] ?? DateTime.now().toIso8601String(),
-        'mood': trend['mood_score'] ?? 5.0,
-        'energy': trend['energy_level'] ?? 5.0,
-        'stress': trend['stress_level'] ?? 5.0,
+        // FIX: Safer type casting
+        'mood': (trend['mood_score'] as num?)?.toDouble() ?? 5.0,
+        'energy': (trend['energy_level'] as num?)?.toDouble() ?? 5.0,
+        'stress': (trend['stress_level'] as num?)?.toDouble() ?? 5.0,
       };
     }).toList();
   }
@@ -1398,8 +1406,9 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     final streakData = _analytics['streak_data'] as Map<String, dynamic>?;
 
     return {
-      'current': streakData?['current_streak'] ?? 0,
-      'longest': streakData?['longest_streak'] ?? 0,
+      // FIX: Safer type casting
+      'current': (streakData?['current_streak'] as num?)?.toInt() ?? 0,
+      'longest': (streakData?['longest_streak'] as num?)?.toInt() ?? 0,
     };
   }
 
@@ -1416,7 +1425,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
       };
     }
 
-    final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
+    final avgMood = (basicStats['avg_mood'] as num?)?.toDouble() ?? 5.0;
 
     String trendIcon, trendDescription;
     Color trendColor;
@@ -1458,7 +1467,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
       };
     }
 
-    final avgStress = basicStats['avg_stress'] as double? ?? 5.0;
+    final avgStress = (basicStats['avg_stress'] as num?)?.toDouble() ?? 5.0;
 
     if (avgStress >= 7) {
       return {
@@ -1515,11 +1524,12 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
       };
     }
 
-    final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
-    final avgEnergy = basicStats['avg_energy'] as double? ?? 5.0;
-    final avgStress = basicStats['avg_stress'] as double? ?? 5.0;
-    final totalEntries = basicStats['total_entries'] as int? ?? 0;
-    final currentStreak = streakData?['current_streak'] as int? ?? 0;
+    // FIX: Safer type casting
+    final avgMood = (basicStats['avg_mood'] as num?)?.toDouble() ?? 5.0;
+    final avgEnergy = (basicStats['avg_energy'] as num?)?.toDouble() ?? 5.0;
+    final avgStress = (basicStats['avg_stress'] as num?)?.toDouble() ?? 5.0;
+    final totalEntries = (basicStats['total_entries'] as num?)?.toInt() ?? 0;
+    final currentStreak = (streakData?['current_streak'] as num?)?.toInt() ?? 0;
 
     // Calcular score de bienestar
     final wellbeingScore = ((avgMood + avgEnergy + (10 - avgStress)) / 3).round();
@@ -1572,11 +1582,12 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
       return recommendations;
     }
 
-    final avgMood = basicStats['avg_mood'] as double? ?? 5.0;
-    final avgEnergy = basicStats['avg_energy'] as double? ?? 5.0;
-    final avgStress = basicStats['avg_stress'] as double? ?? 5.0;
-    final avgSleep = basicStats['avg_sleep'] as double? ?? 8.0;
-    final totalMeditation = basicStats['total_meditation'] as int? ?? 0;
+    // FIX: Safer type casting
+    final avgMood = (basicStats['avg_mood'] as num?)?.toDouble() ?? 5.0;
+    final avgEnergy = (basicStats['avg_energy'] as num?)?.toDouble() ?? 5.0;
+    final avgStress = (basicStats['avg_stress'] as num?)?.toDouble() ?? 5.0;
+    final avgSleep = (basicStats['avg_sleep'] as num?)?.toDouble() ?? 8.0;
+    final totalMeditation = (basicStats['total_meditation'] as num?)?.toInt() ?? 0;
 
     // Recomendación basada en mood bajo
     if (avgMood < 5.0) {

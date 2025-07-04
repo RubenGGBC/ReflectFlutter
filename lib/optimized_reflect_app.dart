@@ -12,6 +12,7 @@ import 'injection_container_clean.dart' as clean_di;
 import 'presentation/providers/optimized_providers.dart';
 import 'presentation/providers/extended_daily_entries_provider.dart';
 import 'presentation/providers/theme_provider.dart';
+import 'presentation/providers/image_moments_provider.dart'; // ✅ NUEVO
 import 'ai/provider/ai_provider.dart';
 
 // Screens
@@ -42,6 +43,11 @@ class OptimizedReflectApp extends StatelessWidget {
         ),
         ChangeNotifierProvider<GoalsProvider>(
           create: (_) => clean_di.sl<GoalsProvider>(),
+        ),
+
+        // ✅ NUEVO: ImageMomentsProvider
+        ChangeNotifierProvider<ImageMomentsProvider>(
+          create: (_) => clean_di.sl<ImageMomentsProvider>(),
         ),
 
         // ============================================================================

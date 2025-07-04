@@ -13,6 +13,7 @@ import '../../data/services/notification_service.dart'; // ✅ NUEVO
 import 'presentation/providers/optimized_providers.dart';
 import 'presentation/providers/extended_daily_entries_provider.dart';
 import 'presentation/providers/notifications_provider.dart'; // ✅ NUEVO
+import 'presentation/providers/image_moments_provider.dart'; // ✅ NUEVO PROVIDER AÑADIDO
 import 'ai/provider/ai_provider.dart';
 
 // Theme provider (reutilizado del original)
@@ -94,6 +95,11 @@ Future<void> initCleanDependencies() async {
           () => NotificationsProvider(),
     );
 
+    // ✅ NUEVO: ImageMomentsProvider
+    sl.registerFactory<ImageMomentsProvider>(
+          () => ImageMomentsProvider(),
+    );
+
     logger.i('✅ Dependencias limpias inicializadas correctamente');
 
   } catch (e) {
@@ -142,6 +148,7 @@ bool areCleanServicesRegistered() {
     sl<AIProvider>();
     sl<GoalsProvider>();
     sl<NotificationsProvider>(); // ✅ NUEVO
+    sl<ImageMomentsProvider>(); // ✅ NUEVO
 
     return true;
   } catch (e) {
@@ -152,7 +159,7 @@ bool areCleanServicesRegistered() {
 /// Información del contenedor limpio
 Map<String, dynamic> getCleanContainerInfo() {
   return {
-    'total_services': 10, // ✅ ACTUALIZADO
+    'total_services': 11, // ✅ ACTUALIZADO (era 10, ahora 11)
     'services_ready': areCleanServicesRegistered(),
     'core_services': [
       'Logger',
@@ -169,6 +176,7 @@ Map<String, dynamic> getCleanContainerInfo() {
       'AIProvider',
       'GoalsProvider',
       'NotificationsProvider', // ✅ NUEVO
+      'ImageMomentsProvider', // ✅ NUEVO
     ],
     'removed_legacy': [
       'AnalyticsProvider (legacy)',
@@ -245,6 +253,7 @@ class CleanDIConstants {
   static const String aiProvider = 'AIProvider';
   static const String goalsProvider = 'GoalsProvider';
   static const String notificationsProvider = 'NotificationsProvider'; // ✅ NUEVO
+  static const String imageMomentsProvider = 'ImageMomentsProvider'; // ✅ NUEVO
 }
 
 // ============================================================================
