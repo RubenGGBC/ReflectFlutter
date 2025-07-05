@@ -15,6 +15,8 @@ import 'presentation/providers/extended_daily_entries_provider.dart';
 import 'presentation/providers/notifications_provider.dart'; // ✅ NUEVO
 import 'presentation/providers/image_moments_provider.dart'; // ✅ NUEVO PROVIDER AÑADIDO
 import 'ai/provider/ai_provider.dart';
+import '../../../ai/provider/predective_analysis_provider.dart'; // ✅ NUEVO: Análisis Predictivo
+import 'ai/provider/chat_provider.dart'; // ✅ NUEVO: Chat con IA
 
 // Theme provider (reutilizado del original)
 import 'presentation/providers/theme_provider.dart';
@@ -100,6 +102,16 @@ Future<void> initCleanDependencies() async {
           () => ImageMomentsProvider(),
     );
 
+    // ✅ NUEVO: PredictiveAnalysisProvider
+    sl.registerFactory<PredictiveAnalysisProvider>(
+          () => PredictiveAnalysisProvider(sl<OptimizedDatabaseService>()),
+    );
+
+    // ✅ NUEVO: ChatProvider
+    sl.registerFactory<ChatProvider>(
+          () => ChatProvider(sl<OptimizedDatabaseService>(), sl<AIProvider>()),
+    );
+
     logger.i('✅ Dependencias limpias inicializadas correctamente');
 
   } catch (e) {
@@ -149,6 +161,8 @@ bool areCleanServicesRegistered() {
     sl<GoalsProvider>();
     sl<NotificationsProvider>(); // ✅ NUEVO
     sl<ImageMomentsProvider>(); // ✅ NUEVO
+    sl<PredictiveAnalysisProvider>(); // ✅ NUEVO
+    sl<ChatProvider>(); // ✅ NUEVO
 
     return true;
   } catch (e) {
@@ -159,7 +173,7 @@ bool areCleanServicesRegistered() {
 /// Información del contenedor limpio
 Map<String, dynamic> getCleanContainerInfo() {
   return {
-    'total_services': 11, // ✅ ACTUALIZADO (era 10, ahora 11)
+    'total_services': 13, // ✅ ACTUALIZADO (era 12, ahora 13)
     'services_ready': areCleanServicesRegistered(),
     'core_services': [
       'Logger',
@@ -177,6 +191,8 @@ Map<String, dynamic> getCleanContainerInfo() {
       'GoalsProvider',
       'NotificationsProvider', // ✅ NUEVO
       'ImageMomentsProvider', // ✅ NUEVO
+      'PredictiveAnalysisProvider', // ✅ NUEVO
+      'ChatProvider', // ✅ NUEVO
     ],
     'removed_legacy': [
       'AnalyticsProvider (legacy)',
@@ -254,6 +270,8 @@ class CleanDIConstants {
   static const String goalsProvider = 'GoalsProvider';
   static const String notificationsProvider = 'NotificationsProvider'; // ✅ NUEVO
   static const String imageMomentsProvider = 'ImageMomentsProvider'; // ✅ NUEVO
+  static const String predictiveAnalysisProvider = 'PredictiveAnalysisProvider'; // ✅ NUEVO
+  static const String chatProvider = 'ChatProvider'; // ✅ NUEVO
 }
 
 // ============================================================================
