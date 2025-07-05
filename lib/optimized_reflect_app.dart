@@ -14,6 +14,8 @@ import 'presentation/providers/extended_daily_entries_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/image_moments_provider.dart'; // ✅ NUEVO
 import 'ai/provider/ai_provider.dart';
+import 'ai/provider/predective_analysis_provider.dart'; // ✅ NUEVO: Análisis Predictivo
+import 'ai/provider/chat_provider.dart'; // ✅ NUEVO: Chat con IA
 
 // Screens
 import 'presentation/screens/v2/login_screen_v2.dart';
@@ -90,6 +92,26 @@ class OptimizedReflectApp extends StatelessWidget {
             if (auth.isLoggedIn && auth.currentUser != null) {
               previous?.loadCompleteAnalytics(auth.currentUser!.id);
             }
+            return previous!;
+          },
+        ),
+
+        // ✅ NUEVO: PredictiveAnalysisProvider
+        ChangeNotifierProxyProvider<OptimizedAuthProvider, PredictiveAnalysisProvider>(
+          create: (_) => clean_di.sl<PredictiveAnalysisProvider>(),
+          update: (context, auth, previous) {
+            // Este provider se activa cuando hay usuario autenticado
+            // pero no carga datos automáticamente (solo cuando se llama explícitamente)
+            return previous!;
+          },
+        ),
+
+        // ✅ NUEVO: ChatProvider - Depende del AIProvider
+        ChangeNotifierProxyProvider<AIProvider, ChatProvider>(
+          create: (_) => clean_di.sl<ChatProvider>(),
+          update: (context, ai, previous) {
+            // El ChatProvider se inicializa automáticamente cuando AIProvider está disponible
+            // El database service se obtiene a través del injection container
             return previous!;
           },
         ),
