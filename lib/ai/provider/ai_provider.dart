@@ -24,7 +24,7 @@ class AIProvider extends ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isGenAIAvailable => _isGenAIAvailable; // ✅ NEW: Expose GenAI status
 
-  /// Inicia el proceso completo de inicialización de la IA.
+  /// Inicia el proceso completo de inicia l ización de la IA.
   Future<void> initializeAI() async {
     if (_isInitialized || _isInitializing) return;
 
