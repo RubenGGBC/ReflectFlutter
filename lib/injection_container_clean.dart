@@ -17,6 +17,7 @@ import 'presentation/providers/image_moments_provider.dart'; // ✅ NUEVO PROVID
 import 'ai/provider/ai_provider.dart';
 import '../../../ai/provider/predective_analysis_provider.dart'; // ✅ NUEVO: Análisis Predictivo
 import 'ai/provider/chat_provider.dart'; // ✅ NUEVO: Chat con IA
+import 'ai/provider/mental_health_chat_provider.dart'; // ✅ NUEVO: Mental Health Chat
 
 // Theme provider (reutilizado del original)
 import 'presentation/providers/theme_provider.dart';
@@ -112,6 +113,11 @@ Future<void> initCleanDependencies() async {
           () => ChatProvider(sl<OptimizedDatabaseService>(), sl<AIProvider>()),
     );
 
+    // ✅ NUEVO: MentalHealthChatProvider
+    sl.registerFactory<MentalHealthChatProvider>(
+          () => MentalHealthChatProvider(sl<OptimizedDatabaseService>()),
+    );
+
     logger.i('✅ Dependencias limpias inicializadas correctamente');
 
   } catch (e) {
@@ -163,6 +169,7 @@ bool areCleanServicesRegistered() {
     sl<ImageMomentsProvider>(); // ✅ NUEVO
     sl<PredictiveAnalysisProvider>(); // ✅ NUEVO
     sl<ChatProvider>(); // ✅ NUEVO
+    sl<MentalHealthChatProvider>(); // ✅ NUEVO
 
     return true;
   } catch (e) {
@@ -173,7 +180,7 @@ bool areCleanServicesRegistered() {
 /// Información del contenedor limpio
 Map<String, dynamic> getCleanContainerInfo() {
   return {
-    'total_services': 13, // ✅ ACTUALIZADO (era 12, ahora 13)
+    'total_services': 14, // ✅ ACTUALIZADO (era 13, ahora 14)
     'services_ready': areCleanServicesRegistered(),
     'core_services': [
       'Logger',
@@ -193,6 +200,7 @@ Map<String, dynamic> getCleanContainerInfo() {
       'ImageMomentsProvider', // ✅ NUEVO
       'PredictiveAnalysisProvider', // ✅ NUEVO
       'ChatProvider', // ✅ NUEVO
+      'MentalHealthChatProvider', // ✅ NUEVO
     ],
     'removed_legacy': [
       'AnalyticsProvider (legacy)',
@@ -272,6 +280,7 @@ class CleanDIConstants {
   static const String imageMomentsProvider = 'ImageMomentsProvider'; // ✅ NUEVO
   static const String predictiveAnalysisProvider = 'PredictiveAnalysisProvider'; // ✅ NUEVO
   static const String chatProvider = 'ChatProvider'; // ✅ NUEVO
+  static const String mentalHealthChatProvider = 'MentalHealthChatProvider'; // ✅ NUEVO
 }
 
 // ============================================================================

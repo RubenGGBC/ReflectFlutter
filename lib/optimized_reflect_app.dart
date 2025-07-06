@@ -16,6 +16,7 @@ import 'presentation/providers/image_moments_provider.dart'; // ✅ NUEVO
 import 'ai/provider/ai_provider.dart';
 import 'ai/provider/predective_analysis_provider.dart'; // ✅ NUEVO: Análisis Predictivo
 import 'ai/provider/chat_provider.dart'; // ✅ NUEVO: Chat con IA
+import 'ai/provider/mental_health_chat_provider.dart'; // ✅ NUEVO: Mental Health Chat
 
 // Screens
 import 'presentation/screens/v2/login_screen_v2.dart';
@@ -114,6 +115,11 @@ class OptimizedReflectApp extends StatelessWidget {
             // El database service se obtiene a través del injection container
             return previous!;
           },
+        ),
+
+        // ✅ NUEVO: MentalHealthChatProvider - Independent mental health chat
+        ChangeNotifierProvider<MentalHealthChatProvider>(
+          create: (_) => clean_di.sl<MentalHealthChatProvider>(),
         ),
       ],
       child: Consumer<ThemeProvider>(
