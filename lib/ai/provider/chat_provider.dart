@@ -1,6 +1,6 @@
 // lib/ai/provider/chat_provider.dart
 // ============================================================================
-// CHAT PROVIDER - COACH EMOCIONAL CON IA Y MEMORIA
+// CHAT PROVIDER - CONVERSACIÓN GENERAL CON IA Y MEMORIA EMOCIONAL - CORREGIDO
 // ============================================================================
 
 import 'package:flutter/foundation.dart';
@@ -14,7 +14,8 @@ import '../../data/services/optimized_database_service.dart';
 import '../../data/models/optimized_models.dart';
 import 'ai_provider.dart';
 import '../services/phi_model_service_genai_complete.dart';
-import '../prompts/wellness_coach_prompts.dart';
+import '../services/phi_,model_service_chat_extension.dart';
+import '../services/psychology_chat_extension.dart';
 
 class ChatProvider extends ChangeNotifier {
   final OptimizedDatabaseService _databaseService;
@@ -32,9 +33,9 @@ class ChatProvider extends ChangeNotifier {
   bool _isAIReady = false;
   String _aiStatus = 'Verificando...';
 
-  // Cache de datos del usuario para coaching
-  Map<String, dynamic>? _userWellnessData;
-  DateTime? _lastWellnessDataUpdate;
+  // Cache de memoria emocional - MODIFICADO: Solo patrones generales
+  Map<String, dynamic>? _conversationMemory;
+  DateTime? _lastMemoryUpdate;
 
   ChatProvider(this._databaseService, this._aiProvider) {
     _initializeChat();
@@ -60,8 +61,8 @@ class ChatProvider extends ChangeNotifier {
       // 1. Verificar estado del motor de IA
       await _checkAIReadiness();
 
-      // 2. Cargar datos de bienestar del usuario
-      await _loadUserWellnessData();
+      // 2. Cargar memoria conversacional (MODIFICADO: Sin datos específicos del usuario)
+      await _loadConversationMemory();
 
       // 3. Cargar conversaciones guardadas
       await _loadConversations();
@@ -70,20 +71,46 @@ class ChatProvider extends ChangeNotifier {
       if (_conversations.isEmpty) {
         await _createDefaultConversation();
       } else {
-        // Usar la conversación más reciente
         _currentConversation = _conversations.first;
       }
 
       _logger.i('✅ ChatProvider inicializado correctamente');
     } catch (e) {
       _logger.e('❌ Error inicializando ChatProvider: $e');
-      _setError('Error inicializando chat: $e');
+      _setError('Error iniciando el chat: $e');
     } finally {
       _setLoading(false);
     }
   }
 
-  /// 🧠 Verificar estado del motor de IA
+  /// 🔧 Setters de estado
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void _setSendingMessage(bool sending) {
+    _isSendingMessage = sending;
+    notifyListeners();
+  }
+
+  void _setError(String? error) {
+    _errorMessage = error;
+    notifyListeners();
+  }
+
+  /// ✅ MÉTODO FALTANTE: Limpiar error
+  void _clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
+
+  void _setAIStatus(String status) {
+    _aiStatus = status;
+    notifyListeners();
+  }
+
+  /// 🧠 Verificar disponibilidad de IA
   Future<void> _checkAIReadiness() async {
     try {
       final phiService = PhiModelServiceGenAI.instance;
@@ -91,13 +118,12 @@ class ChatProvider extends ChangeNotifier {
       if (phiService.isInitialized) {
         _isAIReady = true;
         _setAIStatus(phiService.isGenAIAvailable
-            ? 'Coach IA listo (motor nativo)'
-            : 'Coach IA listo (modo compatible)');
+            ? 'IA lista (motor nativo)'
+            : 'IA lista (modo compatible)');
       } else {
         _isAIReady = false;
-        _setAIStatus('Coach IA inicializando...');
+        _setAIStatus('IA inicializando...');
 
-        // Intentar inicializar
         await phiService.initialize(
           onStatusUpdate: (status) => _setAIStatus(status),
           onProgress: (progress) => {/* progress handled elsewhere */},
@@ -105,47 +131,64 @@ class ChatProvider extends ChangeNotifier {
 
         _isAIReady = phiService.isInitialized;
         _setAIStatus(_isAIReady
-            ? 'Coach IA listo'
-            : 'Coach IA temporalmente no disponible');
+            ? 'IA lista'
+            : 'IA temporalmente no disponible');
       }
     } catch (e) {
       _isAIReady = false;
-      _setAIStatus('Coach IA en modo básico');
+      _setAIStatus('IA en modo básico');
       _logger.w('IA no disponible, usando modo básico: $e');
     }
   }
 
-  /// 📊 Cargar datos de bienestar del usuario
-  Future<void> _loadUserWellnessData() async {
+  /// 💭 Cargar memoria conversacional - MODIFICADO: Solo patrones generales
+  Future<void> _loadConversationMemory() async {
     try {
-      // Cargar entradas recientes (últimos 7 días)
-      final now = DateTime.now();
-      final weekAgo = now.subtract(const Duration(days: 7));
+      final prefs = await SharedPreferences.getInstance();
+      final memoryJson = prefs.getString('conversation_memory');
 
-      final recentEntries = await _databaseService.getDailyEntries(
-        userId: 1, // TODO: Obtener userId real del auth provider
-        startDate: weekAgo,
-        endDate: now,
-        limit: 30,
-      );
+      if (memoryJson != null) {
+        _conversationMemory = jsonDecode(memoryJson);
+        _lastMemoryUpdate = DateTime.parse(_conversationMemory!['last_update'] ?? DateTime.now().toIso8601String());
+      } else {
+        // Inicializar memoria por primera vez
+        _conversationMemory = {
+          'emotional_patterns': {},
+          'conversation_preferences': {},
+          'topics_discussed': [],
+          'user_interests': [],
+          'communication_style': 'friendly',
+          'last_update': DateTime.now().toIso8601String(),
+        };
+        await _saveConversationMemory();
+      }
 
-      // Cargar momentos recientes (últimos 7 días)
-      final recentMoments = await _databaseService.getInteractiveMoments(
-        userId: 1, // TODO: Obtener userId real del auth provider
-        limit: 50,
-      );
-
-      _userWellnessData = {
-        'recent_entries': recentEntries.map((e) => e.toOptimizedDatabase()).toList(),
-        'recent_moments': recentMoments.map((m) => m.toOptimizedDatabase()).toList(),
-        'user_name': 'Usuario', // Obtener del perfil si está disponible
-      };
-
-      _lastWellnessDataUpdate = now;
-      _logger.i('📊 Datos de bienestar cargados: ${recentEntries.length} entradas, ${recentMoments.length} momentos');
+      _logger.i('💭 Memoria conversacional cargada');
     } catch (e) {
-      _logger.e('❌ Error cargando datos de bienestar: $e');
-      _userWellnessData = null;
+      _logger.e('❌ Error cargando memoria: $e');
+      _conversationMemory = {
+        'emotional_patterns': {},
+        'conversation_preferences': {},
+        'topics_discussed': [],
+        'user_interests': [],
+        'communication_style': 'friendly',
+        'last_update': DateTime.now().toIso8601String(),
+      };
+    }
+  }
+
+  /// 💾 Guardar memoria conversacional
+  Future<void> _saveConversationMemory() async {
+    try {
+      if (_conversationMemory == null) return;
+
+      _conversationMemory!['last_update'] = DateTime.now().toIso8601String();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('conversation_memory', jsonEncode(_conversationMemory));
+
+      _logger.i('💾 Memoria conversacional guardada');
+    } catch (e) {
+      _logger.e('❌ Error guardando memoria: $e');
     }
   }
 
@@ -184,9 +227,9 @@ class ChatProvider extends ChangeNotifier {
     }
   }
 
-  /// 🆕 Crear conversación por defecto
+  /// 🆕 Crear conversación por defecto - MODIFICADO: Saludo general
   Future<void> _createDefaultConversation() async {
-    final personalizedWelcome = await _generatePersonalizedWelcome();
+    final personalizedWelcome = _generatePersonalizedWelcome();
 
     final welcomeMessage = ChatMessage.system(
       content: personalizedWelcome,
@@ -194,7 +237,7 @@ class ChatProvider extends ChangeNotifier {
 
     final conversation = ChatConversation.create(
       userId: 'current_user',
-      title: 'Chat con Coach IA',
+      title: 'Conversación con IA',
       firstMessage: welcomeMessage,
     );
 
@@ -205,45 +248,429 @@ class ChatProvider extends ChangeNotifier {
     _logger.i('🆕 Conversación por defecto creada');
   }
 
-  /// 🎯 Generar mensaje de bienvenida personalizado
-  Future<String> _generatePersonalizedWelcome() async {
-    if (_userWellnessData == null) {
-      return '¡Hola! Soy tu Coach de IA personal. Estoy aquí para acompañarte en tu desarrollo emocional y bienestar. ¿En qué puedo ayudarte hoy?';
+  /// 🎯 Generar mensaje de bienvenida personalizado - MODIFICADO: Sin datos específicos
+  String _generatePersonalizedWelcome() {
+    if (_conversationMemory == null) {
+      return '¡Hola! Soy tu asistente de IA personal. Estoy aquí para conversar contigo, ayudarte con cualquier duda, analizar tus emociones y proponerte soluciones a lo que necesites. ¿En qué puedo ayudarte hoy?';
     }
 
-    final recentEntries = _userWellnessData!['recent_entries'] as List? ?? [];
-    final recentMoments = _userWellnessData!['recent_moments'] as List? ?? [];
+    final communicationStyle = _conversationMemory!['communication_style'] ?? 'friendly';
+    final userInterests = _conversationMemory!['user_interests'] as List? ?? [];
+    final topicsDiscussed = _conversationMemory!['topics_discussed'] as List? ?? [];
 
-    if (recentEntries.isEmpty && recentMoments.isEmpty) {
-      return '¡Hola! Es genial verte por aquí. Soy tu Coach de IA personal y estoy aquí para acompañarte en tu bienestar emocional. Comenzamos juntos este viaje de autoconocimiento. ¿Cómo te sientes hoy?';
+    String welcomeMessage = '¡Hola de nuevo! ';
+
+    if (communicationStyle == 'formal') {
+      welcomeMessage = 'Saludos. Es un gusto volver a conversar contigo. ';
+    } else if (communicationStyle == 'casual') {
+      welcomeMessage = '¡Hey! ¿Qué tal? ';
     }
 
-    // Analizar datos recientes para personalizar el saludo
-    var welcomeMessage = '¡Hola! Me alegra verte de nuevo. ';
-
-    if (recentEntries.isNotEmpty) {
-      final lastEntry = recentEntries.last;
-      final moodScore = lastEntry['mood_score'] ?? 5;
-
-      if (moodScore >= 7) {
-        welcomeMessage += 'He notado que has tenido días positivos recientemente, ¡eso es maravilloso! ';
-      } else if (moodScore <= 4) {
-        welcomeMessage += 'Veo que has estado navegando algunos desafíos. Estoy aquí para apoyarte. ';
-      } else {
-        welcomeMessage += 'He visto tus reflexiones recientes y admiro tu dedicación al autoconocimiento. ';
-      }
+    if (userInterests.isNotEmpty) {
+      final randomInterest = userInterests[math.Random().nextInt(userInterests.length)];
+      welcomeMessage += 'Recuerdo que te gusta hablar de $randomInterest. ';
     }
 
-    welcomeMessage += '¿En qué puedo acompañarte hoy?';
+    if (topicsDiscussed.isNotEmpty && topicsDiscussed.length > 3) {
+      welcomeMessage += 'Hemos tenido conversaciones muy interesantes. ';
+    }
+
+    welcomeMessage += '¿En qué puedo ayudarte hoy? Puedo conversar sobre cualquier tema, analizar cómo te sientes o ayudarte a encontrar soluciones.';
 
     return welcomeMessage;
   }
 
-  /// 💬 Enviar mensaje del usuario
-  Future<void> sendMessage(String content) async {
+  /// 💬 Enviar mensaje y obtener respuesta de IA - MODIFICADO: Análisis emocional general
+  Future<void> sendMessage(String message) async {
+    if (message.trim().isEmpty || _isSendingMessage) return;
+    if (_currentConversation == null) {
+      await _createDefaultConversation();
+    }
+
+    _setSendingMessage(true);
+    _setError(null);
+
+    try {
+      // Agregar mensaje del usuario
+      final userMessage = ChatMessage.user(
+        content: message.trim(),
+        userId: 'current_user',
+        conversationId: _currentConversation!.id,
+      );
+      _addMessageToCurrentConversation(userMessage);
+
+      // Analizar y actualizar memoria emocional
+      await _analyzeAndUpdateMemory(message);
+
+      // Generar respuesta de IA
+      if (_isAIReady) {
+        final response = await _generateAIResponse(message);
+        final aiMessage = ChatMessage.assistant(
+          content: response,
+          conversationId: _currentConversation!.id,
+        );
+        _addMessageToCurrentConversation(aiMessage);
+      } else {
+        final fallbackResponse = _generateFallbackResponse(message);
+        final aiMessage = ChatMessage.assistant(
+          content: fallbackResponse,
+          conversationId: _currentConversation!.id,
+        );
+        _addMessageToCurrentConversation(aiMessage);
+      }
+
+      // Guardar conversación
+      await _saveConversations();
+      await _saveConversationMemory();
+
+    } catch (e) {
+      _logger.e('❌ Error enviando mensaje: $e');
+      _setError('Error enviando mensaje: ${e.toString()}');
+
+      // Agregar mensaje de error
+      final errorMessage = ChatMessage.error(
+        content: 'Lo siento, hubo un problema procesando tu mensaje. Por favor intenta de nuevo.',
+        conversationId: _currentConversation!.id,
+      );
+      _addMessageToCurrentConversation(errorMessage);
+
+    } finally {
+      _setSendingMessage(false);
+    }
+  }
+
+  /// 🧠 Analizar mensaje y actualizar memoria emocional - NUEVO: Análisis general
+  Future<void> _analyzeAndUpdateMemory(String message) async {
+    if (_conversationMemory == null) return;
+
+    try {
+      // Detectar emociones básicas en el mensaje
+      final emotions = _detectEmotions(message);
+      final topics = _extractTopics(message);
+      final communicationStyle = _detectCommunicationStyle(message);
+
+      // Actualizar patrones emocionales
+      final emotionalPatterns = _conversationMemory!['emotional_patterns'] as Map<String, dynamic>? ?? {};
+      for (final emotion in emotions) {
+        emotionalPatterns[emotion] = (emotionalPatterns[emotion] ?? 0) + 1;
+      }
+      _conversationMemory!['emotional_patterns'] = emotionalPatterns;
+
+      // Actualizar temas de interés
+      final userInterests = List<String>.from(_conversationMemory!['user_interests'] ?? []);
+      for (final topic in topics) {
+        if (!userInterests.contains(topic)) {
+          userInterests.add(topic);
+          if (userInterests.length > 10) {
+            userInterests.removeAt(0); // Mantener solo los 10 más recientes
+          }
+        }
+      }
+      _conversationMemory!['user_interests'] = userInterests;
+
+      // Actualizar temas discutidos
+      final topicsDiscussed = List<String>.from(_conversationMemory!['topics_discussed'] ?? []);
+      for (final topic in topics) {
+        topicsDiscussed.add(topic);
+        if (topicsDiscussed.length > 20) {
+          topicsDiscussed.removeAt(0);
+        }
+      }
+      _conversationMemory!['topics_discussed'] = topicsDiscussed;
+
+      // Actualizar estilo de comunicación preferido
+      if (communicationStyle.isNotEmpty) {
+        _conversationMemory!['communication_style'] = communicationStyle;
+      }
+
+    } catch (e) {
+      _logger.e('❌ Error analizando memoria: $e');
+    }
+  }
+
+  /// 😊 Detectar emociones en el mensaje - NUEVO
+  List<String> _detectEmotions(String message) {
+    final emotions = <String>[];
+    final lowerMessage = message.toLowerCase();
+
+    // Emociones positivas
+    if (lowerMessage.contains(RegExp(r'\b(feliz|contento|alegre|genial|excelente|perfecto|increíble|maravilloso)\b'))) {
+      emotions.add('alegría');
+    }
+    if (lowerMessage.contains(RegExp(r'\b(emocionado|entusiasmado|motivado|inspirado)\b'))) {
+      emotions.add('entusiasmo');
+    }
+    if (lowerMessage.contains(RegExp(r'\b(gracias|agradecido|agradezco)\b'))) {
+      emotions.add('gratitud');
+    }
+
+    // Emociones negativas
+    if (lowerMessage.contains(RegExp(r'\b(triste|deprimido|melancólico|desanimado)\b'))) {
+      emotions.add('tristeza');
+    }
+    if (lowerMessage.contains(RegExp(r'\b(nervioso|ansioso|preocupado|estresado|agobiado)\b'))) {
+      emotions.add('ansiedad');
+    }
+    if (lowerMessage.contains(RegExp(r'\b(enojado|molesto|frustrado|irritado)\b'))) {
+      emotions.add('enojo');
+    }
+    if (lowerMessage.contains(RegExp(r'\b(confundido|perdido|no entiendo)\b'))) {
+      emotions.add('confusión');
+    }
+
+    return emotions;
+  }
+
+  /// 🏷️ Extraer temas del mensaje - NUEVO
+  List<String> _extractTopics(String message) {
+    final topics = <String>[];
+    final lowerMessage = message.toLowerCase();
+
+    // Temas comunes
+    final topicPatterns = {
+      'trabajo': RegExp(r'\b(trabajo|empleo|oficina|jefe|empresa|carrera|proyecto)\b'),
+      'estudios': RegExp(r'\b(estudios|universidad|colegio|examen|tarea|curso)\b'),
+      'familia': RegExp(r'\b(familia|padres|hijos|hermanos|pareja|relación)\b'),
+      'salud': RegExp(r'\b(salud|médico|ejercicio|dormir|comer|dieta)\b'),
+      'dinero': RegExp(r'\b(dinero|economía|comprar|ahorro|gasto|presupuesto)\b'),
+      'tecnología': RegExp(r'\b(tecnología|computadora|celular|internet|app|programa)\b'),
+      'hobbies': RegExp(r'\b(música|películas|libros|videojuegos|deporte|arte)\b'),
+      'viajes': RegExp(r'\b(viaje|vacaciones|viajar|turismo|destino)\b'),
+    };
+
+    for (final entry in topicPatterns.entries) {
+      if (entry.value.hasMatch(lowerMessage)) {
+        topics.add(entry.key);
+      }
+    }
+
+    return topics;
+  }
+
+  /// 🗣️ Detectar estilo de comunicación - NUEVO
+  String _detectCommunicationStyle(String message) {
+    final lowerMessage = message.toLowerCase();
+
+    // Formal
+    if (lowerMessage.contains(RegExp(r'\b(usted|por favor|disculpe|podría|sería tan amable)\b'))) {
+      return 'formal';
+    }
+
+    // Casual
+    if (lowerMessage.contains(RegExp(r'\b(hey|qué tal|cómo andas|genial|chevere|jaja|jeje)\b'))) {
+      return 'casual';
+    }
+
+    return 'friendly'; // Por defecto
+  }
+
+  /// 🤖 Generar respuesta de IA
+  Future<String> _generateAIResponse(String message) async {
+    try {
+      final phiService = PhiModelServiceGenAI.instance;
+      final conversationHistory = _buildConversationHistory();
+
+      return await phiService.generateChatResponse(
+        userMessage: message,
+        conversationHistory: conversationHistory,
+        userName: 'Usuario',
+      );
+    } catch (e) {
+      _logger.e('❌ Error generando respuesta IA: $e');
+      return _generateFallbackResponse(message);
+    }
+  }
+
+  /// 📜 Construir historial de conversación
+  String _buildConversationHistory() {
+    if (_currentConversation == null || _currentConversation!.messages.isEmpty) {
+      return '';
+    }
+
+    final recentMessages = _currentConversation!.messages.take(10).toList();
+    return recentMessages
+        .map((msg) => '${msg.roleDisplay}: ${msg.content}')
+        .join('\n');
+  }
+
+  /// ✅ MÉTODO FALTANTE: Construir contexto de conversación para psicología
+  String _buildConversationContext() {
+    if (_currentConversation == null || _currentConversation!.messages.isEmpty) {
+      return '';
+    }
+
+    // Tomar los últimos 15 mensajes para contexto más amplio en psicología
+    final recentMessages = _currentConversation!.messages.take(15).toList();
+    return recentMessages
+        .where((msg) => msg.type != MessageType.thinking) // Excluir mensajes de "pensando"
+        .map((msg) => '${msg.roleDisplay}: ${msg.content}')
+        .join('\n');
+  }
+
+  /// 🔧 Generar respuesta de respaldo - MODIFICADO: Más empática y propositiva
+  String _generateFallbackResponse(String message) {
+    final emotions = _detectEmotions(message);
+    final lowerMessage = message.toLowerCase();
+
+    // Respuestas según emociones detectadas
+    if (emotions.contains('tristeza')) {
+      return "Entiendo que te sientes triste. Es completamente normal tener estos momentos. ¿Te gustaría hablar sobre lo que te está pasando? A veces ayuda expresar nuestros sentimientos. También puedo sugerirte algunas actividades que podrían ayudarte a sentirte mejor.";
+    }
+
+    if (emotions.contains('ansiedad')) {
+      return "Noto que te sientes ansioso o preocupado. Estas emociones pueden ser muy intensas. ¿Quieres que hablemos sobre lo que te está generando esta ansiedad? Puedo ayudarte con técnicas de relajación o estrategias para manejar estos sentimientos.";
+    }
+
+    if (emotions.contains('enojo')) {
+      return "Veo que estás molesto. Es válido sentirse así a veces. ¿Te ayudaría hablar sobre lo que te está frustrando? Puedo escucharte y ayudarte a encontrar formas constructivas de manejar esta situación.";
+    }
+
+    if (emotions.contains('alegría')) {
+      return "¡Me alegra mucho saber que te sientes bien! Es genial cuando tenemos estos momentos positivos. ¿Qué te está haciendo sentir tan feliz? Me encanta compartir la alegría contigo.";
+    }
+
+    if (emotions.contains('confusión')) {
+      return "Entiendo que te sientes confundido. Todos pasamos por momentos donde las cosas no están claras. ¿Puedes contarme más sobre lo que te tiene confundido? Trabajemos juntos para aclarar tus dudas.";
+    }
+
+    // Respuestas según preguntas comunes
+    if (lowerMessage.contains('ayuda') || lowerMessage.contains('ayudar')) {
+      return "Por supuesto, estoy aquí para ayudarte. Puedo conversar sobre cualquier tema que necesites, analizar cómo te sientes, darte consejos prácticos o simplemente escucharte. ¿En qué específicamente te gustaría que te ayude?";
+    }
+
+    if (lowerMessage.contains('solución') || lowerMessage.contains('resolver')) {
+      return "Me parece genial que busques soluciones. Esa es una actitud muy positiva. Cuéntame más detalles sobre la situación que quieres resolver y trabajemos juntos para encontrar las mejores opciones.";
+    }
+
+    if (lowerMessage.contains('consejo') || lowerMessage.contains('qué hacer')) {
+      return "Estaré encantado de darte mi perspectiva. Para poder aconsejarte mejor, ¿podrías contarme un poco más sobre tu situación? Mientras más detalles tengas, mejor podremos encontrar el camino correcto.";
+    }
+
+    // Respuesta general empática
+    return "Gracias por compartir eso conmigo. Aunque mi sistema de IA está temporalmente limitado, estoy aquí para escucharte y ayudarte en lo que pueda. ¿Hay algo específico en lo que te gustaría que te apoye? Puedo ofrecerte mi perspectiva, sugerencias prácticas o simplemente ser un buen compañero de conversación.";
+  }
+
+  /// ➕ Añadir mensaje a conversación actual
+  void _addMessageToCurrentConversation(ChatMessage message) {
+    if (_currentConversation != null) {
+      _currentConversation = _currentConversation!.addMessage(message);
+
+      // Actualizar en la lista de conversaciones
+      final index = _conversations.indexWhere((conv) => conv.id == _currentConversation!.id);
+      if (index != -1) {
+        _conversations[index] = _currentConversation!;
+      }
+
+      notifyListeners();
+    }
+  }
+
+  /// ✅ MÉTODO FALTANTE: Remover mensaje específico de la conversación actual
+  void _removeMessageFromCurrentConversation(String messageId) {
+    if (_currentConversation != null) {
+      final updatedMessages = _currentConversation!.messages
+          .where((msg) => msg.id != messageId)
+          .toList();
+
+      _currentConversation = _currentConversation!.copyWith(
+        messages: updatedMessages,
+      );
+
+      // Actualizar en la lista de conversaciones
+      final index = _conversations.indexWhere((conv) => conv.id == _currentConversation!.id);
+      if (index != -1) {
+        _conversations[index] = _currentConversation!;
+      }
+
+      notifyListeners();
+    }
+  }
+
+  /// ✅ MÉTODO FALTANTE: Remover todos los mensajes de "pensando"
+  void _removeThinkingMessages() {
+    if (_currentConversation != null) {
+      final updatedMessages = _currentConversation!.messages
+          .where((msg) => msg.type != MessageType.thinking)
+          .toList();
+
+      _currentConversation = _currentConversation!.copyWith(
+        messages: updatedMessages,
+      );
+
+      // Actualizar en la lista de conversaciones
+      final index = _conversations.indexWhere((conv) => conv.id == _currentConversation!.id);
+      if (index != -1) {
+        _conversations[index] = _currentConversation!;
+      }
+
+      notifyListeners();
+    }
+  }
+
+  /// 🆕 Crear nueva conversación
+  Future<void> createNewConversation() async {
+    await _createDefaultConversation();
+    notifyListeners();
+  }
+
+  /// 🔄 Seleccionar conversación
+  void selectConversation(ChatConversation conversation) {
+    _currentConversation = conversation;
+    notifyListeners();
+  }
+
+  /// 🗑️ Eliminar conversación
+  Future<void> deleteConversation(ChatConversation conversation) async {
+    _conversations.removeWhere((conv) => conv.id == conversation.id);
+
+    if (_currentConversation?.id == conversation.id) {
+      _currentConversation = _conversations.isNotEmpty ? _conversations.first : null;
+    }
+
+    await _saveConversations();
+    notifyListeners();
+  }
+
+  /// 🧹 Limpiar conversación actual
+  Future<void> clearCurrentConversation() async {
+    if (_currentConversation != null) {
+      // Crear nueva conversación con solo el mensaje de bienvenida
+      final welcomeMessage = ChatMessage.system(
+        content: _generatePersonalizedWelcome(),
+        conversationId: _currentConversation!.id,
+      );
+
+      _currentConversation = _currentConversation!.copyWith(
+        messages: [welcomeMessage],
+        lastMessageAt: DateTime.now(),
+      );
+
+      // Actualizar en la lista
+      final index = _conversations.indexWhere((conv) => conv.id == _currentConversation!.id);
+      if (index != -1) {
+        _conversations[index] = _currentConversation!;
+      }
+
+      await _saveConversations();
+      notifyListeners();
+    }
+  }
+
+  /// 🔄 Recargar IA
+  Future<void> reloadAI() async {
+    await _checkAIReadiness();
+  }
+
+  /// 🧹 Limpiar error
+  void clearError() {
+    _setError(null);
+  }
+
+  /// 🧠 Enviar mensaje específico de psicología
+  Future<void> sendPsychologyMessage(String content) async {
     if (content.trim().isEmpty || _isSendingMessage) return;
 
-    _logger.i('📤 Enviando mensaje: ${content.substring(0, content.length > 50 ? 50 : content.length)}...');
+    _logger.i('🧠 Enviando mensaje psicológico: ${content.substring(0, content.length > 50 ? 50 : content.length)}...');
 
     _setSendingMessage(true);
     _clearError();
@@ -265,774 +692,85 @@ class ChatProvider extends ChangeNotifier {
       );
       _addMessageToCurrentConversation(thinkingMessage);
 
-      // 4. Generar respuesta del coach IA
-      final aiResponse = await _generateCoachResponse(content);
+      // 4. Usar el servicio de psicología
+      final phiService = PhiModelServiceGenAI.instance;
+
+      // Construir historial de conversación
+      final conversationHistory = _buildConversationContext();
+
+      // Generar respuesta psicológica específica
+      final psychologyResponse = await phiService.generatePsychologyResponse(
+        userMessage: content,
+        conversationHistory: conversationHistory,
+        userName: 'Paciente',
+      );
 
       // 5. Remover indicador de "pensando"
       _removeMessageFromCurrentConversation(thinkingMessage.id);
 
-      // 6. Añadir respuesta de la IA
+      // 6. Añadir respuesta del psicólogo
       final assistantMessage = ChatMessage.assistant(
-        content: aiResponse.response,
+        content: psychologyResponse,
         conversationId: _currentConversation?.id,
-        confidence: aiResponse.confidence,
-        sources: aiResponse.sources,
       );
       _addMessageToCurrentConversation(assistantMessage);
 
       // 7. Guardar conversación
       await _saveConversations();
 
-      _logger.i('✅ Mensaje enviado y respuesta generada');
+      _logger.i('✅ Mensaje psicológico enviado y respuesta generada');
 
     } catch (e) {
-      _logger.e('❌ Error enviando mensaje: $e');
+      _logger.e('❌ Error enviando mensaje psicológico: $e');
 
       // Remover mensaje de "pensando" si existe
       _removeThinkingMessages();
 
-      // Añadir mensaje de error
+      // Añadir mensaje de error específico para psicología
       final errorMessage = ChatMessage.error(
-        content: 'Lo siento, hubo un problema procesando tu mensaje. ¿Podrías intentarlo de nuevo?',
+        content: 'Lo siento, hubo un problema en la sesión de psicología. El Dr. IA no está disponible en este momento. ¿Podrías intentarlo de nuevo?',
         conversationId: _currentConversation?.id,
       );
       _addMessageToCurrentConversation(errorMessage);
 
-      _setError('Error procesando mensaje: $e');
+      _setError('Error en sesión de psicología: $e');
+      rethrow;
     } finally {
       _setSendingMessage(false);
     }
   }
 
-  /// 🤖 Generar respuesta del coach IA
-  Future<CoachResponse> _generateCoachResponse(String userMessage) async {
-    try {
-      // Actualizar datos de bienestar si es necesario
-      await _updateWellnessDataIfNeeded();
+  /// 🧑‍⚕️ Crear conversación específica para psicología
+  Future<void> createPsychologySession() async {
+    final welcomeMessage = ChatMessage.system(
+      content: '''¡Hola! Soy el Dr. IA, tu psicólogo personal especializado en terapia cognitivo-conductual.
 
-      // Construir contexto de la conversación
-      final conversationContext = _buildConversationContext();
+🌟 **Bienvenido/a a tu espacio seguro**
 
-      // Analizar el tipo de consulta del usuario
-      final queryType = _analyzeUserQuery(userMessage);
+En esta sesión podremos trabajar juntos en:
+• **Gestión de emociones** y regulación emocional
+• **Técnicas de relajación** y mindfulness  
+• **Reestructuración de pensamientos** negativos
+• **Estrategias de afrontamiento** para el estrés
+• **Fortalecimiento de la autoestima** y confianza
 
-      // Generar respuesta basada en el tipo de consulta
-      switch (queryType) {
-        case QueryType.wellnessAnalysis:
-          return await _generateWellnessAnalysisResponse(userMessage, conversationContext);
-        case QueryType.emotionalSupport:
-          return await _generateEmotionalSupportResponse(userMessage, conversationContext);
-        case QueryType.recommendations:
-          return await _generateRecommendationsResponse(userMessage, conversationContext);
-        case QueryType.dataExploration:
-          return await _generateDataExplorationResponse(userMessage, conversationContext);
-        case QueryType.generalChat:
-        default:
-          return await _generateGeneralChatResponse(userMessage, conversationContext);
-      }
-    } catch (e) {
-      _logger.e('❌ Error generando respuesta IA: $e');
-      return CoachResponse(
-        response: 'Lo siento, encontré dificultades procesando tu mensaje. Como tu coach, te sugiero que lo intentemos de nuevo con una pregunta más específica.',
-        confidence: 0.3,
-        sources: ['sistema'],
-      );
-    }
-  }
+💭 **¿Cómo te sientes hoy?** 
+Puedes compartir conmigo cualquier pensamiento, preocupación o emoción que tengas. Este es un espacio libre de juicios donde tu bienestar es la prioridad.
 
-  /// 🔍 Analizar tipo de consulta del usuario
-  QueryType _analyzeUserQuery(String message) {
-    final lowercaseMessage = message.toLowerCase();
-
-    // Palabras clave para análisis de bienestar
-    if (lowercaseMessage.contains(RegExp(r'\b(anali[sz]a|resumen|datos|patr[oó]n|tendencia|estad[íi]stica)\b'))) {
-      return QueryType.wellnessAnalysis;
-    }
-
-    // Palabras clave para soporte emocional
-    if (lowercaseMessage.contains(RegExp(r'\b(me siento|estoy|ansiedad|tristeza|estr[eé]s|depresi[oó]n|preocup|mied|dolor|sufr)\b'))) {
-      return QueryType.emotionalSupport;
-    }
-
-    // Palabras clave para recomendaciones
-    if (lowercaseMessage.contains(RegExp(r'\b(qu[eé] puedo|c[oó]mo|ayuda|consejo|recomend|sugier|deber[íi]a)\b'))) {
-      return QueryType.recommendations;
-    }
-
-    // Palabras clave para exploración de datos
-    if (lowercaseMessage.contains(RegExp(r'\b(cu[aá]ndo|d[oó]nde|por qu[eé]|qu[eé] d[íi]a|cu[aá]nto)\b'))) {
-      return QueryType.dataExploration;
-    }
-
-    return QueryType.generalChat;
-  }
-
-  /// 📊 Generar respuesta de análisis de bienestar
-  Future<CoachResponse> _generateWellnessAnalysisResponse(String message, String context) async {
-    if (_userWellnessData == null) {
-      return CoachResponse(
-        response: 'Me encantaría analizar tu bienestar, pero aún no tengo suficientes datos tuyos. Te sugiero que comiences registrando algunas reflexiones diarias para que pueda ofrecerte insights personalizados.',
-        confidence: 0.8,
-        sources: ['análisis básico'],
-      );
-    }
-
-    final recentEntries = _userWellnessData!['recent_entries'] as List<Map<String, dynamic>>;
-
-    if (recentEntries.isEmpty) {
-      return CoachResponse(
-        response: 'Para poder hacer un análisis significativo de tu bienestar, necesitaría que registres algunas reflexiones diarias. Una vez que tengas algunos días de datos, podré identificar patrones y ofrecerte insights valiosos sobre tu estado emocional.',
-        confidence: 0.7,
-        sources: ['guía de registro'],
-      );
-    }
-
-    // Calcular métricas
-    final analysis = _analyzeWellnessMetrics(recentEntries);
-
-    return CoachResponse(
-      response: '''Basándome en tus últimas ${analysis['days']} reflexiones, puedo compartir algunos insights importantes:
-
-**Análisis del estado de ánimo:**
-Tu puntuación promedio es ${analysis['avgMood']}/10, lo que indica ${analysis['moodInterpretation']}. He notado que ${analysis['moodPattern']}.
-
-**Niveles de energía:**
-Tu energía promedio es ${analysis['avgEnergy']}/10. ${analysis['energyInsight']}.
-
-**Gestión del estrés:**
-Tus niveles de estrés promedian ${analysis['avgStress']}/10. ${analysis['stressInsight']}.
-
-**Patrón destacado:**
-${analysis['keyPattern']}
-
-¿Te gustaría que profundice en algún aspecto específico de este análisis?''',
-      confidence: 0.9,
-      sources: ['análisis de ${analysis['days']} días', 'métricas de bienestar'],
+¿Hay algo específico en lo que te gustaría que te acompañe hoy?''',
     );
-  }
 
-  /// 💙 Generar respuesta de soporte emocional
-  Future<CoachResponse> _generateEmotionalSupportResponse(String message, String context) async {
-    // Detectar emociones en el mensaje
-    final emotion = _detectEmotion(message);
-    final supportResponse = _generateEmotionalSupport(emotion, message);
-
-    // Incluir contexto de datos si está disponible
-    String contextualSupport = '';
-    if (_userWellnessData != null) {
-      final recentEntries = _userWellnessData!['recent_entries'] as List;
-      if (recentEntries.isNotEmpty) {
-        final recentMood = recentEntries.last['mood_score'] ?? 5;
-        if (recentMood <= 4) {
-          contextualSupport = '\n\nHe notado en tus reflexiones recientes que has estado navegando algunos desafíos. Quiero que sepas que estos momentos difíciles son parte natural de la experiencia humana y que tu disposición a reflexionar sobre ellos muestra una gran fortaleza.';
-        }
-      }
-    }
-
-    return CoachResponse(
-      response: supportResponse + contextualSupport,
-      confidence: 0.85,
-      sources: ['soporte emocional', 'coaching empático'],
-    );
-  }
-
-  /// 💡 Generar respuesta de recomendaciones
-  Future<CoachResponse> _generateRecommendationsResponse(String message, String context) async {
-    if (_userWellnessData == null) {
-      return CoachResponse(
-        response: '''Te puedo ofrecer algunas recomendaciones generales para el bienestar:
-
-• **Práctica de mindfulness**: Dedica 5-10 minutos diarios a la meditación o respiración consciente
-• **Registro emocional**: Mantén un diario de emociones para aumentar tu autoconocimiento
-• **Actividad física**: Incorpora al menos 30 minutos de movimiento en tu día
-• **Conexiones sociales**: Cultiva relaciones significativas con familiares y amigos
-• **Rutina de sueño**: Mantén horarios regulares de descanso
-
-¿Te gustaría que personalice estas recomendaciones una vez que comiences a registrar tus reflexiones diarias?''',
-        confidence: 0.7,
-        sources: ['recomendaciones generales'],
-      );
-    }
-
-    final recommendations = _generatePersonalizedRecommendations();
-
-    return CoachResponse(
-      response: '''Basándome en tu historial de bienestar, aquí tienes mis recomendaciones personalizadas:
-
-${recommendations.map((rec) => '• **${rec['title']}**: ${rec['description']}').join('\n')}
-
-${recommendations.isNotEmpty ? '\n¿Te gustaría que profundice en alguna de estas recomendaciones?' : ''}''',
-      confidence: 0.9,
-      sources: ['análisis personalizado', 'patrones de bienestar'],
-    );
-  }
-
-  /// 🔍 Generar respuesta de exploración de datos
-  Future<CoachResponse> _generateDataExplorationResponse(String message, String context) async {
-    if (_userWellnessData == null) {
-      return CoachResponse(
-        response: 'Aún no tengo datos suficientes para responder esa pregunta específica. Una vez que registres algunas reflexiones, podré ayudarte a explorar patrones específicos en tus datos.',
-        confidence: 0.6,
-        sources: ['sin datos'],
-      );
-    }
-
-    final recentEntries = _userWellnessData!['recent_entries'] as List<Map<String, dynamic>>;
-    final exploration = _exploreSpecificData(message, recentEntries);
-
-    return CoachResponse(
-      response: exploration,
-      confidence: 0.8,
-      sources: ['exploración de datos', 'análisis específico'],
-    );
-  }
-
-  /// 💬 Generar respuesta de chat general
-  Future<CoachResponse> _generateGeneralChatResponse(String message, String context) async {
-    // Respuestas empáticas y coaching para chat general
-    final responses = [
-      'Esa es una reflexión muy valiosa. Como tu coach, me interesa conocer más sobre lo que estás experimentando. ¿Podrías contarme un poco más sobre lo que hay detrás de esa idea?',
-      'Me alegra que compartas eso conmigo. En mi experiencia como coach de bienestar, he visto que este tipo de reflexiones son el punto de partida para un crecimiento muy significativo.',
-      'Gracias por confiar en mí con esa reflexión. ¿Hay algo específico sobre tu bienestar emocional en lo que te gustaría que profundicemos juntos?',
-      'Es interesante lo que mencionas. Como tu coach, me gustaría ayudarte a explorar esa idea desde diferentes perspectivas. ¿Qué te parece si comenzamos por entender cómo te hace sentir?',
-    ];
-
-    final randomResponse = responses[math.Random().nextInt(responses.length)];
-
-    return CoachResponse(
-      response: randomResponse,
-      confidence: 0.75,
-      sources: ['coaching conversacional'],
-    );
-  }
-
-  /// 📊 Analizar métricas de bienestar
-  Map<String, dynamic> _analyzeWellnessMetrics(List<Map<String, dynamic>> entries) {
-    if (entries.isEmpty) return {};
-
-    final moodScores = entries.map((e) =>
-        ((e['mood_score'] ?? 5) as num).toDouble()).toList();
-    final energyLevels = entries.map((e) =>
-        ((e['energy_level'] ?? 5) as num).toDouble()).toList();
-    final stressLevels = entries.map((e) =>
-        ((e['stress_level'] ?? 5) as num).toDouble()).toList();
-
-    final avgMood = moodScores.reduce((a, b) => a + b) / moodScores.length;
-    final avgEnergy = energyLevels.reduce((a, b) => a + b) / energyLevels.length;
-    final avgStress = stressLevels.reduce((a, b) => a + b) / stressLevels.length;
-
-    return {
-      'days': entries.length,
-      'avgMood': avgMood.toStringAsFixed(1),
-      'avgEnergy': avgEnergy.toStringAsFixed(1),
-      'avgStress': avgStress.toStringAsFixed(1),
-      'moodInterpretation': avgMood >= 7 ? 'un estado emocional positivo' :
-      avgMood >= 5 ? 'un equilibrio emocional saludable' :
-      'algunos desafíos emocionales que estás navegando con valentía',
-      'moodPattern': _analyzeMoodTrend(moodScores),
-      'energyInsight': avgEnergy >= 7 ? 'Mantienes buenos niveles de vitalidad' :
-      avgEnergy >= 5 ? 'Tu energía está en niveles moderados' :
-      'Podríamos trabajar en estrategias para optimizar tu energía',
-      'stressInsight': avgStress <= 4 ? 'Gestionas el estrés de manera efectiva' :
-      avgStress <= 7 ? 'Tus niveles de estrés están en rango normal' :
-      'Es importante que prestemos atención a tu gestión del estrés',
-      'keyPattern': _identifyKeyPattern(moodScores, energyLevels, stressLevels),
-    };
-  }
-
-  /// 📈 Analizar tendencia del estado de ánimo
-  String _analyzeMoodTrend(List<double> moodScores) {
-    if (moodScores.length < 2) return 'necesito más datos para identificar tendencias';
-
-    final firstHalf = moodScores.take(moodScores.length ~/ 2).toList();
-    final secondHalf = moodScores.skip(moodScores.length ~/ 2).toList();
-
-    final firstAvg = firstHalf.reduce((a, b) => a + b) / firstHalf.length;
-    final secondAvg = secondHalf.reduce((a, b) => a + b) / secondHalf.length;
-
-    if (secondAvg > firstAvg + 0.5) {
-      return 'una tendencia positiva en tu estado de ánimo últimamente';
-    } else if (firstAvg > secondAvg + 0.5) {
-      return 'algunos desafíos recientes, pero esto es información valiosa para trabajar juntos';
-    } else {
-      return 'una estabilidad emocional, lo cual habla de tu capacidad de autorregulación';
-    }
-  }
-
-  /// 🔍 Identificar patrón clave
-  String _identifyKeyPattern(List<double> mood, List<double> energy, List<double> stress) {
-    // Calcular correlaciones simples
-    final moodEnergyCorr = _calculateSimpleCorrelation(mood, energy);
-    final moodStressCorr = _calculateSimpleCorrelation(mood, stress.map((s) => 10 - s).toList());
-
-    if (moodEnergyCorr > 0.6) {
-      return 'Existe una conexión positiva entre tu estado de ánimo y niveles de energía, lo cual es una fortaleza importante.';
-    } else if (moodStressCorr > 0.6) {
-      return 'Muestras una buena capacidad para mantener un estado de ánimo positivo incluso cuando gestionas estrés.';
-    } else {
-      return 'Tus patrones emocionales muestran una complejidad natural que habla de tu profundidad emocional.';
-    }
-  }
-
-  /// 📊 Calcular correlación simple
-  double _calculateSimpleCorrelation(List<double> x, List<double> y) {
-    if (x.length != y.length || x.length < 2) return 0.0;
-
-    final meanX = x.reduce((a, b) => a + b) / x.length;
-    final meanY = y.reduce((a, b) => a + b) / y.length;
-
-    double numerator = 0.0;
-    double sumSqX = 0.0;
-    double sumSqY = 0.0;
-
-    for (int i = 0; i < x.length; i++) {
-      final diffX = x[i] - meanX;
-      final diffY = y[i] - meanY;
-      numerator += diffX * diffY;
-      sumSqX += diffX * diffX;
-      sumSqY += diffY * diffY;
-    }
-
-    final denominator = math.sqrt(sumSqX * sumSqY);
-    return denominator == 0 ? 0.0 : numerator / denominator;
-  }
-
-  /// 😊 Detectar emoción en mensaje
-  String _detectEmotion(String message) {
-    final lowercaseMessage = message.toLowerCase();
-
-    if (lowercaseMessage.contains(RegExp(r'\b(triste|tristeza|deprimi|llor|dolor|sufr)\b'))) {
-      return 'sadness';
-    } else if (lowercaseMessage.contains(RegExp(r'\b(ansio|nervio|preocup|mied|p[aá]nic)\b'))) {
-      return 'anxiety';
-    } else if (lowercaseMessage.contains(RegExp(r'\b(enoja|ira|rabia|molest|frustrat)\b'))) {
-      return 'anger';
-    } else if (lowercaseMessage.contains(RegExp(r'\b(fel[íi]z|alegr|content|emociona)\b'))) {
-      return 'happiness';
-    } else if (lowercaseMessage.contains(RegExp(r'\b(estresa|agobia|presiona|tens)\b'))) {
-      return 'stress';
-    } else {
-      return 'neutral';
-    }
-  }
-
-  /// 💙 Generar soporte emocional específico
-  String _generateEmotionalSupport(String emotion, String message) {
-    switch (emotion) {
-      case 'sadness':
-        return '''Veo que estás pasando por un momento difícil y quiero que sepas que es completamente válido sentirse así. La tristeza es una emoción natural que nos permite procesar experiencias difíciles.
-
-Algunas estrategias que pueden ayudarte:
-• Permítete sentir la emoción sin juzgarte
-• Busca actividades que nutran tu alma (música, naturaleza, arte)
-• Conecta con personas que te brinden apoyo
-• Recuerda que este sentimiento es temporal
-
-¿Te gustaría que exploremos juntos qué está detrás de esta tristeza?''';
-
-      case 'anxiety':
-        return '''Reconozco la ansiedad que estás experimentando. Es una respuesta natural de nuestro cuerpo ante situaciones que percibimos como desafiantes.
-
-Técnicas que pueden ayudarte ahora mismo:
-• Respiración 4-7-8: inhala 4 segundos, mantén 7, exhala 8
-• Técnica de grounding: nombra 5 cosas que ves, 4 que puedes tocar, 3 que escuchas
-• Recuérdate que estás seguro/a en este momento
-• Enfócate en lo que sí puedes controlar
-
-¿Quieres que practiquemos juntos alguna de estas técnicas?''';
-
-      case 'anger':
-        return '''La ira que sientes es una emoción válida que nos indica que algo importante para nosotros se ha visto afectado. Es saludable reconocerla.
-
-Para gestionar esta energía de manera constructiva:
-• Toma respiraciones profundas antes de actuar
-• Identifica qué necesidad o valor se sintió amenazado
-• Busca formas de expresar tu perspectiva de manera asertiva
-• Considera el ejercicio físico para canalizar la energía
-
-¿Te gustaría explorar qué hay detrás de esta ira para transformarla en acción constructiva?''';
-
-      case 'stress':
-        return '''El estrés que sientes es una señal de que tu sistema está respondiendo a demandas elevadas. Es importante que cuidemos tu bienestar.
-
-Estrategias inmediatas para el estrés:
-• Prioriza las tareas más importantes y delega lo que puedas
-• Toma descansos regulares, aunque sean de 5 minutos
-• Practica mindfulness o meditación breve
-• Asegúrate de mantener hábitos básicos: sueño, alimentación, hidratación
-
-¿Qué aspectos específicos del estrés te gustaría que abordemos juntos?''';
-
-      case 'happiness':
-        return '''¡Qué maravilloso poder acompañarte en este momento de alegría! Es importante celebrar y saborear estos momentos positivos.
-
-Para potenciar este bienestar:
-• Tómate un momento para apreciar conscientemente esta sensación
-• Comparte tu alegría con personas importantes para ti
-• Reflexiona sobre qué contribuyó a este estado positivo
-• Considera cómo puedes incorporar más de estos elementos en tu vida
-
-¿Te gustaría explorar qué factores han contribuido a este estado positivo?''';
-
-      default:
-        return '''Gracias por compartir lo que estás sintiendo conmigo. Crear un espacio para expresar nuestras emociones es fundamental para el bienestar.
-
-Como tu coach, estoy aquí para:
-• Escucharte sin juicio
-• Ayudarte a explorar tus emociones con curiosidad
-• Acompañarte en el desarrollo de estrategias de bienestar
-• Celebrar tus fortalezas y crecimiento
-
-¿Hay algo específico sobre tu estado emocional actual que te gustaría explorar más profundamente?''';
-    }
-  }
-
-  /// 💡 Generar recomendaciones personalizadas
-  List<Map<String, String>> _generatePersonalizedRecommendations() {
-    if (_userWellnessData == null) return [];
-
-    final recentEntries = _userWellnessData!['recent_entries'] as List<Map<String, dynamic>>;
-    if (recentEntries.isEmpty) return [];
-
-    final recommendations = <Map<String, String>>[];
-
-    // Analizar patrones para recomendaciones específicas
-    final avgMood = recentEntries
-        .map((e) => ((e['mood_score'] ?? 5) as num).toDouble())
-        .reduce((a, b) => a + b) / recentEntries.length;
-
-    final avgEnergy = recentEntries
-        .map((e) => ((e['energy_level'] ?? 5) as num).toDouble())
-        .reduce((a, b) => a + b) / recentEntries.length;
-
-    final avgStress = recentEntries
-        .map((e) => ((e['stress_level'] ?? 5) as num).toDouble())
-        .reduce((a, b) => a + b) / recentEntries.length;
-
-    if (avgMood < 6) {
-      recommendations.add({
-        'title': 'Práctica de Gratitud Personalizada',
-        'description': 'Basándome en tus patrones, te sugiero una práctica diaria de 3 gratitudes específicas cada mañana durante 2 semanas para elevar tu estado de ánimo naturalmente.',
-      });
-    }
-
-    if (avgEnergy < 6) {
-      recommendations.add({
-        'title': 'Optimización de Energía',
-        'description': 'Tus datos sugieren que podrías beneficiarte de revisar tu rutina de sueño y considerar incorporar 10 minutos de movimiento energizante cada mañana.',
-      });
-    }
-
-    if (avgStress > 7) {
-      recommendations.add({
-        'title': 'Técnica de Relajación Progresiva',
-        'description': 'Dado tus niveles de estrés, te recomiendo practicar 5 minutos de relajación muscular progresiva antes de dormir para mejorar tu descanso y reducir tensión.',
-      });
-    }
-
-    if (recommendations.isEmpty) {
-      recommendations.add({
-        'title': 'Mantenimiento del Bienestar',
-        'description': 'Tus métricas muestran un buen equilibrio. Te sugiero mantener tus prácticas actuales y considerar añadir una nueva actividad que te genere curiosidad o crecimiento.',
-      });
-    }
-
-    return recommendations;
-  }
-
-  /// 🔍 Explorar datos específicos
-  String _exploreSpecificData(String message, List<Map<String, dynamic>> entries) {
-    final lowercaseMessage = message.toLowerCase();
-
-    if (lowercaseMessage.contains('mejor') || lowercaseMessage.contains('máximo')) {
-      final bestDay = _findBestDay(entries);
-      return bestDay.isNotEmpty
-          ? 'Tu mejor día registrado fue el ${bestDay['date']} con un estado de ánimo de ${bestDay['mood']}/10. ¿Recuerdas qué hiciste especial ese día?'
-          : 'Aún necesito más datos para identificar tu mejor día.';
-    }
-
-    if (lowercaseMessage.contains('peor') || lowercaseMessage.contains('difícil')) {
-      final worstDay = _findMostChallengingDay(entries);
-      return worstDay.isNotEmpty
-          ? 'El día más desafiante fue el ${worstDay['date']} con un estado de ánimo de ${worstDay['mood']}/10. Es valioso reflexionar sobre cómo lograste superar ese momento.'
-          : 'No he identificado días particularmente difíciles en tus registros recientes.';
-    }
-
-    return 'Basándome en tus datos, puedo ver que has registrado ${entries.length} reflexiones. ¿Hay algún patrón específico que te gustaría que exploremos juntos?';
-  }
-
-  /// 📅 Encontrar mejor día
-  Map<String, dynamic> _findBestDay(List<Map<String, dynamic>> entries) {
-    if (entries.isEmpty) return {};
-
-    var bestEntry = entries.first;
-    for (final entry in entries) {
-      final currentMood = (entry['mood_score'] ?? 0) as num;
-      final bestMood = (bestEntry['mood_score'] ?? 0) as num;
-      if (currentMood > bestMood) {
-        bestEntry = entry;
-      }
-    }
-
-    return {
-      'date': bestEntry['entry_date']?.toString().split(' ')[0] ?? 'fecha desconocida',
-      'mood': bestEntry['mood_score'] ?? 0,
-    };
-  }
-
-  /// 📅 Encontrar día más desafiante
-  Map<String, dynamic> _findMostChallengingDay(List<Map<String, dynamic>> entries) {
-    if (entries.isEmpty) return {};
-
-    var worstEntry = entries.first;
-    for (final entry in entries) {
-      final currentMood = (entry['mood_score'] ?? 10) as num;
-      final worstMood = (worstEntry['mood_score'] ?? 10) as num;
-      if (currentMood < worstMood) {
-        worstEntry = entry;
-      }
-    }
-
-    return {
-      'date': worstEntry['entry_date']?.toString().split(' ')[0] ?? 'fecha desconocida',
-      'mood': worstEntry['mood_score'] ?? 0,
-    };
-  }
-
-  /// 🔄 Actualizar datos de bienestar si es necesario
-  Future<void> _updateWellnessDataIfNeeded() async {
-    if (_lastWellnessDataUpdate == null ||
-        DateTime.now().difference(_lastWellnessDataUpdate!).inMinutes > 30) {
-      await _loadUserWellnessData();
-    }
-  }
-
-  /// 📝 Construir contexto de la conversación
-  String _buildConversationContext() {
-    if (_currentConversation == null || _currentConversation!.messages.isEmpty) {
-      return '';
-    }
-
-    final recentMessages = _currentConversation!.messages
-        .where((msg) => !msg.isThinking && !msg.isError)
-        .take(6)
-        .toList();
-
-    final contextString = recentMessages
-        .map((msg) => '${msg.roleDisplay}: ${msg.content.length > 100 ? msg.content.substring(0, 100) + '...' : msg.content}')
-        .join('\n');
-
-    return contextString;
-  }
-
-  /// ➕ Añadir mensaje a conversación actual
-  void _addMessageToCurrentConversation(ChatMessage message) {
-    if (_currentConversation != null) {
-      _currentConversation = _currentConversation!.addMessage(message);
-
-      // Actualizar en la lista de conversaciones
-      final index = _conversations.indexWhere((conv) => conv.id == _currentConversation!.id);
-      if (index != -1) {
-        _conversations[index] = _currentConversation!;
-      }
-
-      notifyListeners();
-    }
-  }
-
-  /// ➖ Remover mensaje de conversación actual
-  void _removeMessageFromCurrentConversation(String messageId) {
-    if (_currentConversation != null) {
-      _currentConversation = _currentConversation!.removeMessage(messageId);
-
-      // Actualizar en la lista de conversaciones
-      final index = _conversations.indexWhere((conv) => conv.id == _currentConversation!.id);
-      if (index != -1) {
-        _conversations[index] = _currentConversation!;
-      }
-
-      notifyListeners();
-    }
-  }
-
-  /// 🧹 Remover mensajes de "pensando"
-  void _removeThinkingMessages() {
-    if (_currentConversation != null) {
-      final filteredMessages = _currentConversation!.messages
-          .where((msg) => !msg.isThinking)
-          .toList();
-
-      _currentConversation = _currentConversation!.copyWith(messages: filteredMessages);
-
-      // Actualizar en la lista
-      final index = _conversations.indexWhere((conv) => conv.id == _currentConversation!.id);
-      if (index != -1) {
-        _conversations[index] = _currentConversation!;
-      }
-
-      notifyListeners();
-    }
-  }
-
-  /// 🆕 Crear nueva conversación
-  Future<void> createNewConversation() async {
-    final conversation = ChatConversation.create(
+    final session = ChatConversation.create(
       userId: 'current_user',
-      title: 'Nueva conversación ${_conversations.length + 1}',
+      title: 'Sesión de Psicología ${DateTime.now().day}/${DateTime.now().month}',
+      firstMessage: welcomeMessage,
     );
 
-    _conversations.insert(0, conversation);
-    _currentConversation = conversation;
+    _conversations.insert(0, session);
+    _currentConversation = session;
     await _saveConversations();
 
-    notifyListeners();
-    _logger.i('🆕 Nueva conversación creada');
-  }
-
-  /// 🔄 Cambiar conversación activa
-  void setCurrentConversation(String conversationId) {
-    final conversation = _conversations.firstWhere(
-          (conv) => conv.id == conversationId,
-      orElse: () => _conversations.first,
-    );
-
-    _currentConversation = conversation;
-    notifyListeners();
-    _logger.i('🔄 Conversación cambiada: $conversationId');
-  }
-
-  /// 🗑️ Eliminar conversación
-  Future<void> deleteConversation(String conversationId) async {
-    _conversations.removeWhere((conv) => conv.id == conversationId);
-
-    // Si se eliminó la conversación actual, seleccionar otra
-    if (_currentConversation?.id == conversationId) {
-      if (_conversations.isNotEmpty) {
-        _currentConversation = _conversations.first;
-      } else {
-        await _createDefaultConversation();
-      }
-    }
-
-    await _saveConversations();
-    notifyListeners();
-    _logger.i('🗑️ Conversación eliminada: $conversationId');
-  }
-
-  /// 🔄 Reiniciar IA
-  Future<void> reinitializeAI() async {
-    _logger.i('🔄 Reiniciando chat...');
-    await _checkAIReadiness();
-    await _loadUserWellnessData();
-    _clearError();
+    _logger.i('🧠 Nueva sesión de psicología creada');
     notifyListeners();
   }
-
-  /// 🧹 Limpiar todas las conversaciones
-  Future<void> clearAllConversations() async {
-    _conversations.clear();
-    _currentConversation = null;
-    await _createDefaultConversation();
-    await _saveConversations();
-    notifyListeners();
-    _logger.i('🧹 Todas las conversaciones eliminadas');
-  }
-
-  // Métodos de estado privados
-  void _setLoading(bool loading) {
-    _isLoading = loading;
-    notifyListeners();
-  }
-
-  void _setSendingMessage(bool sending) {
-    _isSendingMessage = sending;
-    notifyListeners();
-  }
-
-  void _setError(String? error) {
-    _errorMessage = error;
-    notifyListeners();
-  }
-
-  void _clearError() {
-    _errorMessage = null;
-    notifyListeners();
-  }
-
-  void _setAIStatus(String status) {
-    _aiStatus = status;
-    notifyListeners();
-  }
-
-  /// 📊 Obtener estadísticas del chat
-  Map<String, dynamic> getChatStats() {
-    final totalMessages = _conversations
-        .expand((conv) => conv.messages)
-        .where((msg) => !msg.isThinking && !msg.isError)
-        .length;
-
-    final userMessages = _conversations
-        .expand((conv) => conv.messages)
-        .where((msg) => msg.isUser)
-        .length;
-
-    final assistantMessages = _conversations
-        .expand((conv) => conv.messages)
-        .where((msg) => msg.isAssistant)
-        .length;
-
-    return {
-      'total_conversations': _conversations.length,
-      'total_messages': totalMessages,
-      'user_messages': userMessages,
-      'assistant_messages': assistantMessages,
-      'ai_ready': _isAIReady,
-      'ai_status': _aiStatus,
-      'wellness_data_loaded': _userWellnessData != null,
-    };
-  }
-
-  /// 📈 Obtener recomendaciones prioritarias
-  List<String> getPriorityRecommendations() {
-    if (_userWellnessData == null) return [];
-
-    final personalizedRecs = _generatePersonalizedRecommendations();
-    return personalizedRecs.take(3).map((rec) => rec['title']!).toList();
-  }
-
-  /// 🔥 Verificar si hay alertas críticas
-  bool hasCriticalAlerts() {
-    if (_userWellnessData == null) return false;
-
-    final recentEntries = _userWellnessData!['recent_entries'] as List<Map<String, dynamic>>;
-    if (recentEntries.isEmpty) return false;
-
-    // Alertas basadas en patrones preocupantes
-    final recentMoods = recentEntries.take(3).map((e) =>
-        ((e['mood_score'] ?? 5) as num).toDouble()).toList();
-    final avgRecentMood = recentMoods.reduce((a, b) => a + b) / recentMoods.length;
-
-    return avgRecentMood <= 3; // Estado de ánimo muy bajo en días recientes
-  }
-}
-
-// Enums y clases auxiliares
-enum QueryType {
-  wellnessAnalysis,
-  emotionalSupport,
-  recommendations,
-  dataExploration,
-  generalChat,
-}
-
-class CoachResponse {
-  final String response;
-  final double confidence;
-  final List<String> sources;
-
-  CoachResponse({
-    required this.response,
-    required this.confidence,
-    required this.sources,
-  });
 }

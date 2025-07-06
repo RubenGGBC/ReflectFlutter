@@ -1,6 +1,6 @@
 // lib/presentation/screens/v2/ai_chat_screen.dart
 // ============================================================================
-// AI CHAT SCREEN - CHAT CON MEMORIA E IA
+// AI CHAT SCREEN - CONVERSACIÓN GENERAL CON IA Y MEMORIA EMOCIONAL
 // ============================================================================
 
 import 'package:flutter/material.dart';
@@ -24,8 +24,10 @@ class _AIChatScreenState extends State<AIChatScreen>
     with TickerProviderStateMixin {
   late AnimationController _animationController;
   late AnimationController _fabController;
+  late AnimationController _typingController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _fabAnimation;
+  late Animation<double> _typingAnimation;
 
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -40,6 +42,40 @@ class _AIChatScreenState extends State<AIChatScreen>
     _setupScrollListener();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _setupChatListener();
+  }
+
+  void _setupChatListener() {
+    // Solo configurar una vez
+    if (!mounted) return;
+
+    final chat = Provider.of<ChatProvider>(context, listen: false);
+    // Remover listener anterior si existe
+    chat.removeListener(_onChatStateChanged);
+    // Agregar nuevo listener
+    chat.addListener(_onChatStateChanged);
+  }
+
+  void _onChatStateChanged() {
+    final chat = Provider.of<ChatProvider>(context, listen: false);
+
+    // Manejar animación de typing
+    if (chat.isSendingMessage) {
+      _typingController.repeat();
+    } else {
+      _typingController.stop();
+      _typingController.reset();
+    }
+
+    // Auto-scroll cuando llega un nuevo mensaje
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToBottom();
+    });
+  }
+
   void _setupAnimations() {
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 800),
@@ -48,6 +84,11 @@ class _AIChatScreenState extends State<AIChatScreen>
 
     _fabController = AnimationController(
       duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _typingController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
 
@@ -65,6 +106,14 @@ class _AIChatScreenState extends State<AIChatScreen>
     ).animate(CurvedAnimation(
       parent: _fabController,
       curve: Curves.elasticOut,
+    ));
+
+    _typingAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _typingController,
+      curve: Curves.easeInOut,
     ));
 
     _animationController.forward();
@@ -88,8 +137,17 @@ class _AIChatScreenState extends State<AIChatScreen>
 
   @override
   void dispose() {
+    // Remover listener de forma segura
+    try {
+      final chat = Provider.of<ChatProvider>(context, listen: false);
+      chat.removeListener(_onChatStateChanged);
+    } catch (e) {
+      // Ignorar errores si el context ya no está disponible
+    }
+
     _animationController.dispose();
     _fabController.dispose();
+    _typingController.dispose();
     _messageController.dispose();
     _scrollController.dispose();
     _messageFocus.dispose();
@@ -116,6 +174,7 @@ class _AIChatScreenState extends State<AIChatScreen>
                     children: [
                       _buildMessagesList(chat),
                       _buildScrollToBottomFab(),
+                      if (chat.isSendingMessage) _buildTypingIndicator(),
                     ],
                   );
                 },
@@ -147,7 +206,7 @@ class _AIChatScreenState extends State<AIChatScreen>
         builder: (context, chat, ai, _) {
           return Row(
             children: [
-              // Avatar del Coach IA
+              // Avatar del Asistente IA
               Container(
                 width: 40,
                 height: 40,
@@ -156,7 +215,7 @@ class _AIChatScreenState extends State<AIChatScreen>
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  chat.isAIReady ? Icons.psychology : Icons.psychology_outlined,
+                  chat.isAIReady ? Icons.smart_toy : Icons.smart_toy_outlined,
                   color: Colors.white,
                   size: 24,
                 ),
@@ -169,7 +228,7 @@ class _AIChatScreenState extends State<AIChatScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '🤖 Coach IA Personal',
+                      '🤖 Asistente IA',
                       style: ModernTypography.heading3.copyWith(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -185,6 +244,45 @@ class _AIChatScreenState extends State<AIChatScreen>
                 ),
               ),
 
+              // Menú de opciones
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, color: Colors.white),
+                color: ModernColors.darkSecondary,
+                onSelected: (value) => _handleMenuAction(value, chat),
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    value: 'new_chat',
+                    child: Row(
+                      children: [
+                        Icon(Icons.add_comment, color: ModernColors.accentBlue),
+                        const SizedBox(width: 8),
+                        Text('Nueva conversación', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'clear_chat',
+                    child: Row(
+                      children: [
+                        Icon(Icons.cleaning_services, color: Colors.orange),
+                        const SizedBox(width: 8),
+                        Text('Limpiar chat', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'reload_ai',
+                    child: Row(
+                      children: [
+                        Icon(Icons.refresh, color: Colors.green),
+                        const SizedBox(width: 8),
+                        Text('Reiniciar IA', style: TextStyle(color: Colors.white)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
               // Estado de la IA
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -198,26 +296,20 @@ class _AIChatScreenState extends State<AIChatScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(
-                      chat.isAIReady ? Icons.check_circle : Icons.error,
-                      size: 16,
-                      color: Colors.white,
+                      chat.isAIReady ? Icons.circle : Icons.circle_outlined,
+                      color: chat.isAIReady ? Colors.green : Colors.red,
+                      size: 12,
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      chat.isAIReady ? 'Listo' : 'Error',
+                      chat.isAIReady ? 'Online' : 'Offline',
                       style: ModernTypography.bodySmall.copyWith(
                         color: Colors.white,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 10,
                       ),
                     ),
                   ],
                 ),
-              ),
-
-              // Menú de acciones
-              IconButton(
-                icon: const Icon(Icons.more_vert, color: Colors.white),
-                onPressed: () => _showChatMenu(context, chat),
               ),
             ],
           );
@@ -235,34 +327,30 @@ class _AIChatScreenState extends State<AIChatScreen>
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: ModernColors.accentBlue.withOpacity(0.2),
+              gradient: LinearGradient(
+                colors: ModernColors.primaryGradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
               shape: BoxShape.circle,
             ),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                const CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation(ModernColors.accentBlue),
-                  strokeWidth: 3,
-                ),
-                const Icon(
-                  Icons.chat,
-                  color: ModernColors.accentBlue,
-                  size: 32,
-                ),
-              ],
+            child: const CircularProgressIndicator(
+              color: Colors.white,
+              strokeWidth: 3,
             ),
           ),
           const SizedBox(height: 24),
           Text(
-            '🚀 Preparando Chat IA',
+            '🚀 Preparando Asistente IA',
             style: ModernTypography.heading3.copyWith(color: Colors.white),
           ),
           const SizedBox(height: 8),
-          Text(
-            'Inicializando conversación...',
-            style: ModernTypography.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.7),
+          Consumer<ChatProvider>(
+            builder: (context, chat, _) => Text(
+              chat.aiStatus,
+              style: ModernTypography.bodyMedium.copyWith(
+                color: Colors.white.withOpacity(0.7),
+              ),
             ),
           ),
         ],
@@ -288,260 +376,274 @@ class _AIChatScreenState extends State<AIChatScreen>
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 120,
-            height: 120,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: ModernColors.primaryGradient,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: ModernColors.primaryGradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                shape: BoxShape.circle,
               ),
-              shape: BoxShape.circle,
+              child: const Icon(
+                Icons.chat_bubble_outline,
+                size: 60,
+                color: Colors.white,
+              ),
             ),
-            child: const Icon(
-              Icons.chat_bubble_outline,
-              size: 60,
-              color: Colors.white,
+            const SizedBox(height: 24),
+            Text(
+              '💬 ¡Hola! Soy tu asistente IA',
+              style: ModernTypography.heading2.copyWith(color: Colors.white),
             ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            '💬 Inicia una conversación',
-            style: ModernTypography.heading2.copyWith(color: Colors.white),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Pregúntame sobre tu bienestar, patrones\no cualquier tema relacionado con tu desarrollo personal',
-            style: ModernTypography.bodyMedium.copyWith(
-              color: Colors.white.withOpacity(0.7),
+            const SizedBox(height: 8),
+            Text(
+              'Puedo conversar sobre cualquier tema, ayudarte a resolver problemas, analizar tus emociones y proponerte soluciones personalizadas.',
+              style: ModernTypography.bodyMedium.copyWith(
+                color: Colors.white.withOpacity(0.7),
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
-          _buildSuggestedQuestions(),
-        ],
+            const SizedBox(height: 32),
+            _buildSuggestedQuestions(),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildSuggestedQuestions() {
     final suggestions = [
-      '¿Cómo puedo mejorar mi bienestar?',
-      'Analiza mis patrones recientes',
-      '¿Qué me recomiendas para hoy?',
-      'Ayúdame con mi estado de ánimo',
+      '¿Cómo puedes ayudarme?',
+      'Necesito consejos para organizarme mejor',
+      'Me siento estresado por el trabajo',
+      '¿Qué opinas sobre este problema?',
+      'Ayúdame a tomar una decisión',
+      'Quiero mejorar mis hábitos',
     ];
 
     return Column(
-      children: suggestions.map((suggestion) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: TextButton(
-            onPressed: () {
-              _messageController.text = suggestion;
-              _sendMessage();
-            },
-            style: TextButton.styleFrom(
-              backgroundColor: Colors.white.withOpacity(0.1),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-            child: Text(
-              suggestion,
-              style: ModernTypography.bodyMedium.copyWith(color: Colors.white),
-            ),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '💡 Preguntas sugeridas:',
+          style: ModernTypography.bodyMedium.copyWith(
+            color: Colors.white.withOpacity(0.9),
+            fontWeight: FontWeight.w600,
           ),
-        );
-      }).toList(),
+        ),
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: suggestions.map((suggestion) {
+            return GestureDetector(
+              onTap: () => _sendSuggestedMessage(suggestion),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Text(
+                  suggestion,
+                  style: ModernTypography.bodySmall.copyWith(
+                    color: Colors.white.withOpacity(0.8),
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
     );
   }
 
   Widget _buildMessageBubble(ChatMessage message, int index) {
+    final isUser = message.isUser;
+    final isSystem = message.isSystem;
+    final isError = message.isError;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: isUser
+            ? MainAxisAlignment.end
+            : MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          if (!message.isUser) ...[
-            _buildAvatar(message),
+          if (!isUser) ...[
+            _buildAvatar(isSystem, isError),
             const SizedBox(width: 8),
           ],
-
-          Expanded(
-            child: Column(
-              crossAxisAlignment: message.isUser
-                  ? CrossAxisAlignment.end
-                  : CrossAxisAlignment.start,
-              children: [
-                _buildMessageHeader(message),
-                const SizedBox(height: 4),
-                _buildMessageContent(message),
-                if (message.isAssistant && message.confidence != null)
-                  _buildConfidenceIndicator(message.confidence!),
-              ],
+          Flexible(
+            child: Container(
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.75,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: isUser
+                    ? LinearGradient(
+                  colors: ModernColors.primaryGradient,
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                )
+                    : null,
+                color: isUser
+                    ? null
+                    : isError
+                    ? Colors.red.withOpacity(0.2)
+                    : isSystem
+                    ? Colors.blue.withOpacity(0.2)
+                    : Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(16),
+                  topRight: const Radius.circular(16),
+                  bottomLeft: Radius.circular(isUser ? 16 : 4),
+                  bottomRight: Radius.circular(isUser ? 4 : 16),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (!isUser && !isSystem) ...[
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.smart_toy,
+                          size: 14,
+                          color: Colors.white.withOpacity(0.8),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Asistente IA',
+                          style: ModernTypography.bodySmall.copyWith(
+                            color: Colors.white.withOpacity(0.8),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  Text(
+                    message.content,
+                    style: ModernTypography.bodyMedium.copyWith(
+                      color: Colors.white,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        message.displayTime,
+                        style: ModernTypography.bodySmall.copyWith(
+                          color: Colors.white.withOpacity(0.5),
+                          fontSize: 10,
+                        ),
+                      ),
+                      if (message.confidence != null) ...[
+                        const SizedBox(width: 8),
+                        _buildConfidenceIndicator(message.confidence!),
+                      ],
+                      if (isUser && message.isSending) ...[
+                        const SizedBox(width: 8),
+                        SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white.withOpacity(0.7),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  if (message.sources?.isNotEmpty == true)
+                    _buildSourcesIndicator(message.sources!),
+                ],
+              ),
             ),
           ),
-
-          if (message.isUser) ...[
+          if (isUser) ...[
             const SizedBox(width: 8),
-            _buildAvatar(message),
+            _buildAvatar(false, false, isUser: true),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildAvatar(ChatMessage message) {
+  Widget _buildAvatar(bool isSystem, bool isError, {bool isUser = false}) {
     return Container(
-      width: 36,
-      height: 36,
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
-        gradient: message.isUser
-            ? LinearGradient(colors: [Colors.blue, Colors.purple])
-            : LinearGradient(colors: ModernColors.primaryGradient),
+        gradient: isUser
+            ? LinearGradient(
+          colors: ModernColors.primaryGradient,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        )
+            : null,
+        color: isUser
+            ? null
+            : isError
+            ? Colors.red.withOpacity(0.3)
+            : isSystem
+            ? Colors.blue.withOpacity(0.3)
+            : Colors.white.withOpacity(0.2),
         shape: BoxShape.circle,
       ),
       child: Icon(
-        message.isUser ? Icons.person : Icons.psychology,
+        isUser
+            ? Icons.person
+            : isError
+            ? Icons.error_outline
+            : isSystem
+            ? Icons.info_outline
+            : Icons.smart_toy,
+        size: 18,
         color: Colors.white,
-        size: 20,
       ),
     );
-  }
-
-  Widget _buildMessageHeader(ChatMessage message) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          message.roleDisplay,
-          style: ModernTypography.bodySmall.copyWith(
-            color: Colors.white.withOpacity(0.7),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          message.displayTime,
-          style: ModernTypography.bodySmall.copyWith(
-            color: Colors.white.withOpacity(0.5),
-          ),
-        ),
-        if (message.isUser) ...[
-          const SizedBox(width: 8),
-          _buildMessageStatus(message),
-        ],
-      ],
-    );
-  }
-
-  Widget _buildMessageContent(ChatMessage message) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _getMessageBackgroundColor(message),
-        borderRadius: BorderRadius.circular(16),
-        border: message.isError
-            ? Border.all(color: Colors.red.withOpacity(0.5))
-            : null,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (message.isThinking)
-            _buildThinkingIndicator()
-          else
-            Text(
-              message.content,
-              style: ModernTypography.bodyMedium.copyWith(
-                color: Colors.white,
-                height: 1.4,
-              ),
-            ),
-
-          if (message.sources?.isNotEmpty == true)
-            _buildSourcesIndicator(message.sources!),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildThinkingIndicator() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation(Colors.white.withOpacity(0.7)),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          'Pensando...',
-          style: ModernTypography.bodyMedium.copyWith(
-            color: Colors.white.withOpacity(0.7),
-            fontStyle: FontStyle.italic,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildMessageStatus(ChatMessage message) {
-    IconData icon;
-    Color color;
-
-    switch (message.status) {
-      case MessageStatus.sending:
-        icon = Icons.access_time;
-        color = Colors.orange;
-        break;
-      case MessageStatus.sent:
-        icon = Icons.check;
-        color = Colors.blue;
-        break;
-      case MessageStatus.delivered:
-        icon = Icons.done_all;
-        color = Colors.green;
-        break;
-      case MessageStatus.failed:
-        icon = Icons.error;
-        color = Colors.red;
-        break;
-      default:
-        icon = Icons.check;
-        color = Colors.grey;
-    }
-
-    return Icon(icon, size: 16, color: color);
   }
 
   Widget _buildConfidenceIndicator(double confidence) {
     return Container(
-      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.lightbulb_outline,
-            size: 12,
-            color: Colors.white.withOpacity(0.5),
+            size: 10,
+            color: Colors.white.withOpacity(0.6),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 2),
           Text(
-            'Confianza: ${(confidence * 100).round()}%',
+            '${(confidence * 100).round()}%',
             style: ModernTypography.bodySmall.copyWith(
-              color: Colors.white.withOpacity(0.5),
-              fontSize: 10,
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 9,
             ),
           ),
         ],
@@ -570,6 +672,64 @@ class _AIChatScreenState extends State<AIChatScreen>
             ),
           );
         }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    return Positioned(
+      bottom: 16,
+      left: 16,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.smart_toy,
+              size: 16,
+              color: Colors.white.withOpacity(0.8),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'escribiendo',
+              style: ModernTypography.bodySmall.copyWith(
+                color: Colors.white.withOpacity(0.8),
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 20,
+              height: 12,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: List.generate(3, (index) {
+                  return AnimatedBuilder(
+                    animation: _typingController,
+                    builder: (context, child) {
+                      final delay = index * 0.2;
+                      final progress = (_typingController.value + delay) % 1.0;
+                      final opacity = (math.sin(progress * math.pi * 2) + 1) / 2;
+
+                      return Container(
+                        width: 4,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(opacity * 0.8),
+                          shape: BoxShape.circle,
+                        ),
+                      );
+                    },
+                  );
+                }),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -604,55 +764,70 @@ class _AIChatScreenState extends State<AIChatScreen>
             ),
           ),
           child: SafeArea(
-            child: Row(
+            child: Column(
               children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: TextField(
-                      controller: _messageController,
-                      focusNode: _messageFocus,
-                      maxLines: null,
-                      enabled: chat.isAIReady && !chat.isSendingMessage,
-                      decoration: InputDecoration(
-                        hintText: chat.isAIReady
-                            ? 'Escribe tu mensaje...'
-                            : 'IA no disponible...',
-                        hintStyle: TextStyle(
-                          color: Colors.white.withOpacity(0.5),
+                if (chat.errorMessage != null) _buildErrorBanner(chat),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(24),
                         ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.all(16),
+                        child: TextField(
+                          controller: _messageController,
+                          focusNode: _messageFocus,
+                          maxLines: null,
+                          enabled: chat.isAIReady && !chat.isSendingMessage,
+                          decoration: InputDecoration(
+                            hintText: chat.isAIReady
+                                ? 'Escribe tu mensaje...'
+                                : 'Esperando que se inicie la IA...',
+                            hintStyle: TextStyle(
+                              color: Colors.white.withOpacity(0.5),
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 12,
+                            ),
+                          ),
+                          style: const TextStyle(color: Colors.white),
+                          onSubmitted: (_) => _sendMessage(chat),
+                        ),
                       ),
-                      style: const TextStyle(color: Colors.white),
-                      onSubmitted: (_) => _sendMessage(),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(colors: ModernColors.primaryGradient),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    onPressed: chat.isAIReady && !chat.isSendingMessage
-                        ? _sendMessage
-                        : null,
-                    icon: chat.isSendingMessage
-                        ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation(Colors.white),
+                    const SizedBox(width: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: ModernColors.primaryGradient,
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        shape: BoxShape.circle,
                       ),
-                    )
-                        : const Icon(Icons.send, color: Colors.white),
-                  ),
+                      child: IconButton(
+                        onPressed: chat.isAIReady && !chat.isSendingMessage
+                            ? () => _sendMessage(chat)
+                            : null,
+                        icon: chat.isSendingMessage
+                            ? SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                            : const Icon(
+                          Icons.send,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -662,30 +837,51 @@ class _AIChatScreenState extends State<AIChatScreen>
     );
   }
 
-  Color _getMessageBackgroundColor(ChatMessage message) {
-    if (message.isUser) {
-      return ModernColors.accentBlue.withOpacity(0.3);
-    } else if (message.isError) {
-      return Colors.red.withOpacity(0.2);
-    } else if (message.isSystem) {
-      return Colors.green.withOpacity(0.2);
-    } else if (message.isThinking) {
-      return Colors.orange.withOpacity(0.2);
-    } else {
-      return Colors.white.withOpacity(0.1);
+  Widget _buildErrorBanner(ChatProvider chat) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.withOpacity(0.5)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: Colors.red, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              chat.errorMessage!,
+              style: ModernTypography.bodySmall.copyWith(
+                color: Colors.red.shade300,
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: () => chat.clearError(),
+            icon: Icon(Icons.close, color: Colors.red, size: 18),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _sendMessage(ChatProvider chat) {
+    final message = _messageController.text.trim();
+    if (message.isNotEmpty) {
+      chat.sendMessage(message);
+      _messageController.clear();
+      _scrollToBottom();
     }
   }
 
-  void _sendMessage() {
-    final text = _messageController.text.trim();
-    if (text.isEmpty) return;
-
-    final chat = context.read<ChatProvider>();
-    _messageController.clear();
-    chat.sendMessage(text);
-
-    // Scroll to bottom después de enviar
-    Future.delayed(const Duration(milliseconds: 100), _scrollToBottom);
+  void _sendSuggestedMessage(String message) {
+    _messageController.text = message;
+    final chat = Provider.of<ChatProvider>(context, listen: false);
+    _sendMessage(chat);
   }
 
   void _scrollToBottom() {
@@ -698,66 +894,44 @@ class _AIChatScreenState extends State<AIChatScreen>
     }
   }
 
-  void _showChatMenu(BuildContext context, ChatProvider chat) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: ModernColors.darkSecondary,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.add, color: Colors.white),
-              title: const Text('Nueva Conversación', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context);
-                chat.createNewConversation();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.refresh, color: Colors.white),
-              title: const Text('Reiniciar IA', style: TextStyle(color: Colors.white)),
-              onTap: () {
-                Navigator.pop(context);
-                chat.reinitializeAI();
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete_sweep, color: Colors.red),
-              title: const Text('Limpiar Chat', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _showClearConfirmation(context, chat);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
+  void _handleMenuAction(String action, ChatProvider chat) {
+    switch (action) {
+      case 'new_chat':
+        chat.createNewConversation();
+        break;
+      case 'clear_chat':
+        _showClearChatDialog(chat);
+        break;
+      case 'reload_ai':
+        chat.reloadAI();
+        break;
+    }
   }
 
-  void _showClearConfirmation(BuildContext context, ChatProvider chat) {
+  void _showClearChatDialog(ChatProvider chat) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: ModernColors.darkSecondary,
-        title: const Text('Confirmar', style: TextStyle(color: Colors.white)),
-        content: const Text(
-          '¿Estás seguro de que quieres eliminar todas las conversaciones?',
+        title: Text(
+          'Limpiar conversación',
           style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          '¿Estás seguro que quieres limpiar esta conversación? Esta acción no se puede deshacer.',
+          style: TextStyle(color: Colors.white.withOpacity(0.8)),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancelar'),
           ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              chat.clearAllConversations();
+              Navigator.of(context).pop();
+              chat.clearCurrentConversation();
             },
-            child: const Text('Eliminar', style: TextStyle(color: Colors.red)),
+            child: Text('Limpiar', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
