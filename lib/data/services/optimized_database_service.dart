@@ -163,6 +163,26 @@ class OptimizedDatabaseService {
       )
     ''');
 
+    // ✅ NUEVO: Tabla personalized_challenges agregada al esquema mínimo
+    await db.execute('''
+      CREATE TABLE personalized_challenges (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        challenge_type TEXT NOT NULL,
+        difficulty TEXT NOT NULL DEFAULT 'medium',
+        target_value REAL NOT NULL,
+        current_progress REAL NOT NULL DEFAULT 0.0,
+        reward_points INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+        completed_at INTEGER,
+        expires_at INTEGER,
+        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+      )
+    ''');
+
     _logger.i('✅ Esquema mínimo creado para fallback');
   }
 
@@ -307,6 +327,29 @@ class OptimizedDatabaseService {
           )
         ''');
 
+        // ✅ NUEVA TABLA: PERSONALIZED_CHALLENGES - Para los desafíos personalizados
+        await txn.execute('''
+          CREATE TABLE personalized_challenges (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
+            challenge_type TEXT NOT NULL CHECK (challenge_type IN ('streak', 'mood_average', 'moments', 'consistency', 'stress_reduction')),
+            difficulty TEXT NOT NULL DEFAULT 'medium' CHECK (difficulty IN ('easy', 'medium', 'hard')),
+            target_value REAL NOT NULL CHECK (target_value > 0),
+            current_progress REAL NOT NULL DEFAULT 0.0 CHECK (current_progress >= 0),
+            reward_points INTEGER DEFAULT 0,
+            is_active INTEGER DEFAULT 1 CHECK (is_active IN (0, 1)),
+            
+            -- Timestamps
+            created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+            completed_at INTEGER,
+            expires_at INTEGER,
+
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+          )
+        ''');
+
         await _createOptimizedIndexes(txn);
 
         _logger.i('✅ Esquema optimizado creado exitosamente para APK');
@@ -347,15 +390,19 @@ class OptimizedDatabaseService {
     await txn.execute(
         'CREATE INDEX idx_tags_usage ON tags (usage_count DESC, last_used DESC)');
 
-    // ✅ NUEVOS ÍNDICES: Para user_goals
+    // Índices para goals
     await txn.execute(
         'CREATE INDEX idx_user_goals_user_status ON user_goals (user_id, status)');
     await txn.execute(
-        'CREATE INDEX idx_user_goals_created ON user_goals (user_id, created_at DESC)');
+        'CREATE INDEX idx_user_goals_created ON user_goals (created_at DESC)');
+
+    // Índices para personalized_challenges
     await txn.execute(
-        'CREATE INDEX idx_user_goals_type ON user_goals (user_id, type)');
+        'CREATE INDEX idx_challenges_user_active ON personalized_challenges (user_id, is_active)');
     await txn.execute(
-        'CREATE INDEX idx_user_goals_progress ON user_goals (user_id, status, current_value, target_value)');
+        'CREATE INDEX idx_challenges_type ON personalized_challenges (user_id, challenge_type)');
+    await txn.execute(
+        'CREATE INDEX idx_challenges_difficulty ON personalized_challenges (difficulty, reward_points DESC)');
   }
 
   Future<void> _upgradeSchema(Database db, int oldVersion,
@@ -1646,7 +1693,10 @@ class OptimizedDatabaseService {
   Future<OptimizedUserModel?> createDeveloperAccount() async {
     try {
       final db = await database;
-      _logger.i('🧪 Creando/accediendo a cuenta de desarrollador...');
+      _logger.i('🧪 Creando/accediendo a cuenta de desarrollador con datos avanzados...');
+
+      // Verificar si existe la tabla personalized_challenges
+      await _ensurePersonalizedChallengesTable(db);
 
       final existing = await db.query(
         'users',
@@ -1658,6 +1708,8 @@ class OptimizedDatabaseService {
       if (existing.isNotEmpty) {
         userId = existing.first['id'] as int;
         _logger.i('🔄 Usando cuenta de desarrollador existente: $userId');
+        // Regenerar datos para testing actualizado
+        await generateComprehensiveTestData(userId);
       } else {
         final defaultPassword = 'devpassword123';
         final passwordHash = _hashPassword(defaultPassword);
@@ -1667,26 +1719,56 @@ class OptimizedDatabaseService {
           'email': 'dev@reflect.com',
           'password_hash': passwordHash,
           'avatar_emoji': '👨‍💻',
-          'bio': 'Explorando los límites de Reflect. Creando datos para un futuro mejor.',
+          'bio': 'Desarrollador explorando patrones de bienestar. Datos generados para análisis completo de casos de uso.',
+          'profile_picture_path': null,
+          'preferences': '{}',
           'created_at': DateTime.now().millisecondsSinceEpoch ~/ 1000,
         });
         _logger.i('✅ Cuenta de desarrollador creada: $userId');
-      }
-
-      // ✅ MANEJO SEGURO DE GENERACIÓN DE DATOS PARA APK
-      try {
         await generateComprehensiveTestData(userId);
-      } catch (e) {
-        _logger.w('⚠️ Error generando datos de prueba (no crítico): $e');
       }
 
       return await getUserById(userId);
 
     } catch (e) {
       _logger.e('❌ Error creando cuenta desarrollador: $e');
-
-      // ✅ RETORNAR NULL EN LUGAR DE RETHROW PARA APK
       return null;
+    }
+  }
+
+  /// Ensure personalized_challenges table exists (for existing databases)
+  Future<void> _ensurePersonalizedChallengesTable(Database db) async {
+    try {
+      // Try to query the table to see if it exists
+      await db.query('personalized_challenges', limit: 1);
+      _logger.i('✅ Tabla personalized_challenges ya existe');
+    } catch (e) {
+      // Table doesn't exist, create it
+      _logger.i('🔧 Creando tabla personalized_challenges...');
+      await db.execute('''
+        CREATE TABLE personalized_challenges (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT NOT NULL,
+          challenge_type TEXT NOT NULL,
+          difficulty TEXT NOT NULL DEFAULT 'medium',
+          target_value REAL NOT NULL,
+          current_progress REAL NOT NULL DEFAULT 0.0,
+          reward_points INTEGER DEFAULT 0,
+          is_active INTEGER DEFAULT 1,
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+          completed_at INTEGER,
+          expires_at INTEGER,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+      ''');
+      
+      // Add indexes for the new table
+      await db.execute('CREATE INDEX idx_challenges_user_active ON personalized_challenges (user_id, is_active)');
+      await db.execute('CREATE INDEX idx_challenges_type ON personalized_challenges (user_id, challenge_type)');
+      
+      _logger.i('✅ Tabla personalized_challenges creada exitosamente');
     }
   }
 
@@ -1704,27 +1786,477 @@ class OptimizedDatabaseService {
   Future<void> generateComprehensiveTestData(int userId) async {
     try {
       final db = await database;
-      _logger.i('📊 Generando datos SIMPLIFICADOS para Alex Developer (ID: $userId)');
+      _logger.i('📊 Generando datos AVANZADOS para Alex Developer (ID: $userId)');
 
-      // Limpiar datos previos
-      await db.delete('daily_entries', where: 'user_id = ?', whereArgs: [userId]);
-      await db.delete('interactive_moments', where: 'user_id = ?', whereArgs: [userId]);
-      await db.delete('user_goals', where: 'user_id = ?', whereArgs: [userId]);
-      _logger.i('🗑️ Datos previos limpiados');
+      // Limpiar datos previos de forma segura
+      try {
+        await db.delete('daily_entries', where: 'user_id = ?', whereArgs: [userId]);
+        await db.delete('interactive_moments', where: 'user_id = ?', whereArgs: [userId]);
+        await db.delete('user_goals', where: 'user_id = ?', whereArgs: [userId]);
+        await db.delete('personalized_challenges', where: 'user_id = ?', whereArgs: [userId]);
+        _logger.i('🗑️ Datos previos limpiados');
+      } catch (e) {
+        _logger.w('⚠️ Error limpiando datos previos (continuando): $e');
+      }
 
-      // Generar datos históricos simplificados
-      await _generateSimpleHistoricalData(userId, db);
+      // Generar casos de uso completos
+      try {
+        await _generateRealisticJourneyData(userId, db);
+        _logger.i('✅ Datos de journey generados');
+      } catch (e) {
+        _logger.w('⚠️ Error generando journey data: $e');
+      }
 
-      // Generar algunos momentos interactivos básicos
-      await _generateSimpleInteractiveMoments(userId, db);
+      try {
+        await _generateAdvancedMoments(userId, db);
+        _logger.i('✅ Momentos avanzados generados');
+      } catch (e) {
+        _logger.w('⚠️ Error generando momentos: $e');
+      }
 
-      // Generar objetivos básicos
-      await _generateSimpleGoals(userId, db);
+      try {
+        await _generateProgressiveGoals(userId, db);
+        _logger.i('✅ Objetivos progresivos generados');
+      } catch (e) {
+        _logger.w('⚠️ Error generando objetivos: $e');
+      }
 
-      _logger.i('✅ Datos SIMPLIFICADOS generados exitosamente - Total: ~60 entradas');
+      try {
+        await _generatePersonalizedChallenges(userId, db);
+        _logger.i('✅ Desafíos personalizados generados');
+      } catch (e) {
+        _logger.w('⚠️ Error generando desafíos: $e');
+      }
+
+      try {
+        await _generateMoodPatterns(userId, db);
+        _logger.i('✅ Patrones de ánimo generados');
+      } catch (e) {
+        _logger.w('⚠️ Error generando patrones: $e');
+      }
+
+      _logger.i('✅ Datos AVANZADOS generados exitosamente - Casos de uso completos para análisis');
     } catch (e) {
-      _logger.e('❌ Error generando datos simplificados: $e');
+      _logger.e('❌ Error generando datos avanzados: $e');
       // No hacer rethrow para no romper la creación de usuario
+    }
+  }
+
+  // ============================================================================
+  // ADVANCED DATA GENERATION METHODS FOR COMPREHENSIVE ANALYSIS
+  // ============================================================================
+
+  /// Generates realistic user journey data covering multiple scenarios
+  Future<void> _generateRealisticJourneyData(int userId, Database db) async {
+    _logger.i('🎭 Generando journey realista con múltiples escenarios...');
+    
+    final now = DateTime.now();
+    final random = math.Random();
+    
+    // Generate 120 days of comprehensive data with realistic patterns
+    for (int daysAgo = 120; daysAgo >= 0; daysAgo--) {
+      final date = now.subtract(Duration(days: daysAgo));
+      await _generateRealisticDayEntry(userId, db, date, daysAgo, random);
+    }
+  }
+
+  /// Generate a realistic day entry with contextual factors
+  Future<void> _generateRealisticDayEntry(int userId, Database db, DateTime date, int daysAgo, math.Random random) async {
+    try {
+      // Define life periods with different characteristics
+      double baseMood, baseEnergy, baseStress;
+      String contextualNote = '';
+      
+      if (daysAgo > 90) {
+        // Crisis period (3+ months ago)
+        baseMood = 2.5 + random.nextDouble() * 3.0; // 2.5-5.5
+        baseEnergy = 2.0 + random.nextDouble() * 2.5; // 2.0-4.5
+        baseStress = 7.0 + random.nextDouble() * 2.5; // 7.0-9.5
+        contextualNote = _getCrisisPeriodNote(random);
+      } else if (daysAgo > 60) {
+        // Recovery period (2-3 months ago)
+        baseMood = 4.0 + random.nextDouble() * 3.5; // 4.0-7.5
+        baseEnergy = 3.5 + random.nextDouble() * 3.0; // 3.5-6.5
+        baseStress = 5.5 + random.nextDouble() * 3.0; // 5.5-8.5
+        contextualNote = _getRecoveryPeriodNote(random);
+      } else if (daysAgo > 30) {
+        // Improvement period (1-2 months ago)
+        baseMood = 6.0 + random.nextDouble() * 2.5; // 6.0-8.5
+        baseEnergy = 5.5 + random.nextDouble() * 3.0; // 5.5-8.5
+        baseStress = 3.5 + random.nextDouble() * 4.0; // 3.5-7.5
+        contextualNote = _getImprovementPeriodNote(random);
+      } else {
+        // Current thriving period (last month)
+        baseMood = 7.0 + random.nextDouble() * 2.5; // 7.0-9.5
+        baseEnergy = 6.5 + random.nextDouble() * 2.5; // 6.5-9.0
+        baseStress = 2.0 + random.nextDouble() * 3.5; // 2.0-5.5
+        contextualNote = _getThrivingPeriodNote(random);
+      }
+
+      // Add weekend/weekday variations
+      final weekdayModifier = _getAdvancedWeekdayModifier(date.weekday, random);
+      final mood = (baseMood + weekdayModifier.mood).clamp(1.0, 10.0);
+      final energy = (baseEnergy + weekdayModifier.energy).clamp(1.0, 10.0);
+      final stress = (baseStress + weekdayModifier.stress).clamp(1.0, 10.0);
+
+      // Generate comprehensive reflection
+      final reflection = _generateContextualReflection(mood, energy, stress, contextualNote, date, random);
+      
+      // Add seasonal adjustments
+      final seasonalMood = _addSeasonalAdjustments(mood, date);
+      
+      final dateStr = date.toIso8601String().split('T')[0];
+      final createdAtTimestamp = date.millisecondsSinceEpoch ~/ 1000;
+
+      final entryData = {
+        'user_id': userId,
+        'entry_date': dateStr,
+        'free_reflection': reflection,
+        'mood_score': seasonalMood.round(),
+        'energy_level': energy.round(),
+        'stress_level': stress.round(),
+        'worth_it': seasonalMood > 6.5 ? 1 : 0,
+        'created_at': createdAtTimestamp,
+      };
+
+      await db.insert(
+        'daily_entries',
+        entryData,
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+
+    } catch (e) {
+      _logger.e('❌ Error insertando entrada realista para fecha $date: $e');
+    }
+  }
+
+  /// Generate personalized challenges based on user patterns
+  Future<void> _generatePersonalizedChallenges(int userId, Database db) async {
+    _logger.i('🎯 Generando desafíos personalizados...');
+    
+    final challenges = [
+      {
+        'user_id': userId,
+        'title': 'Streak de Consistencia',
+        'description': 'Mantén una entrada diaria por 14 días consecutivos',
+        'target_value': 14,
+        'current_progress': 8,
+        'challenge_type': 'streak',
+        'difficulty': 'medium',
+        'reward_points': 100,
+        'is_active': 1,
+        'created_at': DateTime.now().subtract(Duration(days: 10)).millisecondsSinceEpoch ~/ 1000,
+      },
+      {
+        'user_id': userId,
+        'title': 'Maestro del Estado de Ánimo',
+        'description': 'Alcanza un promedio de estado de ánimo de 8+ por 7 días',
+        'target_value': 8,
+        'current_progress': 6,
+        'challenge_type': 'mood_average',
+        'difficulty': 'hard',
+        'reward_points': 150,
+        'is_active': 1,
+        'created_at': DateTime.now().subtract(Duration(days: 5)).millisecondsSinceEpoch ~/ 1000,
+      },
+      {
+        'user_id': userId,
+        'title': 'Coleccionista de Momentos',
+        'description': 'Captura 20 momentos positivos este mes',
+        'target_value': 20,
+        'current_progress': 12,
+        'challenge_type': 'moments',
+        'difficulty': 'easy',
+        'reward_points': 75,
+        'is_active': 1,
+        'created_at': DateTime.now().subtract(Duration(days: 15)).millisecondsSinceEpoch ~/ 1000,
+      },
+    ];
+
+    for (final challenge in challenges) {
+      await db.insert('personalized_challenges', challenge);
+    }
+  }
+
+  /// Generate mood patterns for advanced analytics
+  Future<void> _generateMoodPatterns(int userId, Database db) async {
+    _logger.i('📊 Generando patrones de estado de ánimo...');
+    
+    // This method creates additional metadata for analytics
+    // We'll add some weekend vs weekday patterns, seasonal patterns, etc.
+    // The patterns are already embedded in the realistic journey data
+  }
+
+  /// Generate advanced moments with rich context
+  Future<void> _generateAdvancedMoments(int userId, Database db) async {
+    _logger.i('✨ Generando momentos avanzados...');
+    
+    final now = DateTime.now();
+    final random = math.Random();
+    
+    final momentCategories = [
+      {'category': 'gratitude', 'weight': 0.3},
+      {'category': 'achievement', 'weight': 0.25},
+      {'category': 'connection', 'weight': 0.2},
+      {'category': 'growth', 'weight': 0.15},
+      {'category': 'nature', 'weight': 0.1},
+    ];
+    
+    // Generate 45 moments over the last 60 days
+    for (int i = 0; i < 45; i++) {
+      final daysAgo = random.nextInt(60);
+      final date = now.subtract(Duration(days: daysAgo));
+      
+      final category = _selectWeightedCategory(momentCategories, random);
+      final moment = _generateAdvancedMoment(category, date, random);
+      
+      await db.insert('interactive_moments', {
+        'user_id': userId,
+        'entry_date': date.toIso8601String().split('T')[0],
+        'emoji': '✨',
+        'text': '${moment['title']}: ${moment['description']}',
+        'type': 'positive',
+        'category': category,
+        'intensity': moment['intensity'],
+        'timestamp': date.millisecondsSinceEpoch ~/ 1000,
+        'created_at': date.millisecondsSinceEpoch ~/ 1000,
+      });
+    }
+  }
+
+  /// Generate progressive goals that show evolution
+  Future<void> _generateProgressiveGoals(int userId, Database db) async {
+    _logger.i('🎯 Generando objetivos progresivos...');
+    
+    final goals = [
+      {
+        'user_id': userId,
+        'title': 'Consistencia Diaria Avanzada',
+        'description': 'Mantener una práctica diaria de reflexión',
+        'target_value': 30,
+        'current_value': 23,
+        'type': 'consistency',
+        'status': 'active',
+        'created_at': DateTime.now().subtract(Duration(days: 25)).millisecondsSinceEpoch ~/ 1000,
+      },
+      {
+        'user_id': userId,
+        'title': 'Equilibrio Emocional',
+        'description': 'Mantener un promedio de estado de ánimo estable (7+)',
+        'target_value': 7,
+        'current_value': 7.2,
+        'type': 'mood',
+        'status': 'completed',
+        'created_at': DateTime.now().subtract(Duration(days: 40)).millisecondsSinceEpoch ~/ 1000,
+        'completed_at': DateTime.now().subtract(Duration(days: 5)).millisecondsSinceEpoch ~/ 1000,
+      },
+      {
+        'user_id': userId,
+        'title': 'Gestión de Estrés',
+        'description': 'Reducir niveles de estrés promedio a menos de 4',
+        'target_value': 4,
+        'current_value': 3.8,
+        'type': 'stressReduction',
+        'status': 'completed',
+        'created_at': DateTime.now().subtract(Duration(days: 35)).millisecondsSinceEpoch ~/ 1000,
+        'completed_at': DateTime.now().subtract(Duration(days: 10)).millisecondsSinceEpoch ~/ 1000,
+      },
+      {
+        'user_id': userId,
+        'title': 'Explorador de Momentos',
+        'description': 'Documentar 50 momentos significativos',
+        'target_value': 50,
+        'current_value': 38,
+        'type': 'positiveMoments',
+        'status': 'active',
+        'created_at': DateTime.now().subtract(Duration(days: 20)).millisecondsSinceEpoch ~/ 1000,
+      },
+    ];
+
+    for (final goal in goals) {
+      await db.insert('user_goals', goal);
+    }
+  }
+
+  // Helper methods for contextual content generation
+  String _getCrisisPeriodNote(math.Random random) {
+    final notes = [
+      'Atravesando un período difícil, pero mantengo la esperanza',
+      'Los días están siendo complicados, pero cada pequeño paso cuenta',
+      'Buscando luz en medio de la tormenta',
+      'Recordando que esto también pasará',
+      'Enfocándome en lo básico: respirar, descansar, seguir',
+    ];
+    return notes[random.nextInt(notes.length)];
+  }
+
+  String _getRecoveryPeriodNote(math.Random random) {
+    final notes = [
+      'Empiezo a ver pequeñas mejoras en mi día a día',
+      'Las cosas siguen siendo complicadas, pero hay momentos de claridad',
+      'Estableciendo nuevas rutinas que me ayudan',
+      'Aprendiendo a ser paciente conmigo mismo/a',
+      'Cada día es una oportunidad para mejorar un poco',
+    ];
+    return notes[random.nextInt(notes.length)];
+  }
+
+  String _getImprovementPeriodNote(math.Random random) {
+    final notes = [
+      'Me siento más equilibrado/a y con mejor energía',
+      'Las estrategias que he estado implementando funcionan',
+      'Noto cambios positivos en mi perspectiva',
+      'Construyendo momentum hacia mis objetivos',
+      'Celebrando el progreso, por pequeño que sea',
+    ];
+    return notes[random.nextInt(notes.length)];
+  }
+
+  String _getThrivingPeriodNote(math.Random random) {
+    final notes = [
+      'Me siento en mi mejor momento, lleno/a de energía y propósito',
+      'Todo parece fluir naturalmente hoy',
+      'Agradecido/a por este período de claridad y bienestar',
+      'Aprovechando esta energía positiva para crear y conectar',
+      'Sintiendo una profunda sensación de equilibrio y paz',
+    ];
+    return notes[random.nextInt(notes.length)];
+  }
+
+  ({double mood, double energy, double stress}) _getAdvancedWeekdayModifier(int weekday, math.Random random) {
+    switch (weekday) {
+      case 1: // Monday
+        return (mood: -0.5 + random.nextDouble() * 0.8, energy: -0.3 + random.nextDouble() * 0.6, stress: 0.2 + random.nextDouble() * 0.8);
+      case 2: // Tuesday
+        return (mood: -0.2 + random.nextDouble() * 0.7, energy: 0.0 + random.nextDouble() * 0.5, stress: 0.0 + random.nextDouble() * 0.6);
+      case 3: // Wednesday
+        return (mood: 0.1 + random.nextDouble() * 0.6, energy: 0.2 + random.nextDouble() * 0.4, stress: -0.1 + random.nextDouble() * 0.5);
+      case 4: // Thursday
+        return (mood: 0.3 + random.nextDouble() * 0.7, energy: 0.4 + random.nextDouble() * 0.6, stress: -0.2 + random.nextDouble() * 0.4);
+      case 5: // Friday
+        return (mood: 0.8 + random.nextDouble() * 0.9, energy: 0.6 + random.nextDouble() * 0.8, stress: -0.5 + random.nextDouble() * 0.3);
+      case 6: // Saturday
+        return (mood: 0.9 + random.nextDouble() * 0.8, energy: 0.3 + random.nextDouble() * 1.0, stress: -0.8 + random.nextDouble() * 0.2);
+      case 7: // Sunday
+        return (mood: 0.5 + random.nextDouble() * 0.9, energy: 0.0 + random.nextDouble() * 0.8, stress: -0.3 + random.nextDouble() * 0.4);
+      default:
+        return (mood: 0.0, energy: 0.0, stress: 0.0);
+    }
+  }
+
+  String _generateContextualReflection(double mood, double energy, double stress, String contextNote, DateTime date, math.Random random) {
+    final timeOfDay = random.nextBool() ? 'mañana' : (random.nextBool() ? 'tarde' : 'noche');
+    final baseReflection = contextNote;
+    
+    if (mood > 7.5) {
+      final positiveAddons = [
+        'Siento una energía increíble esta $timeOfDay.',
+        'Todo parece posible cuando me siento así.',
+        'Quiero aprovechar este momento de claridad.',
+        'Me siento conectado/a conmigo mismo/a y con mis objetivos.',
+      ];
+      return '$baseReflection ${positiveAddons[random.nextInt(positiveAddons.length)]}';
+    } else if (mood < 4.0) {
+      final challengingAddons = [
+        'Esta $timeOfDay ha sido especialmente difícil.',
+        'Necesito recordar que los sentimientos son temporales.',
+        'Buscando pequeñas cosas por las que estar agradecido/a.',
+        'Mañana puede ser un día completamente diferente.',
+      ];
+      return '$baseReflection ${challengingAddons[random.nextInt(challengingAddons.length)]}';
+    } else {
+      final neutralAddons = [
+        'Una $timeOfDay tranquila para reflexionar.',
+        'Tomando las cosas paso a paso.',
+        'Aprendiendo a valorar estos momentos de calma.',
+        'Construyendo lentamente hacia algo mejor.',
+      ];
+      return '$baseReflection ${neutralAddons[random.nextInt(neutralAddons.length)]}';
+    }
+  }
+
+  double _addSeasonalAdjustments(double mood, DateTime date) {
+    final month = date.month;
+    double adjustment = 0.0;
+    
+    // Winter blues (December, January, February)
+    if (month == 12 || month == 1 || month == 2) {
+      adjustment = -0.3;
+    }
+    // Spring energy (March, April, May)
+    else if (month >= 3 && month <= 5) {
+      adjustment = 0.2;
+    }
+    // Summer high (June, July, August)
+    else if (month >= 6 && month <= 8) {
+      adjustment = 0.4;
+    }
+    // Fall reflection (September, October, November)
+    else {
+      adjustment = 0.1;
+    }
+    
+    return (mood + adjustment).clamp(1.0, 10.0);
+  }
+
+  String _selectWeightedCategory(List<Map<String, dynamic>> categories, math.Random random) {
+    final totalWeight = categories.fold(0.0, (sum, cat) => sum + cat['weight']);
+    final randomValue = random.nextDouble() * totalWeight;
+    
+    double currentWeight = 0.0;
+    for (final category in categories) {
+      currentWeight += category['weight'];
+      if (randomValue <= currentWeight) {
+        return category['category'];
+      }
+    }
+    return categories.first['category'];
+  }
+
+  Map<String, dynamic> _generateAdvancedMoment(String category, DateTime date, math.Random random) {
+    switch (category) {
+      case 'gratitude':
+        final gratitudeMoments = [
+          {'title': 'Momento de Gratitud', 'description': 'Agradecido/a por las pequeñas cosas que hacen la vida hermosa', 'intensity': 7 + random.nextInt(3)},
+          {'title': 'Conexión Familiar', 'description': 'Una conversación profunda que me recordó lo importante que es estar presente', 'intensity': 8 + random.nextInt(2)},
+          {'title': 'Belleza Cotidiana', 'description': 'Encontré belleza en lo ordinario y me sentí profundamente agradecido/a', 'intensity': 6 + random.nextInt(4)},
+        ];
+        return gratitudeMoments[random.nextInt(gratitudeMoments.length)];
+      
+      case 'achievement':
+        final achievementMoments = [
+          {'title': 'Logro Personal', 'description': 'Completé algo que había estado posponiendo y me siento increíblemente satisfecho/a', 'intensity': 8 + random.nextInt(2)},
+          {'title': 'Superación Personal', 'description': 'Enfrenté un miedo y salí fortalecido/a de la experiencia', 'intensity': 9 + random.nextInt(1)},
+          {'title': 'Progreso Constante', 'description': 'Pequeños pasos que se acumulan en un progreso significativo', 'intensity': 7 + random.nextInt(2)},
+        ];
+        return achievementMoments[random.nextInt(achievementMoments.length)];
+      
+      case 'connection':
+        final connectionMoments = [
+          {'title': 'Conexión Humana', 'description': 'Una conversación que me hizo sentir verdaderamente comprendido/a', 'intensity': 8 + random.nextInt(2)},
+          {'title': 'Momento de Empatía', 'description': 'Pude estar presente para alguien que lo necesitaba', 'intensity': 7 + random.nextInt(3)},
+          {'title': 'Comunidad', 'description': 'Me sentí parte de algo más grande que yo mismo/a', 'intensity': 6 + random.nextInt(4)},
+        ];
+        return connectionMoments[random.nextInt(connectionMoments.length)];
+      
+      case 'growth':
+        final growthMoments = [
+          {'title': 'Aprendizaje Profundo', 'description': 'Una revelación que cambió mi perspectiva sobre algo importante', 'intensity': 8 + random.nextInt(2)},
+          {'title': 'Autoconocimiento', 'description': 'Descubrí algo nuevo sobre mí mismo/a que me ayuda a crecer', 'intensity': 7 + random.nextInt(3)},
+          {'title': 'Sabiduría Práctica', 'description': 'Aplicé algo que había aprendido y funcionó perfectamente', 'intensity': 6 + random.nextInt(4)},
+        ];
+        return growthMoments[random.nextInt(growthMoments.length)];
+      
+      case 'nature':
+        final natureMoments = [
+          {'title': 'Conexión con la Naturaleza', 'description': 'Un momento de paz absoluta rodeado/a de la belleza natural', 'intensity': 8 + random.nextInt(2)},
+          {'title': 'Renovación al Aire Libre', 'description': 'El aire fresco y el sol renovaron completamente mi energía', 'intensity': 7 + random.nextInt(3)},
+          {'title': 'Contemplación Natural', 'description': 'Observando la naturaleza encontré perspectiva sobre mis propios desafíos', 'intensity': 6 + random.nextInt(4)},
+        ];
+        return natureMoments[random.nextInt(natureMoments.length)];
+      
+      default:
+        return {'title': 'Momento Especial', 'description': 'Un momento que valió la pena recordar', 'intensity': 7};
     }
   }
 

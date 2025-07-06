@@ -1677,6 +1677,143 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
   List<Map<String, dynamic>> getTopRecommendations() {
     return getPriorityRecommendations().take(3).toList();
   }
+
+  // ============================================================================
+  // NEW METHODS FOR HIGH PRIORITY ENHANCEMENTS
+  // ============================================================================
+
+  /// Get mood calendar data for heatmap visualization - async version
+  Future<List<Map<String, dynamic>>> getMoodCalendarDataAsync({int days = 30}) async {
+    try {
+      final userId = 1; // TODO: Get from auth provider
+      final data = await _databaseService.getMoodCalendarData(userId, days: days);
+      return data;
+    } catch (e) {
+      _logger.e('Error getting mood calendar data: $e');
+      return [];
+    }
+  }
+
+  /// Get wellbeing prediction insights
+  Future<Map<String, dynamic>> getWellbeingPredictions({int days = 30}) async {
+    try {
+      final userId = 1; // TODO: Get from auth provider
+      final data = await _databaseService.getWellbeingPredictionData(userId, days: days);
+      return data;
+    } catch (e) {
+      _logger.e('Error getting wellbeing predictions: $e');
+      return {};
+    }
+  }
+
+  /// Get processed mood calendar data for UI
+  List<Map<String, dynamic>> get moodCalendarData {
+    final now = DateTime.now();
+    final List<Map<String, dynamic>> calendarData = [];
+    
+    // Generate 30 days of data (5 weeks)
+    for (int i = 29; i >= 0; i--) {
+      final date = now.subtract(Duration(days: i));
+      final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      
+      // Try to find mood data for this date
+      final moodData = _analytics['mood_trends'] as List<dynamic>? ?? [];
+      dynamic dayMood;
+      try {
+        dayMood = moodData.firstWhere(
+          (m) => m != null && m['date'] == dateStr,
+          orElse: () => <String, dynamic>{},
+        );
+        if (dayMood.isEmpty) dayMood = null;
+      } catch (e) {
+        dayMood = null;
+      }
+      
+      double? intensity;
+      String type = 'empty';
+      
+      if (dayMood != null) {
+        final mood = (dayMood['mood'] as num?)?.toDouble() ?? 5.0;
+        if (mood >= 7.0) {
+          type = 'positive';
+          intensity = ((mood - 7.0) / 3.0).clamp(0.0, 1.0);
+        } else if (mood <= 4.0) {
+          type = 'negative';
+          intensity = ((4.0 - mood) / 4.0).clamp(0.0, 1.0);
+        } else {
+          type = 'neutral';
+          intensity = 0.5;
+        }
+      }
+      
+      calendarData.add({
+        'date': date,
+        'dateStr': dateStr,
+        'type': type,
+        'intensity': intensity,
+        'mood': dayMood?['mood'],
+        'isToday': date.day == now.day && date.month == now.month,
+        'dayOfWeek': date.weekday,
+      });
+    }
+    
+    return calendarData;
+  }
+
+  /// Get prediction insights with confidence levels
+  Map<String, dynamic> get predictionInsights {
+    final moodTrends = _analytics['mood_trends'] as List<dynamic>? ?? [];
+    
+    if (moodTrends.length < 7) {
+      return {
+        'hasEnoughData': false,
+        'message': 'Necesitas al menos 7 días de datos para predicciones',
+      };
+    }
+    
+    // Simple trend analysis
+    final recentMoods = moodTrends.take(7).map((m) => (m['mood'] as num?)?.toDouble() ?? 5.0).toList();
+    final avgRecent = recentMoods.reduce((a, b) => a + b) / recentMoods.length;
+    
+    final olderMoods = moodTrends.skip(7).take(7).map((m) => (m['mood'] as num?)?.toDouble() ?? 5.0).toList();
+    final avgOlder = olderMoods.isNotEmpty ? olderMoods.reduce((a, b) => a + b) / olderMoods.length : avgRecent;
+    
+    final trend = avgRecent - avgOlder;
+    
+    String trendDirection;
+    String insight;
+    String recommendation;
+    double confidence;
+    
+    if (trend > 0.5) {
+      trendDirection = 'improving';
+      insight = 'Tu bienestar está mejorando consistentemente';
+      recommendation = 'Mantén tus hábitos actuales, están funcionando';
+      confidence = 0.8;
+    } else if (trend < -0.5) {
+      trendDirection = 'declining';
+      insight = 'Tu bienestar ha mostrado algunos desafíos';
+      recommendation = 'Considera incorporar más actividades de autocuidado';
+      confidence = 0.7;
+    } else {
+      trendDirection = 'stable';
+      insight = 'Tu bienestar se mantiene estable';
+      recommendation = 'Explora nuevas actividades para impulsar tu crecimiento';
+      confidence = 0.6;
+    }
+    
+    return {
+      'hasEnoughData': true,
+      'trend': trendDirection,
+      'insight': insight,
+      'recommendation': recommendation,
+      'confidence': confidence,
+      'avgRecent': avgRecent,
+      'avgOlder': avgOlder,
+      'trendValue': trend,
+    };
+  }
+
   void _setLoading(bool loading) {
     _isLoading = loading;
     notifyListeners();

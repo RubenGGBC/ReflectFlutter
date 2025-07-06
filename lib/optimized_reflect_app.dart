@@ -17,6 +17,8 @@ import 'ai/provider/ai_provider.dart';
 import 'ai/provider/predective_analysis_provider.dart'; // ✅ NUEVO: Análisis Predictivo
 import 'ai/provider/chat_provider.dart'; // ✅ NUEVO: Chat con IA
 import 'ai/provider/mental_health_chat_provider.dart'; // ✅ NUEVO: Mental Health Chat
+import 'presentation/providers/challenges_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
+import 'presentation/providers/streak_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
 
 // Screens
 import 'presentation/screens/v2/login_screen_v2.dart';
@@ -120,6 +122,15 @@ class OptimizedReflectApp extends StatelessWidget {
         // ✅ NUEVO: MentalHealthChatProvider - Independent mental health chat
         ChangeNotifierProvider<MentalHealthChatProvider>(
           create: (_) => clean_di.sl<MentalHealthChatProvider>(),
+        ),
+
+        // ✅ HIGH PRIORITY ENHANCEMENTS: New providers
+        ChangeNotifierProvider<ChallengesProvider>(
+          create: (_) => clean_di.sl<ChallengesProvider>(),
+        ),
+
+        ChangeNotifierProvider<StreakProvider>(
+          create: (_) => clean_di.sl<StreakProvider>(),
         ),
       ],
       child: Consumer<ThemeProvider>(

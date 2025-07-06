@@ -12,9 +12,16 @@ import 'dart:ui';
 
 // Providers optimizados
 import '../../providers/optimized_providers.dart';
+import '../../providers/image_moments_provider.dart';
+import '../../providers/challenges_provider.dart';
+import '../../providers/streak_provider.dart';
 
 // Modelos
 import '../../../data/models/optimized_models.dart';
+
+// Enhancement widgets
+import '../../widgets/home_enhancement_widgets.dart';
+
 
 // ============================================================================
 // PALETA DE COLORES MINIMALISTA OSCURA
@@ -74,7 +81,10 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   void initState() {
     super.initState();
     _setupAnimations();
-    _loadInitialData();
+    // Schedule data loading for after the build is complete
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInitialData();
+    });
   }
 
   void _setupAnimations() {
@@ -137,21 +147,31 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   }
 
   Future<void> _loadInitialData() async {
-    final authProvider = Provider.of<OptimizedAuthProvider>(context, listen: false);
-    final user = authProvider.currentUser;
+    if (!mounted) return;
+    
+    try {
+      final authProvider = Provider.of<OptimizedAuthProvider>(context, listen: false);
+      final user = authProvider.currentUser;
 
-    if (user != null) {
-      await Future.wait([
-        Provider.of<OptimizedMomentsProvider>(context, listen: false).loadTodayMoments(user.id),
-        Provider.of<GoalsProvider>(context, listen: false).loadUserGoals(user.id),
-        Provider.of<OptimizedAnalyticsProvider>(context, listen: false).loadCompleteAnalytics(user.id),
-      ]);
-
-      if (!mounted) return;
-
-      setState(() {
-        // State update might not be needed if providers handle notifications
-      });
+      if (user != null) {
+        // Load data sequentially to avoid overwhelming the database
+        await Provider.of<OptimizedMomentsProvider>(context, listen: false).loadTodayMoments(user.id);
+        if (!mounted) return;
+        
+        await Provider.of<GoalsProvider>(context, listen: false).loadUserGoals(user.id);
+        if (!mounted) return;
+        
+        await Provider.of<OptimizedAnalyticsProvider>(context, listen: false).loadCompleteAnalytics(user.id);
+        if (!mounted) return;
+        
+        await Provider.of<ChallengesProvider>(context, listen: false).loadChallenges(user.id);
+        if (!mounted) return;
+        
+        await Provider.of<StreakProvider>(context, listen: false).loadStreakData(user.id);
+      }
+    } catch (e) {
+      // Log error but don't break the UI
+      print('Error loading initial data: $e');
     }
   }
 
@@ -169,11 +189,28 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: MinimalColors.backgroundPrimary,
-      body: SafeArea(
-        child: Consumer4<OptimizedAuthProvider, OptimizedMomentsProvider,
-            OptimizedAnalyticsProvider, GoalsProvider>(
-          builder: (context, authProvider, momentsProvider,
-              analyticsProvider, goalsProvider, child) {
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              MinimalColors.backgroundPrimary,
+              MinimalColors.backgroundSecondary.withOpacity(0.8),
+              MinimalColors.primaryGradient[0].withOpacity(0.1),
+            ],
+            stops: const [0.0, 0.7, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          child: Consumer<StreakProvider>(
+            builder: (context, streakProvider, _) {
+              return Consumer6<OptimizedAuthProvider, OptimizedMomentsProvider,
+                  OptimizedAnalyticsProvider, GoalsProvider, ImageMomentsProvider,
+                  ChallengesProvider>(
+                builder: (context, authProvider, momentsProvider,
+                    analyticsProvider, goalsProvider, imageProvider,
+                    challengesProvider, child) {
 
             final user = authProvider.currentUser;
             if (user == null) {
@@ -184,13 +221,40 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               );
             }
 
-            return FadeTransition(
-              opacity: _fadeAnimation,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center, // ✅ CENTRAR TODO
-                  children: [
+            return Stack(
+              children: [
+                // Animated background particles
+                ...List.generate(3, (index) => 
+                  AnimatedBuilder(
+                    animation: _floatingAnimation,
+                    builder: (context, child) {
+                      return Positioned(
+                        top: 100 + (index * 200) + (math.sin(_floatingAnimation.value * math.pi * 2 + index) * 20),
+                        right: 50 + (index * 100) + (math.cos(_floatingAnimation.value * math.pi * 2 + index) * 30),
+                        child: Container(
+                          width: 20 + (index * 10),
+                          height: 20 + (index * 10),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [
+                                MinimalColors.accentGradient[index % 2].withOpacity(0.1),
+                                MinimalColors.lightGradient[index % 2].withOpacity(0.05),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center, // ✅ CENTRAR TODO
+                      children: [
                     // 1. ✅ HEADER CON FOTO GRANDE Y BIENVENIDA - CENTRADO
                     _buildCenteredHeader(user),
                     const SizedBox(height: 24),
@@ -203,17 +267,37 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     // 3. ✅ GRÁFICO SEMANAL MEJORADO CON DÍAS REALES
                     _buildRealWeeklyChart(analyticsProvider),
                     const SizedBox(height: 24),
-                    // 4. ✅ GOALS CERCA DE COMPLETARSE CON ESTADO 100%
+                    // 4. 🆕 FOTOS DE LA SEMANA
+                    _buildWeeklyPhotosWidget(momentsProvider, imageProvider),
+                    const SizedBox(height: 24),
+                    // 5. 🎯 PERSONALIZED CHALLENGES
+                    PersonalizedChallengesWidget(animationController: _fadeController),
+                    const SizedBox(height: 24),
+                    // 6. 📊 MOOD CALENDAR HEATMAP
+                    MoodCalendarHeatmapWidget(animationController: _slideController),
+                    const SizedBox(height: 24),
+                    // 7. 🔥 STREAK TRACKER
+                    StreakTrackerWidget(animationController: _pulseController),
+                    const SizedBox(height: 24),
+                    // 8. 🧠 WELLBEING PREDICTION INSIGHTS
+                    WellbeingPredictionWidget(animationController: _shimmerController),
+                    const SizedBox(height: 24),
+                    // 9. ✅ GOALS CERCA DE COMPLETARSE CON ESTADO 100%
                     _buildGoalsWithCompletedState(goalsProvider),
                     const SizedBox(height: 24),
-                    // 5. RECOMENDACIONES CONTEXTUALES MEJORADAS
+                    // 10. RECOMENDACIONES CONTEXTUALES MEJORADAS
                     _buildContextualRecommendations(user, analyticsProvider),
                     const SizedBox(height: 32),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
-              ),
+              ],
             );
-          },
+                },
+              );
+            },
+          ),
         ),
       ),
     );
@@ -1118,6 +1202,321 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     );
   }
 
+// ============================================================================
+// 🆕 WIDGET DE FOTOS SEMANALES
+// ============================================================================
+  Widget _buildWeeklyPhotosWidget(OptimizedMomentsProvider momentsProvider, ImageMomentsProvider imageProvider) {
+    final weeklyMoments = _getWeeklyMomentsWithImages(momentsProvider);
+    
+    if (weeklyMoments.isEmpty) {
+      return _buildEmptyPhotosWidget();
+    }
+
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, (1 - _fadeAnimation.value) * 20),
+          child: Opacity(
+            opacity: _fadeAnimation.value,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: MinimalColors.backgroundCard,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: MinimalColors.primaryGradient[0].withOpacity(0.3),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: MinimalColors.primaryGradient[0].withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(-5, 5),
+                  ),
+                  BoxShadow(
+                    color: MinimalColors.primaryGradient[1].withOpacity(0.3),
+                    blurRadius: 20,
+                    offset: const Offset(5, 5),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: MinimalColors.accentGradient,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.photo_library,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Expanded(
+                        child: Text(
+                          'Fotos de la Semana',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: MinimalColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: MinimalColors.lightGradient,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${weeklyMoments.length}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    height: 120,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: weeklyMoments.length,
+                      itemBuilder: (context, index) {
+                        final moment = weeklyMoments[index];
+                        return _buildPhotoCard(moment, imageProvider, index);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPhotoCard(OptimizedInteractiveMomentModel moment, ImageMomentsProvider imageProvider, int index) {
+    return AnimatedBuilder(
+      animation: _slideAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(_slideAnimation.value.dx * (50 * (index + 1)), 0),
+          child: Container(
+            width: 100,
+            margin: const EdgeInsets.only(right: 12),
+            child: FutureBuilder<String?>(
+              future: imageProvider.getImageForMoment(moment.id ?? 0),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data != null) {
+                  return Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.file(
+                          File(snapshot.data!),
+                          width: 100,
+                          height: 120,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return _buildPhotoPlaceholder(moment.emoji ?? '📷');
+                          },
+                        ),
+                      ),
+                      // Gradient overlay
+                      Container(
+                        width: 100,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withOpacity(0.7),
+                            ],
+                          ),
+                        ),
+                      ),
+                      // Emoji and type indicator
+                      Positioned(
+                        bottom: 8,
+                        left: 8,
+                        right: 8,
+                        child: Column(
+                          children: [
+                            Text(
+                              moment.emoji ?? '📷',
+                              style: const TextStyle(fontSize: 20),
+                            ),
+                            const SizedBox(height: 2),
+                            Container(
+                              width: double.infinity,
+                              height: 3,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: _getMomentTypeGradient(moment.type ?? 'neutral'),
+                                ),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return _buildPhotoPlaceholder(moment.emoji ?? '📷');
+              },
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPhotoPlaceholder(String emoji) {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: 1.0 + (_pulseAnimation.value * 0.05),
+          child: Container(
+            width: 100,
+            height: 120,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: MinimalColors.primaryGradient.map((c) => c.withOpacity(0.3)).toList(),
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: MinimalColors.primaryGradient[0].withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  emoji,
+                  style: const TextStyle(fontSize: 24),
+                ),
+                const SizedBox(height: 4),
+                const Icon(
+                  Icons.photo_camera,
+                  color: MinimalColors.textSecondary,
+                  size: 16,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyPhotosWidget() {
+    return AnimatedBuilder(
+      animation: _floatingAnimation,
+      builder: (context, child) {
+        return Transform.translate(
+          offset: Offset(0, math.sin(_floatingAnimation.value * math.pi * 2) * 3),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: MinimalColors.backgroundCard.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: MinimalColors.primaryGradient[0].withOpacity(0.2),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: MinimalColors.primaryGradient.map((c) => c.withOpacity(0.3)).toList(),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.photo_camera_outlined,
+                    color: MinimalColors.textSecondary,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Agrega fotos a tus momentos',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: MinimalColors.textSecondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'Captura instantes especiales de tu semana',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: MinimalColors.textTertiary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  List<OptimizedInteractiveMomentModel> _getWeeklyMomentsWithImages(OptimizedMomentsProvider momentsProvider) {
+    final now = DateTime.now();
+    final weekStart = now.subtract(Duration(days: now.weekday - 1));
+    final weekEnd = weekStart.add(const Duration(days: 7));
+    
+    return momentsProvider.moments
+        .where((moment) {
+          final momentDate = moment.createdAt;
+          return momentDate.isAfter(weekStart) && momentDate.isBefore(weekEnd);
+        })
+        .take(6) // Limit to 6 photos for better UI
+        .toList();
+  }
+
+  List<Color> _getMomentTypeGradient(String type) {
+    switch (type) {
+      case 'positive':
+        return [const Color(0xFF10B981), const Color(0xFF34D399)];
+      case 'negative':
+        return [const Color(0xFFb91c1c), const Color(0xFFef4444)];
+      default:
+        return [const Color(0xFFf59e0b), const Color(0xFFfbbf24)];
+    }
+  }
+
+// ============================================================================
+// RECOMENDACIONES CONTEXTUALES MEJORADAS
+// ============================================================================
   Widget _buildContextualRecommendations(OptimizedUserModel user, OptimizedAnalyticsProvider analyticsProvider) {
     final recommendations = analyticsProvider.getTopRecommendations();
 

@@ -14,6 +14,8 @@ import 'presentation/providers/optimized_providers.dart';
 import 'presentation/providers/extended_daily_entries_provider.dart';
 import 'presentation/providers/notifications_provider.dart'; // ✅ NUEVO
 import 'presentation/providers/image_moments_provider.dart'; // ✅ NUEVO PROVIDER AÑADIDO
+import 'presentation/providers/challenges_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
+import 'presentation/providers/streak_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
 import 'ai/provider/ai_provider.dart';
 import '../../../ai/provider/predective_analysis_provider.dart'; // ✅ NUEVO: Análisis Predictivo
 import 'ai/provider/chat_provider.dart'; // ✅ NUEVO: Chat con IA
@@ -118,6 +120,15 @@ Future<void> initCleanDependencies() async {
           () => MentalHealthChatProvider(sl<OptimizedDatabaseService>()),
     );
 
+    // ✅ HIGH PRIORITY ENHANCEMENTS: New providers
+    sl.registerFactory<ChallengesProvider>(
+          () => ChallengesProvider(sl<OptimizedDatabaseService>()),
+    );
+
+    sl.registerFactory<StreakProvider>(
+          () => StreakProvider(sl<OptimizedDatabaseService>()),
+    );
+
     logger.i('✅ Dependencias limpias inicializadas correctamente');
 
   } catch (e) {
@@ -170,6 +181,8 @@ bool areCleanServicesRegistered() {
     sl<PredictiveAnalysisProvider>(); // ✅ NUEVO
     sl<ChatProvider>(); // ✅ NUEVO
     sl<MentalHealthChatProvider>(); // ✅ NUEVO
+    sl<ChallengesProvider>(); // ✅ HIGH PRIORITY ENHANCEMENT
+    sl<StreakProvider>(); // ✅ HIGH PRIORITY ENHANCEMENT
 
     return true;
   } catch (e) {
@@ -180,7 +193,7 @@ bool areCleanServicesRegistered() {
 /// Información del contenedor limpio
 Map<String, dynamic> getCleanContainerInfo() {
   return {
-    'total_services': 14, // ✅ ACTUALIZADO (era 13, ahora 14)
+    'total_services': 16, // ✅ ACTUALIZADO (era 14, ahora 16)
     'services_ready': areCleanServicesRegistered(),
     'core_services': [
       'Logger',
@@ -201,6 +214,8 @@ Map<String, dynamic> getCleanContainerInfo() {
       'PredictiveAnalysisProvider', // ✅ NUEVO
       'ChatProvider', // ✅ NUEVO
       'MentalHealthChatProvider', // ✅ NUEVO
+      'ChallengesProvider', // ✅ HIGH PRIORITY ENHANCEMENT
+      'StreakProvider', // ✅ HIGH PRIORITY ENHANCEMENT
     ],
     'removed_legacy': [
       'AnalyticsProvider (legacy)',
@@ -281,6 +296,8 @@ class CleanDIConstants {
   static const String predictiveAnalysisProvider = 'PredictiveAnalysisProvider'; // ✅ NUEVO
   static const String chatProvider = 'ChatProvider'; // ✅ NUEVO
   static const String mentalHealthChatProvider = 'MentalHealthChatProvider'; // ✅ NUEVO
+  static const String challengesProvider = 'ChallengesProvider'; // ✅ HIGH PRIORITY ENHANCEMENT
+  static const String streakProvider = 'StreakProvider'; // ✅ HIGH PRIORITY ENHANCEMENT
 }
 
 // ============================================================================
