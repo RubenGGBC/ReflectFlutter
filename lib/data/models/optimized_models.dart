@@ -881,6 +881,9 @@ OptimizedInteractiveMomentModel.calculateAverageIntensity(moments)
 List<OptimizedInteractiveMomentModel> get todayMoments {
 final today = DateTime.now();
 final todayDate = DateTime(today.year, today.month, today.day);
-return where((m) => m.entryDate.isAtSameMomentAs(todayDate)).toList();
+return where((m) {
+  final momentDate = DateTime(m.entryDate.year, m.entryDate.month, m.entryDate.day);
+  return momentDate.isAtSameMomentAs(todayDate);
+}).toList();
 }
 }

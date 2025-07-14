@@ -17,12 +17,12 @@ import 'daily_review_screen_v2.dart';
 import 'analytics_screen_v2.dart';
 import 'profile_screen_v2.dart';
 import 'analytics_screen_v2_upgraded.dart';
-import 'ai_coach_screen.dart';
 import 'goals_screen.dart';
 import 'predective_analysis_screen.dart';
 import 'ai_chat_screen.dart';
 import '../v2/mental_health_chat_screen.dart';
 import 'analytics_screen_optimized.dart';
+import 'user_progression_analytics_screen.dart';
 
 // Componentes modernos
 import '../components/modern_design_system.dart';
@@ -89,12 +89,6 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
       color: const Color(0xFF4ECDC4),
     ),
     NavigationItem(
-      icon: Icons.psychology_outlined,
-      activeIcon: Icons.psychology,
-      label: 'Coach IA',
-      color: const Color(0xFF9333EA),
-    ),
-    NavigationItem(
       icon: Icons.person_outline,
       activeIcon: Icons.person,
       label: 'Perfil',
@@ -146,11 +140,10 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
   void _initializeScreens() {
     _screens = [
       const _SafeScreenWrapper(child: HomeScreenV2()),
-      const _SafeScreenWrapper(child: QuickMomentsScreen()), // ✅ NUEVA PANTALLA
+      const _SafeScreenWrapper(child: QuickMomentsScreen()),
       const _SafeScreenWrapper(child: DailyReviewScreenV2()),
-      const _SafeScreenWrapper(child:AnalyticsScreenV2()),
+      const _SafeScreenWrapper(child: UserProgressionAnalyticsScreen()),
       const _SafeScreenWrapper(child: GoalsScreen()),
-      const _SafeScreenWrapper(child: PredictiveAnalysisScreen()),
       const _SafeScreenWrapper(child: ProfileScreenV2()),
     ];
   }

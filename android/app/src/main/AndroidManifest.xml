@@ -1,30 +1,13 @@
-<!-- android/app/src/main/AndroidManifest.xml -->
-<!-- UPDATED WITH NOTIFICATIONS SUPPORT - PRESERVING EXISTING CONTENT -->
-
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- ✅ PERMISOS EXISTENTES (mantenidos) -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- ✅ PERMISOS EXISTENTES PARA ALMACENAMIENTO (mantenidos) -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-
-    <!-- ✅ Para Android 10+ (Scoped Storage) (mantenido) -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29" />
-
-    <!-- ✅ NUEVO: Para Android 13+ (Tiramisu) - Acceso a imágenes (mantenido) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
-
-    <!-- ✅ NUEVOS PERMISOS PARA NOTIFICACIONES -->
-    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <!-- ✅ CARACTERÍSTICAS DE CÁMARA EXISTENTES (mantenidas) -->
     <uses-feature
@@ -63,14 +46,8 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
 
-            <!-- ✅ NUEVO: Intent filter para manejar notificaciones tocadas -->
-            <intent-filter>
-                <action android:name="FLUTTER_NOTIFICATION_CLICK" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
         </activity>
 
-        <!-- ✅ FileProvider EXISTENTE (mantenido) -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -81,56 +58,9 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- ✅ NUEVOS SERVICIOS Y RECEPTORES PARA NOTIFICACIONES -->
-
-        <!-- Servicio para notificaciones en segundo plano -->
-        <service
-            android:name="com.dexterous.flutterlocalnotifications.FLTFirebaseMessagingService"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.google.firebase.MESSAGING_EVENT" />
-            </intent-filter>
-        </service>
-
-        <!-- Receptor para notificaciones programadas -->
-        <receiver
-            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver"
-            android:exported="false" />
-
-        <!-- Receptor para reinicio del sistema (mantener notificaciones) -->
-        <receiver
-            android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver"
-            android:enabled="true"
-            android:exported="false">
-            <intent-filter android:priority="2147483647">
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
-                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
-            </intent-filter>
-        </receiver>
-
-        <!-- ✅ META-DATA PARA CONFIGURACIÓN DE NOTIFICACIONES (SIN ICONOS PERSONALIZADOS) -->
-
-        <!-- Canal de notificación por defecto -->
-        <meta-data
-            android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="default_notification_channel" />
-
-        <!-- ✅ META-DATA EXISTENTE PARA FLUTTER (mantenido) -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
-
-        <!-- ✅ NUEVO: Configuración adicional para trabajar en segundo plano -->
-        <meta-data
-            android:name="io.flutter.app.android.SplashScreenUntilFirstFrame"
-            android:value="true" />
-
-        <!-- Servicio para mensajes en segundo plano (si se usa Firebase) -->
-        <service
-            android:name="io.flutter.plugins.firebase.messaging.FlutterFirebaseMessagingBackgroundService"
-            android:exported="false" />
     </application>
 
     <queries>

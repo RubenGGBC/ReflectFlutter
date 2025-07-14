@@ -58,8 +58,10 @@ class _AddMomentScreenState extends State<AddMomentScreen> {
   void _addMoment() async {
     if (_textController.text.trim().isEmpty) return;
 
-    // FIX: Cambiar a providers optimizados
+    // FIX: Obtener todos los providers necesarios para refrescar la data
     final momentsProvider = context.read<OptimizedMomentsProvider>();
+    final dailyEntriesProvider = context.read<OptimizedDailyEntriesProvider>();
+    final analyticsProvider = context.read<OptimizedAnalyticsProvider>();
     final userId = context.read<OptimizedAuthProvider>().currentUser?.id;
 
     if (userId == null) return;
@@ -76,6 +78,11 @@ class _AddMomentScreenState extends State<AddMomentScreen> {
     );
 
     if (mounted && success) {
+      // ✅ REFRESCAR DATOS DE LA HOME SCREEN ANTES DE VOLVER
+      await momentsProvider.loadTodayMoments(userId);
+      await dailyEntriesProvider.loadEntries(userId);
+      await analyticsProvider.loadCompleteAnalytics(userId);
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('✅ Momento guardado con éxito'), backgroundColor: ModernColors.success),
       );

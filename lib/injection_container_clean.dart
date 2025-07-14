@@ -8,6 +8,7 @@ import 'package:logger/logger.dart';
 // Services optimizados
 import 'data/services/optimized_database_service.dart';
 import 'ai/services/predictive_analysis_service.dart';
+import 'services/notification_service.dart';
 
 // Providers optimizados
 import 'presentation/providers/optimized_providers.dart';
@@ -52,6 +53,10 @@ Future<void> initCleanDependencies() async {
     
     sl.registerLazySingleton<PredictiveAnalysisService>(
           () => PredictiveAnalysisService.instance,
+    );
+    
+    sl.registerLazySingleton<NotificationService>(
+          () => NotificationService(),
     );
 
 
@@ -154,7 +159,9 @@ Future<void> initCriticalServices() async {
   logger.i('🚀 Inicializando servicios críticos...');
 
   try {
-    // ✅ NUEVO: Inicializar servicio de notificaciones
+    // Inicializar servicio de notificaciones
+    final notificationService = sl<NotificationService>();
+    await notificationService.init();
     logger.i('✅ Servicio de notificaciones inicializado');
 
     // Inicializar otros servicios críticos aquí si es necesario
@@ -176,6 +183,7 @@ bool areCleanServicesRegistered() {
     sl<Logger>();
     sl<OptimizedDatabaseService>();
     sl<PredictiveAnalysisService>();
+    sl<NotificationService>();
 
     // Verificar providers
     sl<OptimizedAuthProvider>();

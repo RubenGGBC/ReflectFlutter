@@ -2568,7 +2568,7 @@ class GoalsProvider with ChangeNotifier {
         title: title,
         description: description,
         type: goalType,
-        targetValue: targetValue,
+        targetValue: targetValue.toInt(),
         createdAt: DateTime.now(),
       );
 
@@ -2619,8 +2619,8 @@ class GoalsProvider with ChangeNotifier {
         title: title,
         description: description,
         type: type != null ? _parseGoalType(type) : null,
-        targetValue: targetValue,
-        currentValue: currentValue,
+        targetValue: targetValue?.toInt(),
+        currentValue: currentValue?.toInt(),
       );
 
       final success = await _databaseService.updateGoal(updatedGoal);
@@ -2652,7 +2652,7 @@ class GoalsProvider with ChangeNotifier {
       if (goalIndex == -1) return false;
 
       final goal = _goals[goalIndex];
-      final updatedGoal = goal.copyWith(currentValue: newValue);
+      final updatedGoal = goal.copyWith(currentValue: newValue.toInt());
 
       // Verificar si se completó automáticamente
       if (updatedGoal.progress >= 1.0 && goal.status == GoalStatus.active) {
@@ -2829,7 +2829,7 @@ class GoalsProvider with ChangeNotifier {
       return currentStreak.toDouble();
     } catch (e) {
       _logger.e('Error calculando progreso de consistencia: $e');
-      return goal.currentValue;
+      return goal.currentValue.toDouble();
     }
   }
 
@@ -2844,7 +2844,7 @@ class GoalsProvider with ChangeNotifier {
       return avgMood;
     } catch (e) {
       _logger.e('Error calculando progreso de mood: $e');
-      return goal.currentValue;
+      return goal.currentValue.toDouble();
     }
   }
 
@@ -2862,7 +2862,7 @@ class GoalsProvider with ChangeNotifier {
       return positiveMomentsCount.toDouble();
     } catch (e) {
       _logger.e('Error calculando progreso de momentos positivos: $e');
-      return goal.currentValue;
+      return goal.currentValue.toDouble();
     }
   }
 
@@ -2879,7 +2879,7 @@ class GoalsProvider with ChangeNotifier {
       return stressReduction.toDouble(); // ✅ FIXED: Conversión explícita a double
     } catch (e) {
       _logger.e('Error calculando progreso de reducción de estrés: $e');
-      return goal.currentValue;
+      return goal.currentValue.toDouble();
     }
   }
 

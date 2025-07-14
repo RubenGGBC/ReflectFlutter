@@ -691,9 +691,9 @@ class _StreakTrackerWidgetState extends State<StreakTrackerWidget>
           animation: widget.animationController,
           builder: (context, child) {
             return Transform.translate(
-              offset: Offset(0, (1 - widget.animationController.value) * 20),
+              offset: Offset(0, (1 - widget.animationController.value) * 5),
               child: Opacity(
-                opacity: widget.animationController.value,
+                opacity: 1.0, // Fixed opacity instead of animationController.value
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(

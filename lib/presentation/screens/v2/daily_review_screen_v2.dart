@@ -17,7 +17,7 @@ import 'daily_detail_screen_v2.dart';
 // ============================================================================
 // PALETA DE COLORES MINIMALISTA (IGUAL QUE HOME Y ANALYTICS)
 // ============================================================================
-class ReflectionColors {
+class MinimalColors {
   // Fondo principal - Negro profundo
   static const Color backgroundPrimary = Color(0xFF000000);
   static const Color backgroundCard = Color(0xFF0F0F0F);
@@ -39,10 +39,11 @@ class ReflectionColors {
     Color(0xFFa855f7), // Morado claro
   ];
 
-  // Colores de estado
+  // Colores de texto
   static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB3FFFFFF);
-  static const Color textHint = Color(0xFF66FFFFFF);
+  static const Color textSecondary = Color(0xFF9CA3AF);
+  static const Color textTertiary = Color(0xFF6B7280);
+  static const Color textMuted = Color(0xFF4B5563);
 
   // Gradientes específicos para métricas
   static const List<Color> positiveGradient = [Color(0xFF10b981), Color(0xFF34d399)];
@@ -353,7 +354,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ReflectionColors.backgroundPrimary,
+      backgroundColor: MinimalColors.backgroundPrimary,
       body: SafeArea(
         child: SlideTransition(
           position: Tween<Offset>(
@@ -407,10 +408,17 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: ReflectionColors.primaryGradient,
+          colors: MinimalColors.primaryGradient,
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: MinimalColors.primaryGradient[1].withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -497,7 +505,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(2),
                     gradient: isCompleted
-                        ? LinearGradient(colors: ReflectionColors.accentGradient)
+                        ? LinearGradient(colors: MinimalColors.accentGradient)
                         : null,
                     color: isCompleted
                         ? null
@@ -574,18 +582,23 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                ReflectionColors.backgroundCard,
-                ReflectionColors.backgroundSecondary,
+                MinimalColors.backgroundCard,
+                MinimalColors.backgroundSecondary,
               ],
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: ReflectionColors.primaryGradient[0].withOpacity(0.3),
+              color: MinimalColors.primaryGradient[0].withOpacity(0.3),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: ReflectionColors.primaryGradient[1].withOpacity(0.1),
+                color: MinimalColors.primaryGradient[1].withOpacity(0.2),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+              BoxShadow(
+                color: Colors.black.withOpacity(0.4),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -602,7 +615,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(
-                          colors: ReflectionColors.primaryGradient,
+                          colors: MinimalColors.primaryGradient,
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -617,7 +630,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                       child: Text(
                         'Reflexión Libre',
                         style: TextStyle(
-                          color: ReflectionColors.textPrimary,
+                          color: MinimalColors.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -648,14 +661,14 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                 controller: _reflectionController,
                 maxLines: 6,
                 style: const TextStyle(
-                  color: ReflectionColors.textPrimary,
+                  color: MinimalColors.textPrimary,
                   fontSize: 16,
                   height: 1.5,
                 ),
                 decoration: InputDecoration(
                   hintText: _getPersonalizedHint(),
                   hintStyle: const TextStyle(
-                    color: ReflectionColors.textHint,
+                    color: MinimalColors.textMuted,
                     fontSize: 15,
                   ),
                   border: InputBorder.none,
@@ -674,8 +687,15 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: ReflectionColors.backgroundSecondary,
+                color: MinimalColors.backgroundSecondary,
                 borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -683,7 +703,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   const Text(
                     'Emociones detectadas:',
                     style: TextStyle(
-                      color: ReflectionColors.textSecondary,
+                      color: MinimalColors.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -724,13 +744,13 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    ReflectionColors.lightGradient[0].withOpacity(0.1),
-                    ReflectionColors.lightGradient[1].withOpacity(0.1),
+                    MinimalColors.lightGradient[0].withOpacity(0.1),
+                    MinimalColors.lightGradient[1].withOpacity(0.1),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: ReflectionColors.lightGradient[0].withOpacity(0.3),
+                  color: MinimalColors.lightGradient[0].withOpacity(0.3),
                   width: 1,
                 ),
               ),
@@ -741,14 +761,14 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                     children: [
                       Icon(
                         Icons.lightbulb_outline_rounded,
-                        color: ReflectionColors.lightGradient[0],
+                        color: MinimalColors.lightGradient[0],
                         size: 18,
                       ),
                       const SizedBox(width: 8),
                       const Text(
                         'Sugerencias para reflexionar:',
                         style: TextStyle(
-                          color: ReflectionColors.textPrimary,
+                          color: MinimalColors.textPrimary,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -769,17 +789,17 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: ReflectionColors.backgroundCard,
+                          color: MinimalColors.backgroundCard,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: ReflectionColors.lightGradient[0].withOpacity(0.2),
+                            color: MinimalColors.lightGradient[0].withOpacity(0.2),
                           ),
                         ),
                         child: Row(
                           children: [
                             Icon(
                               Icons.add_circle_outline_rounded,
-                              color: ReflectionColors.lightGradient[0],
+                              color: MinimalColors.lightGradient[0],
                               size: 16,
                             ),
                             const SizedBox(width: 8),
@@ -787,7 +807,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                               child: Text(
                                 suggestion,
                                 style: const TextStyle(
-                                  color: ReflectionColors.textSecondary,
+                                  color: MinimalColors.textSecondary,
                                   fontSize: 13,
                                 ),
                               ),
@@ -820,11 +840,11 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   List<Color> _getSentimentGradient(double sentiment) {
     if (sentiment > 0.3) {
-      return ReflectionColors.positiveGradient;
+      return MinimalColors.positiveGradient;
     } else if (sentiment < -0.3) {
-      return ReflectionColors.negativeGradient;
+      return MinimalColors.negativeGradient;
     } else {
-      return ReflectionColors.neutralGradient;
+      return MinimalColors.neutralGradient;
     }
   }
 
@@ -875,18 +895,23 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            ReflectionColors.backgroundCard,
-            ReflectionColors.backgroundSecondary,
+            MinimalColors.backgroundCard,
+            MinimalColors.backgroundSecondary,
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: ReflectionColors.positiveGradient[0].withOpacity(0.3),
+          color: MinimalColors.positiveGradient[0].withOpacity(0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: ReflectionColors.positiveGradient[1].withOpacity(0.1),
+            color: MinimalColors.positiveGradient[1].withOpacity(0.2),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -903,7 +928,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: ReflectionColors.positiveGradient,
+                      colors: MinimalColors.positiveGradient,
                     ),
                     borderRadius: BorderRadius.circular(8),
                   ),
@@ -918,7 +943,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   child: Text(
                     'Gratitud y Apreciación',
                     style: TextStyle(
-                      color: ReflectionColors.textPrimary,
+                      color: MinimalColors.textPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -929,7 +954,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: ReflectionColors.positiveGradient,
+                        colors: MinimalColors.positiveGradient,
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -949,14 +974,14 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             controller: _gratitudeController,
             maxLines: 3,
             style: const TextStyle(
-              color: ReflectionColors.textPrimary,
+              color: MinimalColors.textPrimary,
               fontSize: 16,
               height: 1.5,
             ),
             decoration: const InputDecoration(
               hintText: '¿Por qué estás agradecido hoy? Menciona personas, momentos o experiencias...',
               hintStyle: TextStyle(
-                color: ReflectionColors.textHint,
+                color: MinimalColors.textMuted,
                 fontSize: 15,
               ),
               border: InputBorder.none,
@@ -975,9 +1000,16 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: ReflectionColors.backgroundCard,
+              color: MinimalColors.backgroundCard,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.green.withOpacity(0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: TextField(
               controller: _positiveTagsController,
@@ -997,9 +1029,16 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: ReflectionColors.backgroundCard,
+              color: MinimalColors.backgroundCard,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: Colors.red.withOpacity(0.3)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.3),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
             ),
             child: TextField(
               controller: _negativeTagsController,
@@ -1172,7 +1211,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: ReflectionColors.backgroundCard,
+        color: MinimalColors.backgroundCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: insightColor.withOpacity(0.3)),
       ),
@@ -1214,7 +1253,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   title: 'Nivel de Energía',
                   value: _energyLevel,
                   emoji: '⚡',
-                  gradientColors: ReflectionColors.positiveGradient,
+                  gradientColors: MinimalColors.positiveGradient,
                   onChanged: (value) => setState(() => _energyLevel = value),
                 ),
 
@@ -1224,7 +1263,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   title: 'Nivel de Estrés',
                   value: _stressLevel,
                   emoji: '😰',
-                  gradientColors: ReflectionColors.negativeGradient,
+                  gradientColors: MinimalColors.negativeGradient,
                   onChanged: (value) => setState(() => _stressLevel = value),
                   isReversed: true, // Mayor valor = peor
                 ),
@@ -1355,7 +1394,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: ReflectionColors.backgroundCard,
+        color: MinimalColors.backgroundCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: balanceColor.withOpacity(0.3)),
       ),
@@ -1459,7 +1498,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: ReflectionColors.backgroundCard,
+        color: MinimalColors.backgroundCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
@@ -1503,7 +1542,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: ReflectionColors.accentGradient),
+                gradient: LinearGradient(colors: MinimalColors.accentGradient),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: const Text(
@@ -1571,7 +1610,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: ReflectionColors.backgroundCard,
+        color: MinimalColors.backgroundCard,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.white.withOpacity(0.1)),
       ),
@@ -1594,7 +1633,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: ReflectionColors.lightGradient),
+                  gradient: LinearGradient(colors: MinimalColors.lightGradient),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -1613,10 +1652,10 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           const SizedBox(height: 12),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: ReflectionColors.lightGradient[0],
+              activeTrackColor: MinimalColors.lightGradient[0],
               inactiveTrackColor: Colors.white24,
-              thumbColor: ReflectionColors.lightGradient[1],
-              overlayColor: ReflectionColors.lightGradient[0].withOpacity(0.2),
+              thumbColor: MinimalColors.lightGradient[1],
+              overlayColor: MinimalColors.lightGradient[0].withOpacity(0.2),
               trackHeight: 4,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
             ),
@@ -1690,9 +1729,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: _worthIt == true
-                        ? LinearGradient(colors: ReflectionColors.positiveGradient)
+                        ? LinearGradient(colors: MinimalColors.positiveGradient)
                         : null,
-                    color: _worthIt == true ? null : ReflectionColors.backgroundCard,
+                    color: _worthIt == true ? null : MinimalColors.backgroundCard,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _worthIt == true
@@ -1734,9 +1773,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: _worthIt == false
-                        ? LinearGradient(colors: ReflectionColors.negativeGradient)
+                        ? LinearGradient(colors: MinimalColors.negativeGradient)
                         : null,
-                    color: _worthIt == false ? null : ReflectionColors.backgroundCard,
+                    color: _worthIt == false ? null : MinimalColors.backgroundCard,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _worthIt == false
@@ -1879,7 +1918,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: ReflectionColors.backgroundCard,
+          color: MinimalColors.backgroundCard,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white.withOpacity(0.1)),
         ),
@@ -1888,7 +1927,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: ReflectionColors.accentGradient),
+                gradient: LinearGradient(colors: MinimalColors.accentGradient),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: Colors.white, size: 20),
@@ -1941,14 +1980,19 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: ReflectionColors.backgroundCard,
+        color: MinimalColors.backgroundCard,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: Colors.white.withOpacity(0.1)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: MinimalColors.primaryGradient[1].withOpacity(0.2),
+            blurRadius: 25,
+            offset: const Offset(0, 12),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 15,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -1998,7 +2042,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: ReflectionColors.backgroundSecondary,
+        color: MinimalColors.backgroundSecondary,
         border: Border(
           top: BorderSide(color: Colors.white.withOpacity(0.1)),
         ),
@@ -2041,7 +2085,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               ),
               child: Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: ReflectionColors.accentGradient),
+                  gradient: LinearGradient(colors: MinimalColors.accentGradient),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 padding: const EdgeInsets.symmetric(vertical: 16),
@@ -2139,7 +2183,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       builder: (context) => Container(
         height: 300,
         decoration: const BoxDecoration(
-          color: ReflectionColors.backgroundPrimary,
+          color: MinimalColors.backgroundPrimary,
           borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.all(20),
@@ -2179,10 +2223,10 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                     const SizedBox(height: 20),
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: ReflectionColors.accentGradient[0],
+                        activeTrackColor: MinimalColors.accentGradient[0],
                         inactiveTrackColor: Colors.white24,
-                        thumbColor: ReflectionColors.accentGradient[1],
-                        overlayColor: ReflectionColors.accentGradient[0].withOpacity(0.2),
+                        thumbColor: MinimalColors.accentGradient[1],
+                        overlayColor: MinimalColors.accentGradient[0].withOpacity(0.2),
                         trackHeight: 8,
                         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 14),
                       ),
@@ -2225,7 +2269,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                       ),
                       child: Container(
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: ReflectionColors.accentGradient),
+                          gradient: LinearGradient(colors: MinimalColors.accentGradient),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
@@ -2259,9 +2303,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
   }
 
   List<Color> _getMoodGradient(int score) {
-    if (score <= 3) return ReflectionColors.negativeGradient;
-    if (score <= 6) return ReflectionColors.neutralGradient;
-    return ReflectionColors.positiveGradient;
+    if (score <= 3) return MinimalColors.negativeGradient;
+    if (score <= 6) return MinimalColors.neutralGradient;
+    return MinimalColors.positiveGradient;
   }
 
   void _showLoadingDialog() {

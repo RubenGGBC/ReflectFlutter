@@ -11,6 +11,8 @@ import 'package:flutter/services.dart';
 // Providers
 import '../../providers/optimized_providers.dart';
 import '../../providers/image_moments_provider.dart';
+import '../../providers/challenges_provider.dart';
+import '../../providers/streak_provider.dart';
 
 // Modelos
 import '../../../data/models/optimized_models.dart';
@@ -241,18 +243,25 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
     try {
       _showLoadingDialog();
 
-      final momentsProvider = Provider.of<OptimizedMomentsProvider>(
-        context,
-        listen: false,
-      );
-      final imageProvider = Provider.of<ImageMomentsProvider>(
-        context,
-        listen: false,
-      );
+      // Obtener todos los providers necesarios
+      final momentsProvider = context.read<OptimizedMomentsProvider>();
+      final dailyEntriesProvider = context.read<OptimizedDailyEntriesProvider>();
+      final analyticsProvider = context.read<OptimizedAnalyticsProvider>();
+      final goalsProvider = context.read<GoalsProvider>();
+      final challengesProvider = context.read<ChallengesProvider>();
+      final streakProvider = context.read<StreakProvider>();
+      final imageProvider = context.read<ImageMomentsProvider>();
+      final userId = context.read<OptimizedAuthProvider>().currentUser?.id;
+
+      if (userId == null) {
+        Navigator.pop(context); // Cerrar loading
+        _showErrorSnackBar('Error: Usuario no identificado.');
+        return;
+      }
 
       // Guardar el momento
       final newMoment = await momentsProvider.addMoment(
-        userId: 1, // TODO: Obtener el ID real del usuario logueado
+        userId: userId,
         emoji: _selectedEmoji,
         text: _description.trim(),
         type: _momentType,
@@ -269,29 +278,45 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           );
         }
 
+        // ✅ RECARGAR TODOS LOS DATOS DE LA HOME SCREEN
+        await _reloadData(context, userId);
+
         Navigator.pop(context); // Cerrar loading
         HapticFeedback.heavyImpact();
         _showSuccessSnackBar('¡Momento guardado exitosamente!');
 
-        // ✅ NAVEGACIÓN ARREGLADA - Regresar a la pantalla anterior y después navegar al home
+        // ✅ NAVEGACIÓN CORREGIDA - Regresar a la pantalla principal
         Navigator.of(context).popUntil((route) => route.isFirst);
 
-        // Opcional: Si quieres ir específicamente al MainNavigationScreenV2
-        // Navigator.of(context).pushAndRemoveUntil(
-        //   MaterialPageRoute(
-        //     builder: (context) => const MainNavigationScreenV2(),
-        //   ),
-        //   (Route<dynamic> route) => false,
-        // );
-
       } else {
-        Navigator.pop(context);
+        Navigator.pop(context); // Cerrar loading
         _showErrorSnackBar('Error al guardar el momento');
       }
     } catch (e) {
-      Navigator.pop(context);
+      Navigator.pop(context); // Cerrar loading
       _showErrorSnackBar('Error inesperado: $e');
     }
+  }
+
+  // ✅ NUEVO MÉTODO PARA RECARGAR DATOS
+  Future<void> _reloadData(BuildContext context, int userId) async {
+    // Usamos read para evitar escuchar cambios aquí, solo ejecutar la acción
+    final momentsProvider = context.read<OptimizedMomentsProvider>();
+    final dailyEntriesProvider = context.read<OptimizedDailyEntriesProvider>();
+    final analyticsProvider = context.read<OptimizedAnalyticsProvider>();
+    final goalsProvider = context.read<GoalsProvider>();
+    final challengesProvider = context.read<ChallengesProvider>();
+    final streakProvider = context.read<StreakProvider>();
+
+    // Ejecutar todas las cargas en paralelo para mayor eficiencia
+    await Future.wait([
+      momentsProvider.loadTodayMoments(userId),
+      dailyEntriesProvider.loadEntries(userId),
+      analyticsProvider.loadCompleteAnalytics(userId),
+      goalsProvider.loadUserGoals(userId),
+      challengesProvider.loadChallenges(userId),
+      streakProvider.loadStreakData(userId),
+    ]);
   }
 
   // ============================================================================

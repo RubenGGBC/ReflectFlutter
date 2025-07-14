@@ -17,8 +17,8 @@ import '../../../core/themes/app_theme.dart';
 import '../components/modern_design_system.dart';
 
 // ✅ NEW: Test Data Seeder
-import '../../../test_data/analytics_data_seeder.dart';
-import '../../../test_data/analytics_test_data_generator.dart';
+import '../../../test_data/simple_test_data.dart';
+import '../../../test_data/test_data_seeder.dart';
 import '../../../data/services/optimized_database_service.dart';
 import '../../../injection_container_clean.dart' as clean_di;
 
@@ -538,29 +538,9 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
               ),
               const SizedBox(height: ModernSpacing.md),
               _buildSeedButton(
-                '👤 Usuario Estable',
-                'Datos consistentes y rutinas equilibradas',
-                () => _seedUserData(UserProfile.stable),
-              ),
-              _buildSeedButton(
-                '😰 Usuario Ansioso',
-                'Patrones de ansiedad y triggers detectables',
-                () => _seedUserData(UserProfile.anxious),
-              ),
-              _buildSeedButton(
-                '📈 Usuario en Mejora',
-                'Tendencia ascendente y progreso constante',
-                () => _seedUserData(UserProfile.improving),
-              ),
-              _buildSeedButton(
-                '🎭 Usuario Caótico',
-                'Patrones inconsistentes y variables',
-                () => _seedUserData(UserProfile.chaotic),
-              ),
-              _buildSeedButton(
-                '😔 Usuario Deprimido',
-                'Niveles bajos de energía y motivación',
-                () => _seedUserData(UserProfile.depressed),
+                '🧪 Crear Usuario de Prueba',
+                'Generar datos de ejemplo para desarrollo',
+                () => _seedUserData(),
               ),
               const SizedBox(height: ModernSpacing.md),
               _buildSeedButton(
@@ -630,7 +610,7 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
     );
   }
 
-  Future<void> _seedUserData(UserProfile profile) async {
+  Future<void> _seedUserData() async {
     Navigator.pop(context); // Cerrar dialog
     
     // Mostrar loading
@@ -663,22 +643,32 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
       // Usar los métodos específicos que crean usuario y hacen login automático
       Map<String, dynamic> result;
       
-      switch (profile) {
-        case UserProfile.stable:
-          result = await AnalyticsDataSeeder.poblarEstable(databaseService, authProvider);
-          break;
-        case UserProfile.anxious:
-          result = await AnalyticsDataSeeder.poblarAnsioso(databaseService, authProvider);
-          break;
-        case UserProfile.depressed:
-          result = await AnalyticsDataSeeder.poblarDeprimido(databaseService, authProvider);
-          break;
-        case UserProfile.improving:
-          result = await AnalyticsDataSeeder.poblarEnMejora(databaseService, authProvider);
-          break;
-        case UserProfile.chaotic:
-          result = await AnalyticsDataSeeder.poblarCaotico(databaseService, authProvider);
-          break;
+      // Create a simple test user and login
+      final success = await authProvider.loginAsDeveloper();
+      
+      if (success) {
+        // Get the current user ID and seed test data
+        final currentUserId = authProvider.currentUser?.id ?? 1;
+        final seeder = TestDataSeeder(databaseService);
+        await seeder.seedTestData(currentUserId);
+        
+        result = {
+          'success': true,
+          'auto_login': true,
+          'user_name': 'Test User',
+          'user_email': 'developer@test.com',
+          'user_password': 'developer',
+          'stats': {
+            'totalDailyEntries': 30,
+            'totalInteractiveMoments': 45,
+            'totalGoals': 4,
+          }
+        };
+      } else {
+        result = {
+          'success': false,
+          'error': 'Failed to create test user',
+        };
       }
       
       Navigator.pop(context); // Cerrar loading
@@ -694,7 +684,7 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
           );
         } else {
           // Mostrar éxito con opción de login manual
-          _showSuccessDialog(result, profile);
+          _showSuccessDialog(result);
         }
       } else {
         // Mostrar error
@@ -774,9 +764,9 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
       try {
         // Limpiar datos
         final databaseService = clean_di.sl<OptimizedDatabaseService>();
-        final seeder = AnalyticsDataSeeder(databaseService);
+        final seeder = TestDataSeeder(databaseService);
         
-        await seeder.clearAllUserData(1); // Usuario desarrollador
+        await seeder.clearTestData(1); // Usuario desarrollador
         
         Navigator.pop(context); // Cerrar loading
         
@@ -813,7 +803,7 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
     }
   }
 
-  void _showSuccessDialog(Map<String, dynamic> result, UserProfile profile) {
+  void _showSuccessDialog(Map<String, dynamic> result) {
     final stats = result['stats'] as Map<String, dynamic>? ?? {};
     final userName = result['user_name'] as String? ?? 'Usuario';
     final userEmail = result['user_email'] as String? ?? '';

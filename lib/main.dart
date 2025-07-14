@@ -7,7 +7,6 @@ import 'package:logger/logger.dart';
 // Imports corregidos
 import 'optimized_reflect_app.dart';
 import 'injection_container_clean.dart' as clean_di;
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

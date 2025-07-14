@@ -23,10 +23,12 @@ class GoalModel {
   final String description;
   final GoalType type;
   final GoalStatus status;
-  final double targetValue;
-  final double currentValue;
+  final int targetValue;
+  final int currentValue;
+  final String? progressNotes;
   final DateTime createdAt;
   final DateTime? completedAt;
+  final DateTime? lastUpdated;
 
   const GoalModel({
     this.id,
@@ -36,9 +38,11 @@ class GoalModel {
     required this.type,
     this.status = GoalStatus.active,
     required this.targetValue,
-    this.currentValue = 0.0,
+    this.currentValue = 0,
+    this.progressNotes,
     required this.createdAt,
     this.completedAt,
+    this.lastUpdated,
   });
 
   // ============================================================================
@@ -56,8 +60,9 @@ class GoalModel {
   int? get daysSinceCompleted => completedAt != null
       ? DateTime.now().difference(completedAt!).inDays
       : null;
-  double get remainingValue => (targetValue - currentValue).clamp(0.0, targetValue);
+  int get remainingValue => (targetValue - currentValue).clamp(0, targetValue);
   bool get isNearCompletion => progress >= 0.8;
+  bool get hasNotes => progressNotes != null && progressNotes!.isNotEmpty;
 
   String get progressDescription {
     if (isCompleted) return 'Completed! 🎉';
@@ -97,9 +102,9 @@ class GoalModel {
   String get suggestedUnit {
     switch (type) {
       case GoalType.consistency: return 'days';
-      case GoalType.mood: return 'score';
+      case GoalType.mood: return 'times';
       case GoalType.positiveMoments: return 'moments';
-      case GoalType.stressReduction: return 'points';
+      case GoalType.stressReduction: return 'times';
     }
   }
 
@@ -142,10 +147,12 @@ class GoalModel {
       description: map['description'] as String? ?? '',
       type: parseGoalType(map['type']),
       status: parseGoalStatus(map['status']),
-      targetValue: (map['target_value'] as num? ?? 0.0).toDouble(),
-      currentValue: (map['current_value'] as num? ?? 0.0).toDouble(),
+      targetValue: (map['target_value'] as num? ?? 0).toInt(),
+      currentValue: (map['current_value'] as num? ?? 0).toInt(),
+      progressNotes: map['progress_notes'] as String?,
       createdAt: parseDateTime(map['created_at']),
       completedAt: parseOptionalDateTime(map['completed_at']),
+      lastUpdated: parseOptionalDateTime(map['last_updated']),
     );
   }
 
@@ -156,13 +163,18 @@ class GoalModel {
       'user_id': userId,
       'title': title,
       'description': description,
-      'type': type.name, // Guarda 'consistency', no 'GoalType.consistency'
-      'status': status.name, // Guarda 'active', no 'GoalStatus.active'
+      'type': type.name,
+      'status': status.name,
       'target_value': targetValue,
       'current_value': currentValue,
-      // Guarda como timestamp INTEGER (segundos desde epoch), como define el esquema de la BD
+      'progress_notes': progressNotes,
       'created_at': createdAt.millisecondsSinceEpoch ~/ 1000,
-      'completed_at': completedAt!.millisecondsSinceEpoch ~/ 1000,
+      'completed_at': completedAt?.millisecondsSinceEpoch != null 
+          ? completedAt!.millisecondsSinceEpoch ~/ 1000 
+          : null,
+      'last_updated': lastUpdated?.millisecondsSinceEpoch != null 
+          ? lastUpdated!.millisecondsSinceEpoch ~/ 1000 
+          : null,
     };
   }
 
@@ -181,10 +193,12 @@ class GoalModel {
     String? description,
     GoalType? type,
     GoalStatus? status,
-    double? targetValue,
-    double? currentValue,
+    int? targetValue,
+    int? currentValue,
+    String? progressNotes,
     DateTime? createdAt,
     DateTime? completedAt,
+    DateTime? lastUpdated,
   }) {
     return GoalModel(
       id: id ?? this.id,
@@ -195,20 +209,44 @@ class GoalModel {
       status: status ?? this.status,
       targetValue: targetValue ?? this.targetValue,
       currentValue: currentValue ?? this.currentValue,
+      progressNotes: progressNotes ?? this.progressNotes,
       createdAt: createdAt ?? this.createdAt,
-      completedAt: completedAt,
+      completedAt: completedAt ?? this.completedAt,
+      lastUpdated: lastUpdated ?? this.lastUpdated,
     );
   }
 
-  GoalModel updateProgress(double newValue) {
-    return copyWith(currentValue: newValue);
+  GoalModel updateProgress(int newValue, {String? notes}) {
+    return copyWith(
+      currentValue: newValue,
+      progressNotes: notes,
+      lastUpdated: DateTime.now(),
+    );
   }
 
-  GoalModel markAsCompleted() {
+  GoalModel addProgressNote(String note) {
+    final existingNotes = progressNotes ?? '';
+    final timestamp = DateTime.now().toString().substring(0, 16);
+    final newNote = '$timestamp: $note';
+    final updatedNotes = existingNotes.isEmpty 
+        ? newNote 
+        : '$existingNotes\n$newNote';
+    
+    return copyWith(
+      progressNotes: updatedNotes,
+      lastUpdated: DateTime.now(),
+    );
+  }
+
+  GoalModel markAsCompleted({String? completionNote}) {
     return copyWith(
       status: GoalStatus.completed,
       completedAt: DateTime.now(),
       currentValue: targetValue,
+      progressNotes: completionNote != null 
+          ? addProgressNote('✅ Completed: $completionNote').progressNotes
+          : progressNotes,
+      lastUpdated: DateTime.now(),
     );
   }
 
@@ -236,7 +274,7 @@ class GoalModel {
       title: title,
       description: description,
       type: GoalType.consistency,
-      targetValue: targetDays.toDouble(),
+      targetValue: targetDays,
       createdAt: DateTime.now(),
     );
   }
@@ -245,14 +283,14 @@ class GoalModel {
     required int userId,
     required String title,
     required String description,
-    required double targetMoodScore,
+    required int targetTimes,
   }) {
     return GoalModel(
       userId: userId,
       title: title,
       description: description,
       type: GoalType.mood,
-      targetValue: targetMoodScore,
+      targetValue: targetTimes,
       createdAt: DateTime.now(),
     );
   }
@@ -268,7 +306,7 @@ class GoalModel {
       title: title,
       description: description,
       type: GoalType.positiveMoments,
-      targetValue: targetMoments.toDouble(),
+      targetValue: targetMoments,
       createdAt: DateTime.now(),
     );
   }
@@ -277,14 +315,14 @@ class GoalModel {
     required int userId,
     required String title,
     required String description,
-    required double targetStressLevel,
+    required int targetTimes,
   }) {
     return GoalModel(
       userId: userId,
       title: title,
       description: description,
       type: GoalType.stressReduction,
-      targetValue: targetStressLevel,
+      targetValue: targetTimes,
       createdAt: DateTime.now(),
     );
   }
@@ -305,7 +343,7 @@ class GoalModel {
 
   @override
   String toString() {
-    return 'GoalModel{id: $id, title: "$title", type: ${type.name}, status: ${status.name}, progress: ${progressPercentage}%}';
+    return 'GoalModel{id: $id, title: "$title", type: ${type.name}, status: ${status.name}, progress: $progressPercentage%}';
   }
 
   static int compareByProgress(GoalModel a, GoalModel b) {

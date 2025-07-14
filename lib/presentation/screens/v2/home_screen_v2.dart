@@ -158,6 +158,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
         await Provider.of<OptimizedMomentsProvider>(context, listen: false).loadTodayMoments(user.id);
         if (!mounted) return;
         
+        await Provider.of<OptimizedDailyEntriesProvider>(context, listen: false).loadEntries(user.id);
+        if (!mounted) return;
+        
         await Provider.of<GoalsProvider>(context, listen: false).loadUserGoals(user.id);
         if (!mounted) return;
         
@@ -267,9 +270,6 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     // 3. ✅ GRÁFICO SEMANAL MEJORADO CON DÍAS REALES
                     _buildRealWeeklyChart(analyticsProvider),
                     const SizedBox(height: 24),
-                    // 4. 🆕 FOTOS DE LA SEMANA
-                    _buildWeeklyPhotosWidget(momentsProvider, imageProvider),
-                    const SizedBox(height: 24),
                     // 5. 🎯 PERSONALIZED CHALLENGES
                     PersonalizedChallengesWidget(animationController: _fadeController),
                     const SizedBox(height: 24),
@@ -278,9 +278,6 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     const SizedBox(height: 24),
                     // 7. 🔥 STREAK TRACKER
                     StreakTrackerWidget(animationController: _pulseController),
-                    const SizedBox(height: 24),
-                    // 8. 🧠 WELLBEING PREDICTION INSIGHTS
-                    WellbeingPredictionWidget(animationController: _shimmerController),
                     const SizedBox(height: 24),
                     // 9. ✅ GOALS CERCA DE COMPLETARSE CON ESTADO 100%
                     _buildGoalsWithCompletedState(goalsProvider),
@@ -375,18 +372,19 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               },
             ),
 
-            const SizedBox(height: 8),
-
-            // Nombre del usuario - CENTRADO
-            Text(
-              user.name ?? 'Usuario',
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: MinimalColors.textPrimary,
+            // Nombre del usuario - CENTRADO (solo si existe)
+            if (user.name != null && user.name!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                user.name!,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: MinimalColors.textPrimary,
+                ),
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center, // ✅ CENTRAR TEXTO
-            ),
+            ],
           ],
         ),
       ),);
@@ -574,15 +572,21 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     final now = DateTime.now();
     final weeklyData = <Map<String, dynamic>>[];
 
-    // Obtener datos reales de analytics
-    final moodData = analyticsProvider.getMoodChartData();
+    // Obtener datos reales de daily entries  
+    final dailyEntriesProvider = Provider.of<OptimizedDailyEntriesProvider>(context, listen: false);
+    final dailyEntries = dailyEntriesProvider.entries;
 
     // Crear mapa de datos por fecha
-    final dataByDate = <String, double>{};
-    for (final data in moodData) {
-      final dateStr = data['date'] as String? ?? '';
-      final mood = (data['mood'] as num? ?? 5.0).toDouble();
-      dataByDate[dateStr] = mood;
+    final dataByDate = <String, Map<String, dynamic>>{};
+    for (final entry in dailyEntries) {
+      final date = entry.entryDate;
+      final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      dataByDate[dateStr] = {
+        'mood': entry.moodScore ?? 3.0,
+        'energy': (entry.energyLevel as num?)?.toDouble() ?? 3.0,
+        'stress': (entry.stressLevel as num?)?.toDouble() ?? 3.0,
+        'hasEntry': true,
+      };
     }
 
     // Generar 7 días (de lunes a domingo de esta semana)
@@ -595,8 +599,13 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       final isToday = date.day == now.day && date.month == now.month && date.year == now.year;
       final isPast = date.isBefore(now) || isToday;
 
-      // Si es un día futuro, no hay datos
-      final score = isPast ? (dataByDate[dateStr] ?? 0.0) : 0.0;
+      // Obtener datos de la entrada si existe
+      final dayData = dataByDate[dateStr];
+      final hasEntry = dayData?['hasEntry'] ?? false;
+      final mood = dayData?['mood'] ?? 0.0;
+      
+      // Calcular score basado en mood (1-5 -> 0.0-1.0)
+      final score = hasEntry ? ((mood - 1) / 4).clamp(0.0, 1.0) : 0.0;
 
       weeklyData.add({
         'dayName': dayNames[i],
@@ -604,7 +613,10 @@ class _HomeScreenV2State extends State<HomeScreenV2>
         'score': score,
         'isToday': isToday,
         'isPast': isPast,
-        'hasData': score > 0.0, // Agregado para indicar si hay datos para ese día
+        'hasData': hasEntry,
+        'mood': mood,
+        'energy': dayData?['energy'] ?? 0.0,
+        'stress': dayData?['stress'] ?? 0.0,
       });
     }
 
@@ -918,11 +930,16 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   }
 
   List _getGoalsNearCompletion(GoalsProvider goalsProvider) {
-    // Incluir tanto los que están cerca (>= 0.8) como los completados (>= 1.0)
-    return goalsProvider.activeGoals
-        .where((goal) => goal.progress >= 0.8)
-        .take(3) // Mostrar hasta 3
-        .toList();
+    // Mostrar todos los objetivos activos, priorizando los que están cerca de completarse
+    final allActiveGoals = goalsProvider.activeGoals.toList();
+    
+    // Si no hay objetivos activos, retornar lista vacía
+    if (allActiveGoals.isEmpty) return [];
+    
+    // Ordenar por progreso (mayor progreso primero) y tomar hasta 3
+    allActiveGoals.sort((a, b) => b.progress.compareTo(a.progress));
+    
+    return allActiveGoals.take(3).toList();
   }
 
   Widget _buildEmptyGoalsState() {
@@ -968,89 +985,152 @@ class _HomeScreenV2State extends State<HomeScreenV2>
 // ============================================================================
 
   Widget _buildTodaysWellbeingScore(OptimizedAnalyticsProvider analyticsProvider) {
-    final wellbeingData = analyticsProvider.getWellbeingStatus();
-    final score = (wellbeingData['score'] as num?)?.toDouble() ?? 7.5;
+    return Consumer<OptimizedDailyEntriesProvider>(
+      builder: (context, entriesProvider, child) {
+        final todayEntry = entriesProvider.todayEntry;
+        final hasData = todayEntry != null && todayEntry.wellbeingScore > 0;
+        final score = hasData ? todayEntry.wellbeingScore : 0.0;
 
-    return AnimatedBuilder( // ✅ AGREGAR ANIMACIÓN
-      animation: _pulseAnimation,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: 1.0 + (_pulseAnimation.value * 0.01), // Animación sutil
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: MinimalColors.primaryGradient,
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(20),
-              // 🎨 SOMBRA DEGRADADA AÑADIDA
-              boxShadow: [
-                BoxShadow(
-                  color: MinimalColors.primaryGradient[0].withOpacity(0.4),
-                  blurRadius: 25,
-                  offset: const Offset(-5, 10),
-                ),
-                BoxShadow(
-                  color: MinimalColors.primaryGradient[1].withOpacity(0.4),
-                  blurRadius: 25,
-                  offset: const Offset(5, 10),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Bienestar de Hoy',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Colors.white70,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        score.toStringAsFixed(1),
-                        style: const TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Text(
-                        _getScoreDescription(score),
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Colors.white70,
-                        ),
-                      ),
-                    ],
+        return AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: 1.0 + (_pulseAnimation.value * 0.01),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: MinimalColors.primaryGradient,
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ),
-                Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withOpacity(0.2),
-                  ),
-                  child: Center(
-                    child: Text(
-                      _getScoreEmoji(score),
-                      style: const TextStyle(fontSize: 32),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: MinimalColors.primaryGradient[0].withOpacity(0.4),
+                      blurRadius: 25,
+                      offset: const Offset(-5, 10),
                     ),
-                  ),
+                    BoxShadow(
+                      color: MinimalColors.primaryGradient[1].withOpacity(0.4),
+                      blurRadius: 25,
+                      offset: const Offset(5, 10),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+                child: hasData
+                    ? _buildScoreContent(score)
+                    : _buildNoDataContent(),
+              ),
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _buildScoreContent(double score) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Bienestar de Hoy',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                score.toStringAsFixed(1),
+                style: const TextStyle(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Text(
+                _getScoreDescription(score),
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.white70,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withOpacity(0.2),
+          ),
+          child: Center(
+            child: Text(
+              _getScoreEmoji(score),
+              style: const TextStyle(fontSize: 32),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNoDataContent() {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Bienestar de Hoy',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.white70,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Sin datos aún',
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              const Text(
+                'Añade un momento para ver tu puntaje.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Colors.white70,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Container(
+          width: 80,
+          height: 80,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.white.withOpacity(0.2),
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.add_chart,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
