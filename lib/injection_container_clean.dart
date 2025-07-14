@@ -7,20 +7,20 @@ import 'package:logger/logger.dart';
 
 // Services optimizados
 import 'data/services/optimized_database_service.dart';
-import '../../data/services/notification_service.dart'; // ✅ NUEVO
+import 'ai/services/predictive_analysis_service.dart';
 
 // Providers optimizados
 import 'presentation/providers/optimized_providers.dart';
 import 'presentation/providers/extended_daily_entries_provider.dart';
-import 'presentation/providers/notifications_provider.dart'; // ✅ NUEVO
 import 'presentation/providers/image_moments_provider.dart'; // ✅ NUEVO PROVIDER AÑADIDO
+import 'presentation/providers/analytics_provider.dart'; // ✅ PROVIDER AÑADIDO
+import 'presentation/providers/advanced_emotion_analysis_provider.dart'; // ✅ NUEVO PROVIDER AVANZADO
 import 'presentation/providers/challenges_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
 import 'presentation/providers/streak_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
 import 'ai/provider/ai_provider.dart';
-import '../../../ai/provider/predective_analysis_provider.dart'; // ✅ NUEVO: Análisis Predictivo
+import 'ai/provider/predective_analysis_provider.dart'; // ✅ NUEVO: Análisis Predictivo
 import 'ai/provider/chat_provider.dart'; // ✅ NUEVO: Chat con IA
 import 'ai/provider/mental_health_chat_provider.dart'; // ✅ NUEVO: Mental Health Chat
-
 // Theme provider (reutilizado del original)
 import 'presentation/providers/theme_provider.dart';
 
@@ -49,12 +49,12 @@ Future<void> initCleanDependencies() async {
     sl.registerLazySingleton<OptimizedDatabaseService>(
           () => OptimizedDatabaseService(),
     );
+    
+    sl.registerLazySingleton<PredictiveAnalysisService>(
+          () => PredictiveAnalysisService.instance,
+    );
 
-    // ✅ NUEVO: Inicializar servicio de notificaciones como singleton
-    sl.registerLazySingleton<NotificationService>(() {
-      // El servicio se inicializa de forma estática, pero registramos la instancia
-      return NotificationService();
-    });
+
 
     // ============================================================================
     // PROVIDERS (Factories - nueva instancia cuando se pide)
@@ -87,6 +87,15 @@ Future<void> initCleanDependencies() async {
           () => OptimizedAnalyticsProvider(sl<OptimizedDatabaseService>()),
     );
 
+    sl.registerFactory<AnalyticsProvider>(
+          () => AnalyticsProvider(sl<OptimizedDatabaseService>()),
+    );
+
+    // ✅ NUEVO: AnalyticsProviderOptimized
+    sl.registerFactory<AnalyticsProviderOptimized>(
+          () => AnalyticsProviderOptimized(sl<OptimizedDatabaseService>()),
+    );
+
     sl.registerFactory<AIProvider>(
           () => AIProvider(),
     );
@@ -96,9 +105,6 @@ Future<void> initCleanDependencies() async {
     );
 
     // ✅ NUEVO: NotificationsProvider
-    sl.registerFactory<NotificationsProvider>(
-          () => NotificationsProvider(),
-    );
 
     // ✅ NUEVO: ImageMomentsProvider
     sl.registerFactory<ImageMomentsProvider>(
@@ -129,6 +135,11 @@ Future<void> initCleanDependencies() async {
           () => StreakProvider(sl<OptimizedDatabaseService>()),
     );
 
+    // ✅ NUEVO: AdvancedEmotionAnalysisProvider
+    sl.registerFactory<AdvancedEmotionAnalysisProvider>(
+          () => AdvancedEmotionAnalysisProvider(sl<OptimizedDatabaseService>()),
+    );
+
     logger.i('✅ Dependencias limpias inicializadas correctamente');
 
   } catch (e) {
@@ -144,7 +155,6 @@ Future<void> initCriticalServices() async {
 
   try {
     // ✅ NUEVO: Inicializar servicio de notificaciones
-    await NotificationService.initialize();
     logger.i('✅ Servicio de notificaciones inicializado');
 
     // Inicializar otros servicios críticos aquí si es necesario
@@ -165,7 +175,7 @@ bool areCleanServicesRegistered() {
     // Verificar servicios core
     sl<Logger>();
     sl<OptimizedDatabaseService>();
-    sl<NotificationService>(); // ✅ NUEVO
+    sl<PredictiveAnalysisService>();
 
     // Verificar providers
     sl<OptimizedAuthProvider>();
@@ -174,15 +184,17 @@ bool areCleanServicesRegistered() {
     sl<ExtendedDailyEntriesProvider>();
     sl<OptimizedMomentsProvider>();
     sl<OptimizedAnalyticsProvider>();
+    sl<AnalyticsProvider>();
+    sl<AnalyticsProviderOptimized>(); // ✅ NUEVO
     sl<AIProvider>();
     sl<GoalsProvider>();
-    sl<NotificationsProvider>(); // ✅ NUEVO
     sl<ImageMomentsProvider>(); // ✅ NUEVO
     sl<PredictiveAnalysisProvider>(); // ✅ NUEVO
     sl<ChatProvider>(); // ✅ NUEVO
     sl<MentalHealthChatProvider>(); // ✅ NUEVO
     sl<ChallengesProvider>(); // ✅ HIGH PRIORITY ENHANCEMENT
     sl<StreakProvider>(); // ✅ HIGH PRIORITY ENHANCEMENT
+    sl<AdvancedEmotionAnalysisProvider>(); // ✅ NUEVO
 
     return true;
   } catch (e) {
@@ -193,11 +205,12 @@ bool areCleanServicesRegistered() {
 /// Información del contenedor limpio
 Map<String, dynamic> getCleanContainerInfo() {
   return {
-    'total_services': 16, // ✅ ACTUALIZADO (era 14, ahora 16)
+    'total_services': 20, // ✅ ACTUALIZADO (era 19, ahora 20)
     'services_ready': areCleanServicesRegistered(),
     'core_services': [
       'Logger',
       'OptimizedDatabaseService',
+      'PredictiveAnalysisService', // ✅ NUEVO
       'NotificationService', // ✅ NUEVO
     ],
     'providers': [
@@ -207,6 +220,7 @@ Map<String, dynamic> getCleanContainerInfo() {
       'ExtendedDailyEntriesProvider',
       'OptimizedMomentsProvider',
       'OptimizedAnalyticsProvider',
+      'AnalyticsProvider',
       'AIProvider',
       'GoalsProvider',
       'NotificationsProvider', // ✅ NUEVO
@@ -216,6 +230,7 @@ Map<String, dynamic> getCleanContainerInfo() {
       'MentalHealthChatProvider', // ✅ NUEVO
       'ChallengesProvider', // ✅ HIGH PRIORITY ENHANCEMENT
       'StreakProvider', // ✅ HIGH PRIORITY ENHANCEMENT
+      'AdvancedEmotionAnalysisProvider', // ✅ NUEVO
     ],
     'removed_legacy': [
       'AnalyticsProvider (legacy)',
@@ -282,6 +297,7 @@ extension CleanGetItExtension on GetIt {
 class CleanDIConstants {
   static const String logger = 'Logger';
   static const String databaseService = 'OptimizedDatabaseService';
+  static const String predictiveAnalysisService = 'PredictiveAnalysisService'; // ✅ NUEVO
   static const String notificationService = 'NotificationService'; // ✅ NUEVO
   static const String authProvider = 'OptimizedAuthProvider';
   static const String themeProvider = 'ThemeProvider';

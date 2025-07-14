@@ -1,6 +1,6 @@
 // ============================================================================
 // daily_review_screen_v2.dart - NUEVA VERSIÓN GUIADA E INTERACTIVA
-// ============================================================================
+// ===========================================================================
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -185,6 +185,112 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         _weatherMoodImpact = todayEntry.weatherMoodImpact ?? 0;
       });
     }
+  }
+
+  // ============================================================================
+  // MÉTODOS SOFISTICADOS PARA EXPRESIÓN DEL USUARIO
+  // ============================================================================
+
+  // Palabras clave para análisis semántico
+  static const Map<String, List<String>> _emotionKeywords = {
+    'joy': ['feliz', 'alegre', 'contento', 'radiante', 'eufórico', 'dichoso'],
+    'sadness': ['triste', 'melancólico', 'decaído', 'desanimado', 'sombrío'],
+    'anger': ['enojado', 'furioso', 'irritado', 'molesto', 'rabioso'],
+    'fear': ['miedo', 'nervioso', 'ansioso', 'preocupado', 'temeroso'],
+    'surprise': ['sorprendido', 'asombrado', 'impactado', 'inesperado'],
+    'disgust': ['asco', 'repulsión', 'disgusto', 'desagrado'],
+    'calm': ['calmado', 'relajado', 'sereno', 'tranquilo', 'pacífico'],
+    'excited': ['emocionado', 'entusiasmado', 'vibrante', 'energético'],
+  };
+
+  // Análisis inteligente del texto libre
+  Map<String, dynamic> _analyzeReflectionText(String text) {
+    if (text.isEmpty) return {'emotions': [], 'sentiment': 0.0, 'complexity': 0};
+
+    final words = text.toLowerCase().split(RegExp(r'\W+'));
+    final detectedEmotions = <String>[];
+    double sentimentScore = 0.0;
+    int positiveWords = 0;
+    int negativeWords = 0;
+
+    for (final word in words) {
+      for (final emotion in _emotionKeywords.keys) {
+        if (_emotionKeywords[emotion]!.contains(word)) {
+          detectedEmotions.add(emotion);
+          
+          // Calcular sentimiento
+          if (['joy', 'calm', 'excited'].contains(emotion)) {
+            positiveWords++;
+          } else if (['sadness', 'anger', 'fear', 'disgust'].contains(emotion)) {
+            negativeWords++;
+          }
+        }
+      }
+    }
+
+    if (positiveWords + negativeWords > 0) {
+      sentimentScore = (positiveWords - negativeWords) / (positiveWords + negativeWords);
+    }
+
+    return {
+      'emotions': detectedEmotions.toSet().toList(),
+      'sentiment': sentimentScore,
+      'complexity': words.length,
+      'wordCount': words.length,
+    };
+  }
+
+  // Sugerencias inteligentes basadas en el estado actual
+  List<String> _getSmartSuggestions() {
+    final suggestions = <String>[];
+    
+    if (_moodScore <= 4) {
+      suggestions.addAll([
+        '¿Qué pequeña cosa podrías hacer ahora para sentirte un poco mejor?',
+        '¿Hay alguien con quien te gustaría hablar?',
+        'Describe un momento feliz de hoy, por pequeño que sea.',
+      ]);
+    }
+    
+    if (_stressLevel >= 7) {
+      suggestions.addAll([
+        '¿Qué está causando más estrés en este momento?',
+        'Describe tu técnica favorita para relajarte.',
+        '¿Qué harías si tuvieras una hora libre ahora mismo?',
+      ]);
+    }
+    
+    if (_energyLevel <= 3) {
+      suggestions.addAll([
+        '¿Qué actividad te da más energía normalmente?',
+        'Describe cómo te sientes físicamente en este momento.',
+        '¿Qué necesitas para recargar tu energía?',
+      ]);
+    }
+
+    // Sugerencias generales si no hay específicas
+    if (suggestions.isEmpty) {
+      suggestions.addAll([
+        'Describe el mejor momento de tu día.',
+        '¿Qué aprendiste sobre ti mismo hoy?',
+        'Si tuvieras que darle un consejo a alguien que tuvo un día como el tuyo, ¿qué le dirías?',
+        '¿Qué te gustaría recordar de este día en el futuro?',
+      ]);
+    }
+
+    return suggestions..shuffle();
+  }
+
+  // Obtener el emoji basado en múltiples métricas
+  String _getSmartEmoji() {
+    final avgMood = (_moodScore + (10 - _stressLevel) + _energyLevel) / 3;
+    
+    if (avgMood >= 8) return '😊';
+    if (avgMood >= 7) return '🙂';
+    if (avgMood >= 6) return '😐';
+    if (avgMood >= 5) return '😕';
+    if (avgMood >= 4) return '😔';
+    return '😢';
   }
 
   // ============================================================================
@@ -457,46 +563,408 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
   }
 
   Widget _buildReflectionField() {
-    return Container(
-      decoration: BoxDecoration(
-        color: ReflectionColors.backgroundCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
-      child: TextField(
-        controller: _reflectionController,
-        maxLines: 5,
-        style: const TextStyle(color: Colors.white),
-        decoration: const InputDecoration(
-          hintText: '¿Cómo ha sido tu día? ¿Qué has aprendido? ¿Cómo te sientes?',
-          hintStyle: TextStyle(color: Colors.white54),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.all(16),
+    final analysis = _analyzeReflectionText(_reflectionController.text);
+    final suggestions = _getSmartSuggestions();
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Campo de texto principal mejorado
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                ReflectionColors.backgroundCard,
+                ReflectionColors.backgroundSecondary,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: ReflectionColors.primaryGradient[0].withOpacity(0.3),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: ReflectionColors.primaryGradient[1].withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: ReflectionColors.primaryGradient,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(
+                        Icons.edit_note_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        'Reflexión Libre',
+                        style: TextStyle(
+                          color: ReflectionColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    if (_reflectionController.text.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: _getSentimentGradient(analysis['sentiment']),
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${_getSmartEmoji()} ${analysis['wordCount']} palabras',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              TextField(
+                controller: _reflectionController,
+                maxLines: 6,
+                style: const TextStyle(
+                  color: ReflectionColors.textPrimary,
+                  fontSize: 16,
+                  height: 1.5,
+                ),
+                decoration: InputDecoration(
+                  hintText: _getPersonalizedHint(),
+                  hintStyle: const TextStyle(
+                    color: ReflectionColors.textHint,
+                    fontSize: 15,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(16),
+                ),
+                onChanged: (_) => setState(() {}),
+              ),
+            ],
+          ),
         ),
-        onChanged: (_) => setState(() {}),
-      ),
+        
+        // Análisis emocional en tiempo real
+        if (_reflectionController.text.isNotEmpty && analysis['emotions'].isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: ReflectionColors.backgroundSecondary,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Emociones detectadas:',
+                    style: TextStyle(
+                      color: ReflectionColors.textSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    children: (analysis['emotions'] as List<String>).map((emotion) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getEmotionColor(emotion),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          '${_getEmotionEmoji(emotion)} ${_translateEmotion(emotion)}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+        // Sugerencias inteligentes
+        if (_reflectionController.text.isEmpty || _reflectionController.text.length < 20)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    ReflectionColors.lightGradient[0].withOpacity(0.1),
+                    ReflectionColors.lightGradient[1].withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: ReflectionColors.lightGradient[0].withOpacity(0.3),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.lightbulb_outline_rounded,
+                        color: ReflectionColors.lightGradient[0],
+                        size: 18,
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Sugerencias para reflexionar:',
+                        style: TextStyle(
+                          color: ReflectionColors.textPrimary,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  ...suggestions.take(2).map((suggestion) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: GestureDetector(
+                      onTap: () {
+                        _reflectionController.text = suggestion + '\n\n';
+                        _reflectionController.selection = TextSelection.fromPosition(
+                          TextPosition(offset: _reflectionController.text.length),
+                        );
+                        setState(() {});
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: ReflectionColors.backgroundCard,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: ReflectionColors.lightGradient[0].withOpacity(0.2),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.add_circle_outline_rounded,
+                              color: ReflectionColors.lightGradient[0],
+                              size: 16,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                suggestion,
+                                style: const TextStyle(
+                                  color: ReflectionColors.textSecondary,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )).toList(),
+                ],
+              ),
+            ),
+          ),
+      ],
     );
+  }
+
+  // Métodos auxiliares para el campo de reflexión mejorado
+  String _getPersonalizedHint() {
+    final hour = DateTime.now().hour;
+    
+    if (hour < 12) {
+      return '¿Cómo empezaste tu día? ¿Qué esperas que suceda hoy?';
+    } else if (hour < 17) {
+      return '¿Cómo va tu día hasta ahora? ¿Qué ha sido lo más destacado?';
+    } else {
+      return '¿Cómo ha sido tu día? ¿Qué has aprendido sobre ti mismo?';
+    }
+  }
+
+  List<Color> _getSentimentGradient(double sentiment) {
+    if (sentiment > 0.3) {
+      return ReflectionColors.positiveGradient;
+    } else if (sentiment < -0.3) {
+      return ReflectionColors.negativeGradient;
+    } else {
+      return ReflectionColors.neutralGradient;
+    }
+  }
+
+  Color _getEmotionColor(String emotion) {
+    switch (emotion) {
+      case 'joy': return Colors.amber;
+      case 'calm': return Colors.blue;
+      case 'excited': return Colors.orange;
+      case 'sadness': return Colors.indigo;
+      case 'anger': return Colors.red;
+      case 'fear': return Colors.purple;
+      case 'surprise': return Colors.teal;
+      case 'disgust': return Colors.brown;
+      default: return Colors.grey;
+    }
+  }
+
+  String _getEmotionEmoji(String emotion) {
+    switch (emotion) {
+      case 'joy': return '😊';
+      case 'calm': return '😌';
+      case 'excited': return '🤩';
+      case 'sadness': return '😢';
+      case 'anger': return '😠';
+      case 'fear': return '😨';
+      case 'surprise': return '😲';
+      case 'disgust': return '🤢';
+      default: return '🙂';
+    }
+  }
+
+  String _translateEmotion(String emotion) {
+    switch (emotion) {
+      case 'joy': return 'Alegría';
+      case 'calm': return 'Calma';
+      case 'excited': return 'Emoción';
+      case 'sadness': return 'Tristeza';
+      case 'anger': return 'Enojo';
+      case 'fear': return 'Miedo';
+      case 'surprise': return 'Sorpresa';
+      case 'disgust': return 'Disgusto';
+      default: return emotion;
+    }
   }
 
   Widget _buildGratitudeField() {
     return Container(
       decoration: BoxDecoration(
-        color: ReflectionColors.backgroundCard,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-      ),
-      child: TextField(
-        controller: _gratitudeController,
-        maxLines: 2,
-        style: const TextStyle(color: Colors.white),
-        decoration: const InputDecoration(
-          labelText: '🙏 Gratitud (opcional)',
-          labelStyle: TextStyle(color: Colors.white70),
-          hintText: '¿Por qué estás agradecido hoy?',
-          hintStyle: TextStyle(color: Colors.white54),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.all(16),
+        gradient: LinearGradient(
+          colors: [
+            ReflectionColors.backgroundCard,
+            ReflectionColors.backgroundSecondary,
+          ],
         ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: ReflectionColors.positiveGradient[0].withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: ReflectionColors.positiveGradient[1].withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: ReflectionColors.positiveGradient,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.favorite_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Gratitud y Apreciación',
+                    style: TextStyle(
+                      color: ReflectionColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+                if (_gratitudeController.text.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: ReflectionColors.positiveGradient,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      '💚 Gratitud',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          TextField(
+            controller: _gratitudeController,
+            maxLines: 3,
+            style: const TextStyle(
+              color: ReflectionColors.textPrimary,
+              fontSize: 16,
+              height: 1.5,
+            ),
+            decoration: const InputDecoration(
+              hintText: '¿Por qué estás agradecido hoy? Menciona personas, momentos o experiencias...',
+              hintStyle: TextStyle(
+                color: ReflectionColors.textHint,
+                fontSize: 15,
+              ),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.all(16),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+        ],
       ),
     );
   }

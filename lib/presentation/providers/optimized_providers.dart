@@ -3,6 +3,8 @@
 // AUTH PROVIDER ACTUALIZADO CON SOPORTE PARA FOTOS DE PERFIL
 // ============================================================================
 
+export 'analytics_provider_optimized.dart';
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -744,14 +746,22 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
   }
 
   /// Cargar analytics completos del usuario
+  /// ✅ ENHANCED: Carga analytics completos con inteligencia mejorada
   Future<void> loadCompleteAnalytics(int userId, {int days = 30}) async {
-    _logger.d('📊 Cargando analytics para usuario: $userId');
+    _logger.d('📊 Cargando analytics inteligentes para usuario: $userId');
     _setLoading(true);
     _clearError();
 
     try {
+      // ✅ NEW: Get enhanced analytics with intelligent insights
       _analytics = await _databaseService.getUserAnalytics(userId, days: days);
-      _logger.i('✅ Analytics cargados para $days días');
+      
+      // ✅ ADD: Generate additional intelligent insights
+      _analytics['enhanced_summary'] = _generateEnhancedSummary();
+      _analytics['personalized_tips'] = _generatePersonalizedTips();
+      _analytics['wellness_forecast'] = _generateWellnessForecast();
+      
+      _logger.i('✅ Analytics inteligentes cargados para $days días');
     } catch (e) {
       _logger.e('❌ Error cargando analytics: $e');
       _setError('Error cargando estadísticas');
@@ -1828,6 +1838,638 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     _errorMessage = null;
     notifyListeners();
   }
+
+  // ============================================================================
+  // 🚀 ULTRA-SOPHISTICATED ANALYTICS METHODS
+  // ============================================================================
+
+  /// Comprehensive AI-Powered Analytics Dashboard
+  Future<Map<String, dynamic>> getComprehensiveAIAnalytics(int userId) async {
+    _logger.d('🤖 Generando dashboard de analytics AI completo');
+    _setLoading(true);
+
+    try {
+      // Execute all advanced analytics in parallel
+      final futures = await Future.wait([
+        _databaseService.getAdvancedTimeSeriesAnalysis(userId),
+        _databaseService.getMLInspiredPatternAnalysis(userId),
+        _databaseService.getCausalInferenceAnalysis(userId),
+        _databaseService.getUltraAdvancedPrediction(userId),
+        _databaseService.getUserAnalytics(userId),
+      ]);
+
+      final comprehensiveAnalytics = {
+        'time_series_analysis': futures[0],
+        'ml_pattern_analysis': futures[1],
+        'causal_inference': futures[2],
+        'ultra_advanced_prediction': futures[3],
+        'basic_analytics': futures[4],
+        'generated_at': DateTime.now().toIso8601String(),
+        'analysis_quality': _calculateAnalysisQuality(futures),
+        'key_insights': _generateKeyInsights(futures),
+        'actionable_recommendations': _generateActionableRecommendations(futures),
+        'risk_alerts': _generateRiskAlerts(futures),
+      };
+
+      _analytics = comprehensiveAnalytics;
+      _logger.i('✅ Dashboard de analytics AI completado');
+      return comprehensiveAnalytics;
+
+    } catch (e) {
+      _logger.e('❌ Error en analytics AI completo: $e');
+      return {'error': e.toString()};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Machine Learning-Inspired Pattern Recognition
+  Future<Map<String, dynamic>> getMLPatternAnalysis(int userId) async {
+    _logger.d('🧠 Iniciando análisis de patrones ML');
+    _setLoading(true);
+
+    try {
+      final analysis = await _databaseService.getMLInspiredPatternAnalysis(userId);
+      _logger.i('✅ Análisis de patrones ML completado');
+      return analysis;
+    } catch (e) {
+      _logger.e('❌ Error en análisis de patrones ML: $e');
+      return {'error': e.toString()};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Advanced Causal Inference Analysis
+  Future<Map<String, dynamic>> getCausalInferenceAnalysis(int userId) async {
+    _logger.d('🔗 Iniciando análisis de inferencia causal');
+    _setLoading(true);
+
+    try {
+      final analysis = await _databaseService.getCausalInferenceAnalysis(userId);
+      _logger.i('✅ Análisis de inferencia causal completado');
+      return analysis;
+    } catch (e) {
+      _logger.e('❌ Error en análisis de inferencia causal: $e');
+      return {'error': e.toString()};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Ultra-Advanced Prediction with Multiple Algorithms
+  Future<Map<String, dynamic>> getUltraAdvancedPrediction(int userId, {int forecastDays = 7}) async {
+    _logger.d('🔮 Iniciando predicción ultra-avanzada');
+    _setLoading(true);
+
+    try {
+      final prediction = await _databaseService.getUltraAdvancedPrediction(userId, forecastDays: forecastDays);
+      _logger.i('✅ Predicción ultra-avanzada completada');
+      return prediction;
+    } catch (e) {
+      _logger.e('❌ Error en predicción ultra-avanzada: $e');
+      return {'error': e.toString()};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Advanced Time Series Analysis with Machine Learning Insights
+  Future<Map<String, dynamic>> getAdvancedTimeSeriesAnalysis(int userId, {int days = 90}) async {
+    _logger.d('🔬 Iniciando análisis de series temporales avanzado');
+    _setLoading(true);
+
+    try {
+      final analysis = await _databaseService.getAdvancedTimeSeriesAnalysis(userId, days: days);
+      _logger.i('✅ Análisis de series temporales completado');
+      return analysis;
+    } catch (e) {
+      _logger.e('❌ Error en análisis de series temporales: $e');
+      return {'error': e.toString()};
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  /// Emotional Intelligence Score with Advanced Metrics
+  Map<String, dynamic> getEmotionalIntelligenceScore() {
+    final mlData = _analytics['ml_pattern_analysis'] as Map<String, dynamic>?;
+    final causalData = _analytics['causal_inference'] as Map<String, dynamic>?;
+    final timeSeriesData = _analytics['time_series_analysis'] as Map<String, dynamic>?;
+
+    if (mlData == null && causalData == null && timeSeriesData == null) {
+      return {'available': false, 'score': 0.0};
+    }
+
+    double emotionalStability = 0.5;
+    double selfAwareness = 0.5;
+    double adaptability = 0.5;
+    double resilience = 0.5;
+
+    // Calculate from volatility index
+    if (timeSeriesData != null) {
+      final volatility = timeSeriesData['volatility_index'] as double? ?? 0.5;
+      emotionalStability = (1.0 - volatility).clamp(0.0, 1.0);
+    }
+
+    // Calculate from pattern confidence
+    if (mlData != null) {
+      final patternConfidence = mlData['pattern_confidence'] as double? ?? 0.5;
+      selfAwareness = patternConfidence;
+    }
+
+    // Calculate from regulation effectiveness
+    if (mlData != null) {
+      final regulation = mlData['regulation_effectiveness'] as Map<String, dynamic>?;
+      if (regulation != null) {
+        adaptability = regulation['effectiveness_score'] as double? ?? 0.5;
+      }
+    }
+
+    // Calculate from causal understanding
+    if (causalData != null) {
+      final causalStrength = causalData['causal_strength_overall'] as double? ?? 0.5;
+      resilience = causalStrength;
+    }
+
+    final overallScore = (emotionalStability + selfAwareness + adaptability + resilience) / 4.0;
+
+    return {
+      'available': true,
+      'overall_score': (overallScore * 100).round(),
+      'components': {
+        'emotional_stability': (emotionalStability * 100).round(),
+        'self_awareness': (selfAwareness * 100).round(),
+        'adaptability': (adaptability * 100).round(),
+        'resilience': (resilience * 100).round(),
+      },
+      'level': _getEILevel(overallScore),
+      'recommendations': _getEIRecommendations(emotionalStability, selfAwareness, adaptability, resilience),
+    };
+  }
+
+  /// Advanced Mood Prediction with Confidence Intervals
+  Map<String, dynamic> getAdvancedMoodPrediction() {
+    final predictionData = _analytics['ultra_advanced_prediction'] as Map<String, dynamic>?;
+    
+    if (predictionData == null || predictionData.containsKey('error')) {
+      return {
+        'available': false,
+        'error': 'Prediction data not available',
+      };
+    }
+
+    final ensemble = predictionData['ensemble_prediction'] as Map<String, dynamic>?;
+    if (ensemble == null) return {'available': false};
+
+    final predictions = ensemble['predictions'] as List<dynamic>? ?? [];
+    if (predictions.isEmpty) return {'available': false};
+
+    return {
+      'available': true,
+      'predictions': predictions,
+      'confidence': ensemble['ensemble_confidence'],
+      'model_accuracy': predictionData['prediction_accuracy_score'],
+      'risk_assessment': predictionData['risk_assessment'],
+      'recommended_actions': predictionData['recommended_actions'],
+      'prediction_range': predictions.map((p) => p['prediction_range']).toList(),
+    };
+  }
+
+
+  // Helper methods for sophisticated analytics
+  Map<String, dynamic> _calculateAnalysisQuality(List<Map<String, dynamic>> futures) {
+    int validAnalyses = 0;
+    int totalAnalyses = futures.length;
+    double totalConfidence = 0.0;
+
+    for (final analysis in futures) {
+      if (analysis.isNotEmpty && !analysis.containsKey('error')) {
+        validAnalyses++;
+        // Try to extract confidence from each analysis
+        final confidence = analysis['confidence'] as double? ?? 
+                          analysis['pattern_confidence'] as double? ?? 
+                          analysis['ensemble_confidence'] as double? ?? 
+                          0.5;
+        totalConfidence += confidence;
+      }
+    }
+
+    final qualityScore = validAnalyses / totalAnalyses;
+    final avgConfidence = validAnalyses > 0 ? totalConfidence / validAnalyses : 0.0;
+
+    return {
+      'overall_quality_score': (qualityScore * 100).round(),
+      'confidence_level': (avgConfidence * 100).round(),
+      'valid_analyses': validAnalyses,
+      'total_analyses': totalAnalyses,
+    };
+  }
+
+  List<Map<String, dynamic>> _generateKeyInsights(List<Map<String, dynamic>> futures) {
+    final insights = <Map<String, dynamic>>[];
+
+    try {
+      // Extract insights from each analysis type
+      for (int i = 0; i < futures.length; i++) {
+        final analysis = futures[i];
+        if (analysis.isEmpty || analysis.containsKey('error')) continue;
+
+        switch (i) {
+          case 0: // Time series
+            if (analysis['trend_analysis'] != null) {
+              insights.add({
+                'type': 'trend',
+                'insight': 'Tu tendencia de bienestar muestra ${analysis['trend_analysis']['overall_trend']}',
+                'confidence': analysis['trend_analysis']['trend_confidence'] ?? 0.5,
+              });
+            }
+            break;
+          case 1: // ML patterns
+            if (analysis['behavior_clusters'] != null) {
+              final clusters = analysis['behavior_clusters']['num_clusters'] ?? 0;
+              insights.add({
+                'type': 'pattern',
+                'insight': 'Se identificaron $clusters patrones de comportamiento distintos',
+                'confidence': analysis['pattern_confidence'] ?? 0.5,
+              });
+            }
+            break;
+          case 2: // Causal analysis
+            if (analysis['causal_relationships'] != null) {
+              final relationships = analysis['causal_relationships'] as List? ?? [];
+              if (relationships.isNotEmpty) {
+                insights.add({
+                  'type': 'causal',
+                  'insight': 'Se detectaron ${relationships.length} relaciones causa-efecto importantes',
+                  'confidence': analysis['causal_strength_overall'] ?? 0.5,
+                });
+              }
+            }
+            break;
+          case 3: // Prediction
+            if (analysis['ensemble_prediction'] != null) {
+              final confidence = analysis['ensemble_prediction']['ensemble_confidence'] ?? 0.5;
+              insights.add({
+                'type': 'prediction',
+                'insight': 'El modelo de predicción tiene ${(confidence * 100).toStringAsFixed(1)}% de confianza',
+                'confidence': confidence,
+              });
+            }
+            break;
+        }
+      }
+    } catch (e) {
+      _logger.w('Error generando insights: $e');
+    }
+
+    return insights;
+  }
+
+  List<String> _generateActionableRecommendations(List<Map<String, dynamic>> futures) {
+    final recommendations = <String>[];
+
+    try {
+      // Extract recommendations from analyses
+      for (final analysis in futures) {
+        if (analysis.isEmpty || analysis.containsKey('error')) continue;
+
+        final recs = analysis['recommendations'] as List<dynamic>? ?? 
+                    analysis['recommended_actions'] as List<dynamic>? ?? [];
+        
+        for (final rec in recs.take(2)) {
+          if (rec is String) {
+            recommendations.add(rec);
+          } else if (rec is Map && rec['action'] != null) {
+            recommendations.add(rec['action'].toString());
+          }
+        }
+      }
+    } catch (e) {
+      _logger.w('Error generando recomendaciones: $e');
+    }
+
+    return recommendations.take(5).toList();
+  }
+
+  List<Map<String, dynamic>> _generateRiskAlerts(List<Map<String, dynamic>> futures) {
+    final alerts = <Map<String, dynamic>>[];
+
+    try {
+      for (final analysis in futures) {
+        if (analysis.isEmpty || analysis.containsKey('error')) continue;
+
+        // Check for risk indicators
+        final riskAssessment = analysis['risk_assessment'] as Map<String, dynamic>?;
+        if (riskAssessment != null) {
+          final riskLevel = riskAssessment['risk_level'] as String? ?? 'low';
+          if (riskLevel == 'high' || riskLevel == 'medium') {
+            alerts.add({
+              'level': riskLevel,
+              'message': riskAssessment['description'] ?? 'Se detectó un área que requiere atención',
+              'action': riskAssessment['recommended_action'] ?? 'Considera buscar apoyo profesional',
+            });
+          }
+        }
+
+        // Check for anomalies
+        final anomalies = analysis['anomalies'] as List<dynamic>?;
+        if (anomalies != null && anomalies.isNotEmpty) {
+          alerts.add({
+            'level': 'medium',
+            'message': 'Se detectaron ${anomalies.length} anomalías en tus patrones',
+            'action': 'Revisa qué factores pudieron haber influido en estos días',
+          });
+        }
+      }
+    } catch (e) {
+      _logger.w('Error generando alertas: $e');
+    }
+
+    return alerts;
+  }
+
+  String _getEILevel(double score) {
+    if (score >= 0.8) return 'Excepcional';
+    if (score >= 0.7) return 'Alto';
+    if (score >= 0.6) return 'Bueno';
+    if (score >= 0.4) return 'Promedio';
+    return 'En desarrollo';
+  }
+
+  List<String> _getEIRecommendations(double stability, double awareness, double adaptability, double resilience) {
+    final recommendations = <String>[];
+    
+    if (stability < 0.6) recommendations.add('Practica técnicas de regulación emocional');
+    if (awareness < 0.6) recommendations.add('Dedica tiempo a la autorreflexión diaria');
+    if (adaptability < 0.6) recommendations.add('Experimenta con nuevas estrategias de afrontamiento');
+    if (resilience < 0.6) recommendations.add('Fortalece tu red de apoyo social');
+    
+    if (recommendations.isEmpty) {
+      recommendations.add('Mantén tu excelente inteligencia emocional');
+    }
+    
+    return recommendations;
+  }
+  
+  // ============================================================================
+  // 🧠 INTELLIGENT ANALYTICS METHODS
+  // ============================================================================
+  
+  /// ✅ NEW: Generate enhanced summary with intelligent insights
+  Map<String, dynamic> _generateEnhancedSummary() {
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+    final intelligentInsights = _analytics['intelligent_insights'] as Map<String, dynamic>?;
+    final emotionalPatterns = _analytics['emotional_patterns'] as Map<String, dynamic>?;
+    
+    if (basicStats == null) return {};
+    
+    final avgMood = (basicStats['avg_mood'] as num?)?.toDouble() ?? 5.0;
+    final avgEnergy = (basicStats['avg_energy'] as num?)?.toDouble() ?? 5.0;
+    final avgStress = (basicStats['avg_stress'] as num?)?.toDouble() ?? 5.0;
+    
+    String overallTrend = 'stable';
+    String primaryFocus = 'balance';
+    
+    // Analyze intelligent insights if available
+    if (intelligentInsights != null) {
+      final moodVolatility = intelligentInsights['mood_volatility'] as Map<String, dynamic>?;
+      final stressPatterns = intelligentInsights['stress_patterns'] as Map<String, dynamic>?;
+      
+      if (moodVolatility != null) {
+        final stabilityScore = (moodVolatility['stability_score'] as num?)?.toDouble() ?? 0.5;
+        if (stabilityScore < 0.4) {
+          overallTrend = 'volatile';
+          primaryFocus = 'emotional_stability';
+        } else if (stabilityScore > 0.8) {
+          overallTrend = 'very_stable';
+        }
+      }
+      
+      if (stressPatterns != null) {
+        final alertLevel = stressPatterns['alert_level'] as String?;
+        if (alertLevel == 'high') {
+          primaryFocus = 'stress_management';
+        }
+      }
+    }
+    
+    return {
+      'overall_wellbeing_score': ((avgMood + avgEnergy + (10 - avgStress)) / 3).clamp(1.0, 10.0),
+      'primary_strength': _identifyPrimaryStrength(avgMood, avgEnergy, avgStress),
+      'primary_opportunity': _identifyPrimaryOpportunity(avgMood, avgEnergy, avgStress),
+      'overall_trend': overallTrend,
+      'primary_focus': primaryFocus,
+      'confidence_level': _calculateConfidenceLevel(),
+    };
+  }
+  
+  /// ✅ NEW: Generate personalized tips based on user data
+  List<Map<String, dynamic>> _generatePersonalizedTips() {
+    final tips = <Map<String, dynamic>>[];
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+    final habitsAnalysis = _analytics['habits_analysis'] as Map<String, dynamic>?;
+    final personalizedRecommendations = _analytics['personalized_recommendations'] as List?;
+    
+    if (basicStats == null) return tips;
+    
+    final avgMood = (basicStats['avg_mood'] as num?)?.toDouble() ?? 5.0;
+    final avgEnergy = (basicStats['avg_energy'] as num?)?.toDouble() ?? 5.0;
+    final avgStress = (basicStats['avg_stress'] as num?)?.toDouble() ?? 5.0;
+    
+    // Mood-based tips
+    if (avgMood < 6.0) {
+      tips.add({
+        'category': 'mood_boost',
+        'icon': '🌅',
+        'title': 'Mejora tu Estado de Ánimo',
+        'description': 'Prueba actividades que te hagan sonreír',
+        'actions': [
+          'Escucha tu música favorita por 15 minutos',
+          'Llama a un amigo que te haga reír',
+          'Sal a caminar al aire libre'
+        ],
+        'priority': 'high',
+        'estimated_impact': 'medium',
+      });
+    }
+    
+    // Energy-based tips
+    if (avgEnergy < 6.0) {
+      tips.add({
+        'category': 'energy_boost',
+        'icon': '⚡',
+        'title': 'Aumenta tu Energía',
+        'description': 'Pequeños cambios para más vitalidad',
+        'actions': [
+          'Toma un vaso de agua al despertar',
+          'Haz 5 minutos de ejercicio ligero',
+          'Revisa tu horario de sueño'
+        ],
+        'priority': 'medium',
+        'estimated_impact': 'high',
+      });
+    }
+    
+    // Stress-based tips
+    if (avgStress > 6.0) {
+      tips.add({
+        'category': 'stress_relief',
+        'icon': '🧘‍♀️',
+        'title': 'Manejo del Estrés',
+        'description': 'Técnicas para reducir la tensión',
+        'actions': [
+          'Practica respiración profunda 4-7-8',
+          'Dedica 10 minutos a una actividad relajante',
+          'Organiza tu espacio personal'
+        ],
+        'priority': 'high',
+        'estimated_impact': 'high',
+      });
+    }
+    
+    // Include database-generated recommendations if available
+    if (personalizedRecommendations != null) {
+      for (final rec in personalizedRecommendations) {
+        if (rec is Map<String, dynamic>) {
+          tips.add({
+            'category': rec['type'] ?? 'general',
+            'icon': _getIconForRecommendationType(rec['type'] as String?),
+            'title': rec['title'] ?? 'Recomendación Personalizada',
+            'description': rec['description'] ?? '',
+            'actions': rec['actions'] ?? [],
+            'priority': rec['priority'] ?? 'medium',
+            'estimated_impact': rec['estimated_impact'] ?? 'medium',
+          });
+        }
+      }
+    }
+    
+    return tips.take(4).toList(); // Limit to 4 most relevant tips
+  }
+  
+  /// ✅ NEW: Generate wellness forecast based on trends
+  Map<String, dynamic> _generateWellnessForecast() {
+    final wellbeingPrediction = _analytics['wellbeing_prediction'] as Map<String, dynamic>?;
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+    
+    if (wellbeingPrediction == null || basicStats == null) {
+      return {
+        'forecast_available': false,
+        'message': 'Necesitas más datos para generar un pronóstico',
+      };
+    }
+    
+    final trendDirection = (wellbeingPrediction['trend_direction'] as num?)?.toDouble() ?? 0.0;
+    final confidence = (wellbeingPrediction['confidence'] as num?)?.toDouble() ?? 0.0;
+    final predictedScore = (wellbeingPrediction['predicted_score'] as num?)?.toDouble() ?? 5.0;
+    
+    String forecastMessage;
+    String recommendation;
+    String timeframe;
+    
+    if (trendDirection > 0.1) {
+      forecastMessage = 'Tu bienestar está en tendencia ascendente';
+      recommendation = 'Mantén tus hábitos actuales y considera añadir nuevos desafíos positivos';
+      timeframe = 'próximos 7-14 días';
+    } else if (trendDirection < -0.1) {
+      forecastMessage = 'Tu bienestar muestra una tendencia descendente';
+      recommendation = 'Es un buen momento para implementar estrategias de autocuidado';
+      timeframe = 'próximos 5-10 días';
+    } else {
+      forecastMessage = 'Tu bienestar se mantiene estable';
+      recommendation = 'Explora nuevas actividades para potenciar tu crecimiento personal';
+      timeframe = 'próximas 2 semanas';
+    }
+    
+    return {
+      'forecast_available': true,
+      'trend_direction': trendDirection > 0.1 ? 'improving' : trendDirection < -0.1 ? 'declining' : 'stable',
+      'confidence_level': confidence > 0.7 ? 'high' : confidence > 0.4 ? 'medium' : 'low',
+      'predicted_score': predictedScore,
+      'forecast_message': forecastMessage,
+      'recommendation': recommendation,
+      'timeframe': timeframe,
+      'confidence_percentage': (confidence * 100).round(),
+    };
+  }
+  
+  /// Helper: Identify primary strength
+  String _identifyPrimaryStrength(double mood, double energy, double stress) {
+    final scores = {
+      'mood': mood,
+      'energy': energy,
+      'stress_management': 10 - stress,
+    };
+    
+    final highest = scores.entries.reduce((a, b) => a.value > b.value ? a : b);
+    
+    switch (highest.key) {
+      case 'mood':
+        return 'estado_de_animo';
+      case 'energy':
+        return 'energia';
+      case 'stress_management':
+        return 'manejo_del_estres';
+      default:
+        return 'equilibrio_general';
+    }
+  }
+  
+  /// Helper: Identify primary opportunity
+  String _identifyPrimaryOpportunity(double mood, double energy, double stress) {
+    final scores = {
+      'mood': mood,
+      'energy': energy,
+      'stress_management': 10 - stress,
+    };
+    
+    final lowest = scores.entries.reduce((a, b) => a.value < b.value ? a : b);
+    
+    switch (lowest.key) {
+      case 'mood':
+        return 'mejorar_estado_de_animo';
+      case 'energy':
+        return 'aumentar_energia';
+      case 'stress_management':
+        return 'reducir_estres';
+      default:
+        return 'mantener_equilibrio';
+    }
+  }
+  
+  /// Helper: Calculate confidence level based on data quality
+  double _calculateConfidenceLevel() {
+    final metadata = _analytics['metadata'] as Map<String, dynamic>?;
+    final dataQualityScore = (metadata?['data_quality_score'] as num?)?.toDouble() ?? 0.5;
+    
+    final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
+    final totalEntries = (basicStats?['total_entries'] as num?)?.toInt() ?? 0;
+    
+    // Base confidence on data quality and quantity
+    final quantityFactor = math.min(totalEntries / 20.0, 1.0); // Max confidence at 20+ entries
+    return (dataQualityScore * quantityFactor).clamp(0.0, 1.0);
+  }
+  
+  /// Helper: Get icon for recommendation type
+  String _getIconForRecommendationType(String? type) {
+    switch (type) {
+      case 'mood_support':
+        return '💚';
+      case 'stress_management':
+        return '🧘‍♀️';
+      case 'energy_boost':
+        return '⚡';
+      case 'sleep_improvement':
+        return '😴';
+      case 'exercise':
+        return '🏃‍♀️';
+      case 'social':
+        return '👥';
+      default:
+        return '💡';
+    }
+  }
 }
 // lib/presentation/providers/goals_provider.dart
 // ============================================================================
@@ -2394,3 +3036,4 @@ extension GoalsDatabase on OptimizedDatabaseService {
     }
   }
 }
+

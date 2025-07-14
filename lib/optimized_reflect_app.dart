@@ -13,6 +13,8 @@ import 'presentation/providers/optimized_providers.dart';
 import 'presentation/providers/extended_daily_entries_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/image_moments_provider.dart'; // ✅ NUEVO
+import 'presentation/providers/analytics_provider.dart'; // ✅ PROVIDER AÑADIDO
+import 'presentation/providers/advanced_emotion_analysis_provider.dart'; // ✅ NUEVO PROVIDER AVANZADO
 import 'ai/provider/ai_provider.dart';
 import 'ai/provider/predective_analysis_provider.dart'; // ✅ NUEVO: Análisis Predictivo
 import 'ai/provider/chat_provider.dart'; // ✅ NUEVO: Chat con IA
@@ -99,6 +101,27 @@ class OptimizedReflectApp extends StatelessWidget {
           },
         ),
 
+        ChangeNotifierProxyProvider<OptimizedAuthProvider, AnalyticsProvider>(
+          create: (_) => clean_di.sl<AnalyticsProvider>(),
+          update: (context, auth, previous) {
+            if (auth.isLoggedIn && auth.currentUser != null) {
+              previous?.loadCompleteAnalytics(auth.currentUser!.id);
+            }
+            return previous!;
+          },
+        ),
+
+        // ✅ NUEVO: AnalyticsProviderOptimized
+        ChangeNotifierProxyProvider<OptimizedAuthProvider, AnalyticsProviderOptimized>(
+          create: (_) => clean_di.sl<AnalyticsProviderOptimized>(),
+          update: (context, auth, previous) {
+            if (auth.isLoggedIn && auth.currentUser != null) {
+              previous?.generarAnalisisCompleto(auth.currentUser!.id);
+            }
+            return previous!;
+          },
+        ),
+
         // ✅ NUEVO: PredictiveAnalysisProvider
         ChangeNotifierProxyProvider<OptimizedAuthProvider, PredictiveAnalysisProvider>(
           create: (_) => clean_di.sl<PredictiveAnalysisProvider>(),
@@ -131,6 +154,16 @@ class OptimizedReflectApp extends StatelessWidget {
 
         ChangeNotifierProvider<StreakProvider>(
           create: (_) => clean_di.sl<StreakProvider>(),
+        ),
+
+        // ✅ NUEVO: AdvancedEmotionAnalysisProvider
+        ChangeNotifierProxyProvider<OptimizedAuthProvider, AdvancedEmotionAnalysisProvider>(
+          create: (_) => clean_di.sl<AdvancedEmotionAnalysisProvider>(),
+          update: (context, auth, previous) {
+            // Este provider se activa cuando hay usuario autenticado
+            // pero no carga datos automáticamente (solo cuando se llama explícitamente)
+            return previous!;
+          },
         ),
       ],
       child: Consumer<ThemeProvider>(
@@ -170,4 +203,45 @@ class AuthWrapper extends StatelessWidget {
       },
     );
   }
+}
+
+// ============================================================================
+// HELPER PARA LOGGING
+// ============================================================================
+
+final Logger _logger = clean_di.sl<Logger>();
+
+void logProvider(String providerName, String action) {
+  _logger.d('🔄 Provider: $providerName - Action: $action');
+}
+
+// ============================================================================
+// EJEMPLO DE USO DE LOGGING
+// ============================================================================
+
+void exampleUsage() {
+  logProvider('OptimizedAuthProvider', 'Initializing...');
+  // ...
+  logProvider('OptimizedAuthProvider', 'User logged in');
+}
+
+// ============================================================================
+// VERIFICACIÓN DE ESTADO DE PROVIDERS
+// ============================================================================
+
+void checkProviderStatus(BuildContext context) {
+  final authProvider = Provider.of<OptimizedAuthProvider>(context, listen: false);
+  final dailyEntriesProvider = Provider.of<OptimizedDailyEntriesProvider>(context, listen: false);
+
+  _logger.i('Provider Status Check:');
+  _logger.i('  - AuthProvider Logged In: ${authProvider.isLoggedIn}');
+  _logger.i('  - DailyEntriesProvider Entries Loaded: ${dailyEntriesProvider.entries.isNotEmpty}');
+}
+
+// ============================================================================
+// INICIALIZACIÓN DE SERVICIOS CRÍTICOS
+// ============================================================================
+
+Future<void> initializeCriticalServices() async {
+  await clean_di.initCriticalServices();
 }

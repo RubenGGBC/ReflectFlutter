@@ -1,5 +1,5 @@
 // lib/presentation/screens/v2/login_screen_v2.dart
-// ✅ VERSIÓN CORREGIDA CON NOMBRES EXACTOS DEL DESIGN SYSTEM
+// ✅ ENHANCED LOGIN SCREEN WITH APP THEME SYSTEM
 
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -9,11 +9,18 @@ import 'package:image_picker/image_picker.dart';
 // Providers
 import '../../providers/optimized_providers.dart';
 
-// Navigation Screen - ✅ IMPORTACIÓN AGREGADA
+// Navigation Screen
 import 'main_navigation_screen_v2.dart';
 
-// Componentes modernos - ✅ USANDO TU SISTEMA EXISTENTE
+// ✅ NEW: App Theme System
+import '../../../core/themes/app_theme.dart';
 import '../components/modern_design_system.dart';
+
+// ✅ NEW: Test Data Seeder
+import '../../../test_data/analytics_data_seeder.dart';
+import '../../../test_data/analytics_test_data_generator.dart';
+import '../../../data/services/optimized_database_service.dart';
+import '../../../injection_container_clean.dart' as clean_di;
 
 class LoginScreenV2 extends StatefulWidget {
   const LoginScreenV2({super.key});
@@ -87,13 +94,18 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
+    // ✅ NEW: Use app theme system
+    final theme = Theme.of(context);
+    final appColors = theme.extension<AppColors>() ?? ThemeDefinitions.deepOcean;
+    
     return Scaffold(
+      backgroundColor: appColors.primaryBg,
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: ModernColors.primaryGradient, // ✅ USANDO TU GRADIENTE EXISTENTE
+            colors: appColors.gradientHeader,
           ),
         ),
         child: SafeArea(
@@ -120,6 +132,8 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
                     _buildToggleButton(),
                     const SizedBox(height: ModernSpacing.sm),
                     _buildDeveloperLoginButton(),
+                    const SizedBox(height: ModernSpacing.sm),
+                    _buildAdminButton(),
                     const SizedBox(height: ModernSpacing.lg),
                     _buildFooter(),
                   ],
@@ -133,25 +147,34 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
   }
 
   Widget _buildHeader() {
+    final appColors = Theme.of(context).extension<AppColors>() ?? ThemeDefinitions.deepOcean;
+    
     return Column(
       children: [
         Container(
           width: 80,
           height: 80,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: appColors.accentPrimary.withOpacity(0.2),
             shape: BoxShape.circle,
+            border: Border.all(
+              color: appColors.accentPrimary.withOpacity(0.3),
+              width: 1,
+            ),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.self_improvement,
             size: 40,
-            color: Colors.white,
+            color: appColors.accentPrimary,
           ),
         ),
         const SizedBox(height: ModernSpacing.md),
         Text(
           _isLogin ? 'Bienvenido de vuelta' : 'Únete a nosotros',
-          style: ModernTypography.headlineLarge.copyWith(color: Colors.white),
+          style: ModernTypography.headlineLarge.copyWith(
+            color: appColors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: ModernSpacing.sm),
@@ -160,7 +183,7 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
               ? 'Accede a tu espacio de reflexión personal'
               : 'Comienza tu viaje de autodescubrimiento',
           style: ModernTypography.bodyLarge.copyWith(
-            color: Colors.white.withOpacity(0.8),
+            color: appColors.textSecondary,
           ),
           textAlign: TextAlign.center,
         ),
@@ -231,7 +254,9 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
       children: [
         Text(
           'Foto de perfil (opcional)',
-          style: ModernTypography.bodyMedium.copyWith(color: Colors.white),
+          style: ModernTypography.bodyMedium.copyWith(
+            color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white,
+          ),
         ),
         const SizedBox(height: ModernSpacing.sm),
         Row(
@@ -242,9 +267,11 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: ModernColors.glassPrimary,
-                  borderRadius: BorderRadius.circular(ModernSpacing.radiusMedium), // ✅ CORREGIDO
-                  border: Border.all(color: ModernColors.borderPrimary),
+                  color: Theme.of(context).extension<AppColors>()?.glassBg ?? Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(ModernSpacing.radiusMedium),
+                  border: Border.all(
+                    color: Theme.of(context).extension<AppColors>()?.borderColor ?? Colors.white.withOpacity(0.2),
+                  ),
                 ),
                 child: _selectedProfilePicture != null
                     ? ClipRRect(
@@ -254,9 +281,9 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
                     fit: BoxFit.cover,
                   ),
                 )
-                    : const Icon(
+                    : Icon(
                   Icons.add_a_photo_outlined,
-                  color: Colors.white60,
+                  color: Theme.of(context).extension<AppColors>()?.textHint ?? Colors.white60,
                   size: 32,
                 ),
               ),
@@ -271,7 +298,7 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
                         ? 'Foto seleccionada'
                         : 'Toca para agregar una foto',
                     style: ModernTypography.bodyMedium.copyWith(
-                      color: Colors.white.withOpacity(0.9),
+                      color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white.withOpacity(0.9),
                     ),
                   ),
                   if (_selectedProfilePicture != null)
@@ -280,7 +307,7 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
                       child: Text(
                         'Eliminar',
                         style: ModernTypography.bodyMedium.copyWith(
-                          color: ModernColors.error,
+                          color: Theme.of(context).extension<AppColors>()?.negativeMain ?? Colors.red,
                         ),
                       ),
                     ),
@@ -336,12 +363,14 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
           text: _isLogin
               ? '¿No tienes cuenta? '
               : '¿Ya tienes cuenta? ',
-          style: ModernTypography.bodyMedium,
+          style: ModernTypography.bodyMedium.copyWith(
+            color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white,
+          ),
           children: [
             TextSpan(
               text: _isLogin ? 'Regístrate' : 'Inicia sesión',
               style: ModernTypography.bodyMedium.copyWith(
-                color: ModernColors.accentBlue,
+                color: Theme.of(context).extension<AppColors>()?.accentPrimary ?? Colors.blue,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -374,7 +403,24 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
       child: Text(
         '🚀 Iniciar como Desarrollador',
         style: ModernTypography.bodyMedium.copyWith(
-          color: ModernColors.accentGreen,
+          color: Theme.of(context).extension<AppColors>()?.accentSecondary ?? Colors.green,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminButton() {
+    final authProvider = context.watch<OptimizedAuthProvider>();
+
+    return TextButton(
+      onPressed: authProvider.isLoading ? null : () async {
+        await _showAdminDialog();
+      },
+      child: Text(
+        '🔧 Administrador - Sembrar Datos',
+        style: ModernTypography.bodyMedium.copyWith(
+          color: Theme.of(context).extension<AppColors>()?.accentSecondary ?? Colors.orange,
           fontWeight: FontWeight.w600,
         ),
       ),
@@ -383,16 +429,22 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
 
   Widget _buildErrorMessage() {
     return ModernCard(
-      backgroundColor: ModernColors.error.withOpacity(0.15),
+      backgroundColor: (Theme.of(context).extension<AppColors>()?.negativeMain ?? Colors.red).withOpacity(0.15),
       padding: const EdgeInsets.all(ModernSpacing.md),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, color: ModernColors.error, size: 20),
+          Icon(
+            Icons.error_outline, 
+            color: Theme.of(context).extension<AppColors>()?.negativeMain ?? Colors.red, 
+            size: 20,
+          ),
           const SizedBox(width: ModernSpacing.sm),
           Expanded(
             child: Text(
               _errorMessage!,
-              style: ModernTypography.bodyMedium.copyWith(color: ModernColors.error),
+              style: ModernTypography.bodyMedium.copyWith(
+                color: Theme.of(context).extension<AppColors>()?.negativeMain ?? Colors.red,
+              ),
             ),
           ),
         ],
@@ -403,7 +455,9 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
   Widget _buildFooter() {
     return Text(
       'Al continuar, aceptas nuestros Términos de Servicio y Política de Privacidad.',
-      style: ModernTypography.caption,
+      style: ModernTypography.caption.copyWith(
+        color: Theme.of(context).extension<AppColors>()?.textHint ?? Colors.white.withOpacity(0.6),
+      ),
       textAlign: TextAlign.center,
     );
   }
@@ -454,5 +508,463 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
         });
       }
     }
+  }
+
+  // ============================================================================
+  // FUNCIONALIDAD DE ADMINISTRADOR - SEMBRAR DATOS DE PRUEBA
+  // ============================================================================
+
+  Future<void> _showAdminDialog() async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).extension<AppColors>()?.surface ?? Colors.grey[900],
+        title: Text(
+          '🔧 Panel de Administrador',
+          style: ModernTypography.headlineSmall.copyWith(
+            color: Theme.of(context).extension<AppColors>()?.textPrimary ?? Colors.white,
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                'Selecciona el tipo de datos de prueba a sembrar:',
+                style: ModernTypography.bodyMedium.copyWith(
+                  color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white70,
+                ),
+              ),
+              const SizedBox(height: ModernSpacing.md),
+              _buildSeedButton(
+                '👤 Usuario Estable',
+                'Datos consistentes y rutinas equilibradas',
+                () => _seedUserData(UserProfile.stable),
+              ),
+              _buildSeedButton(
+                '😰 Usuario Ansioso',
+                'Patrones de ansiedad y triggers detectables',
+                () => _seedUserData(UserProfile.anxious),
+              ),
+              _buildSeedButton(
+                '📈 Usuario en Mejora',
+                'Tendencia ascendente y progreso constante',
+                () => _seedUserData(UserProfile.improving),
+              ),
+              _buildSeedButton(
+                '🎭 Usuario Caótico',
+                'Patrones inconsistentes y variables',
+                () => _seedUserData(UserProfile.chaotic),
+              ),
+              _buildSeedButton(
+                '😔 Usuario Deprimido',
+                'Niveles bajos de energía y motivación',
+                () => _seedUserData(UserProfile.depressed),
+              ),
+              const SizedBox(height: ModernSpacing.md),
+              _buildSeedButton(
+                '🧹 Limpiar Datos',
+                'Eliminar todos los datos de prueba',
+                () => _clearAllData(),
+                isDestructive: true,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancelar',
+              style: ModernTypography.bodyMedium.copyWith(
+                color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white70,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSeedButton(
+    String title,
+    String description,
+    VoidCallback onPressed, {
+    bool isDestructive = false,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: ModernSpacing.sm),
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isDestructive
+              ? Theme.of(context).extension<AppColors>()?.negativeMain ?? Colors.red
+              : Theme.of(context).extension<AppColors>()?.accentPrimary ?? Colors.blue,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.all(ModernSpacing.md),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(ModernSpacing.radiusMedium),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: ModernTypography.bodyLarge.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              description,
+              style: ModernTypography.bodySmall.copyWith(
+                color: Colors.white70,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _seedUserData(UserProfile profile) async {
+    Navigator.pop(context); // Cerrar dialog
+    
+    // Mostrar loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).extension<AppColors>()?.surface ?? Colors.grey[900],
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: ModernSpacing.md),
+            Text(
+              'Creando usuario y poblando datos...',
+              style: ModernTypography.bodyMedium.copyWith(
+                color: Theme.of(context).extension<AppColors>()?.textPrimary ?? Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      // Obtener servicios
+      final databaseService = clean_di.sl<OptimizedDatabaseService>();
+      final authProvider = context.read<OptimizedAuthProvider>();
+      
+      // Usar los métodos específicos que crean usuario y hacen login automático
+      Map<String, dynamic> result;
+      
+      switch (profile) {
+        case UserProfile.stable:
+          result = await AnalyticsDataSeeder.poblarEstable(databaseService, authProvider);
+          break;
+        case UserProfile.anxious:
+          result = await AnalyticsDataSeeder.poblarAnsioso(databaseService, authProvider);
+          break;
+        case UserProfile.depressed:
+          result = await AnalyticsDataSeeder.poblarDeprimido(databaseService, authProvider);
+          break;
+        case UserProfile.improving:
+          result = await AnalyticsDataSeeder.poblarEnMejora(databaseService, authProvider);
+          break;
+        case UserProfile.chaotic:
+          result = await AnalyticsDataSeeder.poblarCaotico(databaseService, authProvider);
+          break;
+      }
+      
+      Navigator.pop(context); // Cerrar loading
+      
+      if (result['success']) {
+        // Si el login automático fue exitoso, navegar directamente
+        if (result['auto_login'] == true && mounted) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const MainNavigationScreenV2(),
+            ),
+          );
+        } else {
+          // Mostrar éxito con opción de login manual
+          _showSuccessDialog(result, profile);
+        }
+      } else {
+        // Mostrar error
+        _showErrorDialog(result['error']);
+      }
+      
+    } catch (e) {
+      Navigator.pop(context); // Cerrar loading
+      _showErrorDialog(e.toString());
+    }
+  }
+
+  Future<void> _clearAllData() async {
+    Navigator.pop(context); // Cerrar dialog
+    
+    // Confirmar acción
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).extension<AppColors>()?.surface ?? Colors.grey[900],
+        title: Text(
+          '⚠️ Confirmar Limpieza',
+          style: ModernTypography.headlineSmall.copyWith(
+            color: Theme.of(context).extension<AppColors>()?.negativeMain ?? Colors.red,
+          ),
+        ),
+        content: Text(
+          '¿Estás seguro de que deseas eliminar todos los datos de prueba? Esta acción no se puede deshacer.',
+          style: ModernTypography.bodyMedium.copyWith(
+            color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white70,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Cancelar',
+              style: ModernTypography.bodyMedium.copyWith(
+                color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white70,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).extension<AppColors>()?.negativeMain ?? Colors.red,
+            ),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // Mostrar loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => AlertDialog(
+          backgroundColor: Theme.of(context).extension<AppColors>()?.surface ?? Colors.grey[900],
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: ModernSpacing.md),
+              Text(
+                'Limpiando datos...',
+                style: ModernTypography.bodyMedium.copyWith(
+                  color: Theme.of(context).extension<AppColors>()?.textPrimary ?? Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      try {
+        // Limpiar datos
+        final databaseService = clean_di.sl<OptimizedDatabaseService>();
+        final seeder = AnalyticsDataSeeder(databaseService);
+        
+        await seeder.clearAllUserData(1); // Usuario desarrollador
+        
+        Navigator.pop(context); // Cerrar loading
+        
+        // Mostrar éxito
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: Theme.of(context).extension<AppColors>()?.surface ?? Colors.grey[900],
+            title: Text(
+              '✅ Datos Limpiados',
+              style: ModernTypography.headlineSmall.copyWith(
+                color: Theme.of(context).extension<AppColors>()?.accentSecondary ?? Colors.green,
+              ),
+            ),
+            content: Text(
+              'Todos los datos de prueba han sido eliminados exitosamente.',
+              style: ModernTypography.bodyMedium.copyWith(
+                color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white70,
+              ),
+            ),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        
+      } catch (e) {
+        Navigator.pop(context); // Cerrar loading
+        _showErrorDialog(e.toString());
+      }
+    }
+  }
+
+  void _showSuccessDialog(Map<String, dynamic> result, UserProfile profile) {
+    final stats = result['stats'] as Map<String, dynamic>? ?? {};
+    final userName = result['user_name'] as String? ?? 'Usuario';
+    final userEmail = result['user_email'] as String? ?? '';
+    final userPassword = result['user_password'] as String? ?? '';
+    final autoLogin = result['auto_login'] as bool? ?? false;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).extension<AppColors>()?.surface ?? Colors.grey[900],
+        title: Text(
+          autoLogin ? '✅ Usuario Creado y Conectado' : '✅ Usuario Creado',
+          style: ModernTypography.headlineSmall.copyWith(
+            color: Theme.of(context).extension<AppColors>()?.accentSecondary ?? Colors.green,
+          ),
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                autoLogin 
+                  ? 'Usuario creado y sesión iniciada automáticamente'
+                  : 'Usuario creado exitosamente. Usa las credenciales para iniciar sesión.',
+                style: ModernTypography.bodyMedium.copyWith(
+                  color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white70,
+                ),
+              ),
+              const SizedBox(height: ModernSpacing.md),
+              Container(
+                padding: const EdgeInsets.all(ModernSpacing.sm),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).extension<AppColors>()?.surfaceVariant ?? Colors.grey[800],
+                  borderRadius: BorderRadius.circular(ModernSpacing.radiusSmall),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '👤 $userName',
+                      style: ModernTypography.bodyMedium.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).extension<AppColors>()?.textPrimary ?? Colors.white,
+                      ),
+                    ),
+                    Text(
+                      '📧 $userEmail',
+                      style: ModernTypography.bodySmall.copyWith(
+                        color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white70,
+                      ),
+                    ),
+                    Text(
+                      '🔑 $userPassword',
+                      style: ModernTypography.bodySmall.copyWith(
+                        color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (stats.isNotEmpty) ...[
+                const SizedBox(height: ModernSpacing.md),
+                Text(
+                  'Datos generados:',
+                  style: ModernTypography.bodyMedium.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).extension<AppColors>()?.textPrimary ?? Colors.white,
+                  ),
+                ),
+            const SizedBox(height: ModernSpacing.sm),
+            Text(
+              '📅 Entradas diarias: ${stats['totalDailyEntries']}',
+              style: ModernTypography.bodySmall.copyWith(
+                color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white70,
+              ),
+            ),
+            Text(
+              '💭 Momentos interactivos: ${stats['totalInteractiveMoments']}',
+              style: ModernTypography.bodySmall.copyWith(
+                color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white70,
+              ),
+            ),
+            Text(
+              '🎯 Metas: ${stats['totalGoals']}',
+              style: ModernTypography.bodySmall.copyWith(
+                color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white70,
+              ),
+            ),
+              ],
+              if (!autoLogin) ...[
+                const SizedBox(height: ModernSpacing.sm),
+                Text(
+                  'El auto-login falló. Usa las credenciales mostradas para iniciar sesión manualmente.',
+                  style: ModernTypography.bodySmall.copyWith(
+                    color: Theme.of(context).extension<AppColors>()?.accentSecondary ?? Colors.orange,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          if (!autoLogin && userEmail.isNotEmpty && userPassword.isNotEmpty)
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(context);
+                // Intentar login manual
+                _emailController.text = userEmail;
+                _passwordController.text = userPassword;
+                await _handleSubmit();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).extension<AppColors>()?.accentPrimary ?? Colors.blue,
+              ),
+              child: const Text('Iniciar Sesión'),
+            ),
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cerrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showErrorDialog(String error) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).extension<AppColors>()?.surface ?? Colors.grey[900],
+        title: Text(
+          '❌ Error',
+          style: ModernTypography.headlineSmall.copyWith(
+            color: Theme.of(context).extension<AppColors>()?.negativeMain ?? Colors.red,
+          ),
+        ),
+        content: Text(
+          'Error al sembrar datos: $error',
+          style: ModernTypography.bodyMedium.copyWith(
+            color: Theme.of(context).extension<AppColors>()?.textSecondary ?? Colors.white70,
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }

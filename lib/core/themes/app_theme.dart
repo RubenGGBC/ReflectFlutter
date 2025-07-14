@@ -415,7 +415,7 @@ class AppThemeData {
       ),
 
       // Cards y contenedores
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: appColors.surface,
         shadowColor: appColors.shadowColor,
         elevation: 4,

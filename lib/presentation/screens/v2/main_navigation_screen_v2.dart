@@ -16,11 +16,13 @@ import 'quick_moments_screen.dart'; // ✅ NUEVA PANTALLA RÁPIDA
 import 'daily_review_screen_v2.dart';
 import 'analytics_screen_v2.dart';
 import 'profile_screen_v2.dart';
+import 'analytics_screen_v2_upgraded.dart';
 import 'ai_coach_screen.dart';
 import 'goals_screen.dart';
 import 'predective_analysis_screen.dart';
 import 'ai_chat_screen.dart';
 import '../v2/mental_health_chat_screen.dart';
+import 'analytics_screen_optimized.dart';
 
 // Componentes modernos
 import '../components/modern_design_system.dart';
@@ -146,7 +148,7 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
       const _SafeScreenWrapper(child: HomeScreenV2()),
       const _SafeScreenWrapper(child: QuickMomentsScreen()), // ✅ NUEVA PANTALLA
       const _SafeScreenWrapper(child: DailyReviewScreenV2()),
-      const _SafeScreenWrapper(child: AnalyticsScreenV2()),
+      const _SafeScreenWrapper(child:AnalyticsScreenV2()),
       const _SafeScreenWrapper(child: GoalsScreen()),
       const _SafeScreenWrapper(child: PredictiveAnalysisScreen()),
       const _SafeScreenWrapper(child: ProfileScreenV2()),
