@@ -92,7 +92,7 @@ class NotificationService {
             presentSound: true,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidAllowWhileIdle: true,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
@@ -138,7 +138,7 @@ class NotificationService {
             presentSound: true,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidAllowWhileIdle: true,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
@@ -168,7 +168,7 @@ class NotificationService {
             presentSound: true,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidAllowWhileIdle: true,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
@@ -198,7 +198,7 @@ class NotificationService {
             presentSound: true,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidAllowWhileIdle: true,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
       );
@@ -240,7 +240,7 @@ class NotificationService {
             presentSound: true,
           ),
         ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidAllowWhileIdle: true,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
       );
@@ -254,10 +254,15 @@ class NotificationService {
 
   /// Setup all default reminders
   Future<void> setupDefaultReminders() async {
-    await scheduleDailyReviewReminder(hour: 20, minute: 0);
-    await scheduleMomentReminders();
-    await scheduleWeeklyReflection();
-    _logger.i('✅ All default reminders set up');
+    try {
+      await scheduleDailyReviewReminder(hour: 20, minute: 0);
+      await scheduleMomentReminders();
+      await scheduleWeeklyReflection();
+      _logger.i('✅ All default reminders set up');
+    } catch (e) {
+      _logger.w('⚠️ Some reminders could not be set up: $e');
+      // Continue anyway - app should still work without perfect notifications
+    }
   }
 
   /// Cancel all notifications
