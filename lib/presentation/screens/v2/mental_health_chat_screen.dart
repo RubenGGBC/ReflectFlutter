@@ -241,6 +241,27 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
                 ),
               ),
               
+              // Debug Download Button (only show if AI not ready)
+              if (!provider.isAIReady) ...[
+                GestureDetector(
+                  onTap: () => provider.forceDownloadModel(),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                    ),
+                    child: Icon(
+                      Icons.download_rounded,
+                      color: Colors.blue,
+                      size: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+              
               // New Chat Button
               GestureDetector(
                 onTap: () => _showNewChatDialog(provider),

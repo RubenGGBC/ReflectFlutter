@@ -7,12 +7,14 @@ import 'package:flutter/foundation.dart';
 import 'package:logger/logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:io';
 
 import '../../data/models/chat_message_model.dart';
 import '../../data/services/optimized_database_service.dart';
 import '../services/phi_model_service_genai_complete.dart';
 import '../services/phi_,model_service_chat_extension.dart';
 import '../services/genai_platform_interface.dart';
+import '../services/model_downloader.dart';
 import '../prompts/mental_health_prompts.dart';
 
 class MentalHealthChatProvider extends ChangeNotifier {
@@ -93,8 +95,47 @@ class MentalHealthChatProvider extends ChangeNotifier {
 
       _isAIReady = false;
       _setAIStatus('Verificando modelo IA...');
+      
+      // First check if model is downloaded
+      final downloader = ModelDownloader();
+      final isDownloaded = await downloader.isModelDownloaded();
+      
+      _logger.i('📋 Model download status: $isDownloaded');
+      
+      if (!isDownloaded) {
+        _setAIStatus('Modelo no encontrado, descargando...');
+        _logger.i('⬇️ Starting model download...');
+        
+        try {
+          await downloader.downloadModel(
+            onProgress: (progress) {
+              final progressPercent = (progress * 100).toInt();
+              _setAIStatus('Descargando modelo: $progressPercent%');
+              _logger.i('📈 Download Progress: $progressPercent%');
+            },
+            onStatusUpdate: (status) {
+              _setAIStatus(status);
+              _logger.i('📊 Download Status: $status');
+            },
+          );
+          _logger.i('✅ Model download completed');
+        } catch (downloadError) {
+          _logger.e('❌ Model download failed: $downloadError');
+          _setAIStatus('Error descargando modelo');
+          throw Exception('Failed to download model: $downloadError');
+        }
+      } else {
+        _setAIStatus('Modelo encontrado, inicializando...');
+        _logger.i('✅ Model already downloaded');
+      }
 
-      // Initialize with proper progress tracking
+      // Now initialize with proper progress tracking
+      _setAIStatus('Inicializando IA...');
+      
+      // Get model directory for initialization
+      final modelDirectory = await downloader.getModelDirectory();
+      _logger.i('📁 Model directory: $modelDirectory');
+      
       final initSuccess = await phiService.initialize(
         onStatusUpdate: (status) {
           _setAIStatus(status);
@@ -102,8 +143,8 @@ class MentalHealthChatProvider extends ChangeNotifier {
         },
         onProgress: (progress) {
           final progressPercent = (progress * 100).toInt();
-          _setAIStatus('Descargando modelo: $progressPercent%');
-          _logger.i('📈 Download Progress: $progressPercent%');
+          _setAIStatus('Configurando IA: $progressPercent%');
+          _logger.i('📈 Init Progress: $progressPercent%');
         },
       );
 
@@ -320,66 +361,120 @@ Este es nuestro espacio seguro para conversar. No hay prisa ni expectativas, sol
 
     _logger.i('🎯 Using REAL AI (PhiModelService) for: "$userMessage"');
 
-    // Build therapeutic prompt directly
-    final therapeuticPrompt = _buildDirectTherapeuticPrompt(userMessage);
+    // Try up to 3 times with different approaches
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        _logger.i('🔄 Attempt $attempt/3 for AI response');
+        
+        // Build therapeutic prompt with attempt-specific modifications
+        final therapeuticPrompt = _buildDirectTherapeuticPrompt(userMessage, attempt);
 
-    // Call GenAI directly - NO FALLBACKS
-    final response = await _generateWithDirectGenAI(therapeuticPrompt);
+        // Call GenAI directly
+        final response = await _generateWithDirectGenAI(therapeuticPrompt);
 
-    if (response.isEmpty) {
-      throw Exception('Real AI returned empty response');
+        if (response.isEmpty) {
+          throw Exception('Real AI returned empty response');
+        }
+
+        // LOG THE ACTUAL RESPONSE BEFORE VALIDATION
+        _logger.i('🔍 RAW AI RESPONSE (attempt $attempt): "$response"');
+
+        // Validate response format
+        if (_isValidChatResponse(response)) {
+          _logger.i('✅ REAL AI therapeutic response accepted on attempt $attempt');
+          return response;
+        } else {
+          _logger.w('🚫 Rejected AI response on attempt $attempt: Wrong format');
+          if (attempt == 3) {
+            throw Exception('Real AI consistently generated wrong format after 3 attempts');
+          }
+          continue; // Try next attempt
+        }
+      } catch (e) {
+        _logger.w('⚠️ Attempt $attempt failed: $e');
+        if (attempt == 3) {
+          throw Exception('Real AI failed after 3 attempts: $e');
+        }
+        // Wait a bit before retry
+        await Future.delayed(Duration(milliseconds: 500));
+      }
     }
 
-    // LOG THE ACTUAL RESPONSE BEFORE VALIDATION
-    _logger.i('🔍 RAW AI RESPONSE: "$response"');
+    throw Exception('Real AI failed to generate valid response');
+  }
 
-    // More lenient validation - only reject obvious wrong responses
-    if (response.contains('OBSERVACIÓN CLAVE:') ||
-        response.contains('RESUMEN SEMANAL:') ||
-        response.contains('Esta semana no has registrado') ||
-        (response.startsWith('**¡Hola') && response.contains('Esta semana'))) {
-      _logger.w('🚫 Rejected AI response: Wrong format (weekly summary)');
-      throw Exception('Real AI generated weekly summary instead of chat response');
-    }
-
-    // Allow the response if it seems reasonable
-    _logger.i('✅ REAL AI therapeutic response accepted');
-    return response;
+  /// 🔍 Validate if response is a proper chat response
+  bool _isValidChatResponse(String response) {
+    final responseUpper = response.toUpperCase();
+    final invalidPatterns = [
+      'OBSERVACIÓN CLAVE:',
+      'RESUMEN SEMANAL:',
+      'ESTA SEMANA NO HAS REGISTRADO',
+      'ESTA SEMANA',
+      'INSIGHTS PROFUNDOS:',
+      'RECOMENDACIONES PERSONALIZADAS:',
+      'REFLEXIÓN FINAL:',
+      'ANÁLISIS SEMANAL:',
+      'WEEKLY SUMMARY',
+      'OBSERVACIONES CLAVE',
+      'RESUMEN DE LA SEMANA',
+      'ANÁLISIS DE',
+      'REPORTES',
+      'MÉTRICAS',
+      'DATOS DE LA SEMANA',
+      'PROMEDIO DE',
+      'NIVEL DE ENERGÍA',
+      'ESTADO DE ÁNIMO PROMEDIO',
+    ];
+    
+    final containsInvalidPattern = invalidPatterns.any((pattern) => 
+      responseUpper.contains(pattern));
+    
+    final hasReportFormat = response.contains('**') && 
+      (response.contains('RESUMEN') || response.contains('ANÁLISIS'));
+    
+    return !containsInvalidPattern && !hasReportFormat;
   }
 
   /// 🎯 Build direct therapeutic prompt (CHAT ONLY, NO ANALYSIS)
-  String _buildDirectTherapeuticPrompt(String userMessage) {
+  String _buildDirectTherapeuticPrompt(String userMessage, [int attempt = 1]) {
     final conversationHistory = _buildConversationHistoryString();
     final userName = _sessionContext['preferred_name'] ?? 'Usuario';
 
+    // More specific instructions for different attempts
+    final String specificInstructions = attempt == 1
+        ? "Responde ÚNICAMENTE al mensaje del usuario como un terapeuta empático en conversación natural."
+        : attempt == 2
+            ? "IMPORTANTE: NO generes análisis ni reportes. Solo responde al mensaje como si fueras un amigo terapeuta hablando cara a cara."
+            : "CRÍTICO: Responde SOLO con una conversación natural. NO uses formato de reporte. Solo habla directamente al usuario.";
+
     return '''<|system|>
-Eres un psicoterapeuta profesional teniendo una conversación privada con un cliente. Tu ÚNICA función es responder de forma empática y terapéutica al mensaje específico del usuario.
+Eres un terapeuta conversacional. Solo responde al mensaje del usuario con empatía y naturalidad.
 
-REGLAS ESTRICTAS:
-- Responde SOLAMENTE al mensaje actual
-- NO generes análisis, reportes, observaciones o resúmenes
-- NO uses palabras como "OBSERVACIÓN", "RESUMEN", "ANÁLISIS" 
-- NO uses formato de reporte con asteriscos (**)
-- Mantén respuestas cortas: 1-3 oraciones máximo
-- Usa lenguaje natural y empático
-- Haz UNA pregunta abierta al final si es apropiado
+FORMATO REQUERIDO:
+- Respuesta directa al mensaje (2-3 oraciones)
+- Sin análisis, reportes, o resúmenes
+- Sin formato con asteriscos (**)
+- Sin títulos o secciones
+- Sin palabras como "OBSERVACIÓN", "RESUMEN", "ANÁLISIS", "SEMANAL"
 
-PROHIBIDO:
-- Análisis semanales
-- Observaciones clave  
-- Formato de reporte
-- Respuestas largas
-- Consejos no solicitados
+EJEMPLOS CORRECTOS:
+Usuario: "Hola"
+Respuesta: "Hola, me alegra que estés aquí. ¿Cómo te sientes hoy?"
 
-EJEMPLO DE RESPUESTA CORRECTA:
 Usuario: "Estoy triste"
-Tú: "Entiendo que estás pasando por un momento difícil. La tristeza puede ser muy abrumadora. ¿Te gustaría contarme qué está contribuyendo a este sentimiento?"
+Respuesta: "Entiendo que estás pasando por un momento difícil. La tristeza puede ser muy abrumadora. ¿Qué te ha llevado a sentirte así?"
 
-Mantén el tono cálido, profesional y completamente enfocado en el mensaje actual.
+Usuario: "Tengo ansiedad"
+Respuesta: "La ansiedad puede ser muy intensa. Es valiente de tu parte compartir esto conmigo. ¿Hay algo específico que la esté provocando?"
+
+$specificInstructions
 <|end|>
 
 <|user|>
-${conversationHistory.isNotEmpty ? 'Contexto de conversación previa:\n$conversationHistory\n\n' : ''}Mensaje actual de $userName: $userMessage
+${conversationHistory.isNotEmpty ? 'Conversación previa:\n$conversationHistory\n\n' : ''}$userName dice: "$userMessage"
+
+Responde como terapeuta empático en conversación natural:
 <|end|>
 
 <|assistant|>''';
@@ -546,6 +641,53 @@ ${conversationHistory.isNotEmpty ? 'Contexto de conversación previa:\n$conversa
   /// 🔄 Public method to trigger re-initialization
   Future<void> initializeChat() async {
     await _initializeChat();
+  }
+  
+  /// 🔄 Force model download (for testing/debugging)
+  Future<void> forceDownloadModel() async {
+    try {
+      _setAIStatus('Forzando descarga del modelo...');
+      final downloader = ModelDownloader();
+      
+      // Delete existing model files first
+      final modelPath = await downloader.getModelPath();
+      final dataPath = await downloader.getDataPath();
+      
+      final modelFile = File(modelPath);
+      final dataFile = File(dataPath);
+      
+      if (await modelFile.exists()) {
+        await modelFile.delete();
+        _logger.i('🗑️ Deleted existing model file');
+      }
+      
+      if (await dataFile.exists()) {
+        await dataFile.delete();
+        _logger.i('🗑️ Deleted existing data file');
+      }
+      
+      // Force download
+      await downloader.downloadModel(
+        onProgress: (progress) {
+          final progressPercent = (progress * 100).toInt();
+          _setAIStatus('Descargando modelo: $progressPercent%');
+          _logger.i('📈 Force Download Progress: $progressPercent%');
+        },
+        onStatusUpdate: (status) {
+          _setAIStatus(status);
+          _logger.i('📊 Force Download Status: $status');
+        },
+      );
+      
+      _logger.i('✅ Force model download completed');
+      
+      // Re-initialize after download
+      await _initializeChat();
+      
+    } catch (e) {
+      _logger.e('❌ Force download failed: $e');
+      _setError('Error forzando descarga: $e');
+    }
   }
 
   void _addMessageToCurrentConversation(ChatMessage message) {
