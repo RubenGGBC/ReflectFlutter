@@ -18,6 +18,7 @@ import 'profile_screen_v2.dart';
 import 'goals_screen.dart';
 import 'user_progression_analytics_screen.dart';
 import 'goals_screen_enhanced.dart';
+import 'mental_health_chat_screen.dart'; // ✅ NUEVA PANTALLA DE CHAT IA
 
 // Componentes modernos
 
@@ -69,6 +70,12 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
       activeIcon: Icons.edit_note,
       label: 'Reflexión',
       color: const Color(0xFF10B981),
+    ),
+    NavigationItem(
+      icon: Icons.psychology_outlined,
+      activeIcon: Icons.psychology,
+      label: 'Coach IA',
+      color: const Color(0xFF9333EA),
     ),
     NavigationItem(
       icon: Icons.analytics_outlined,
@@ -136,6 +143,7 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
       const _SafeScreenWrapper(child: HomeScreenV2()),
       const _SafeScreenWrapper(child: QuickMomentsScreen()),
       const _SafeScreenWrapper(child: DailyReviewScreenV2()),
+      const _SafeScreenWrapper(child: MentalHealthChatScreen()),
       const _SafeScreenWrapper(child: UserProgressionAnalyticsScreen()),
       const _SafeScreenWrapper(child: GoalsScreenEnhanced()),
       const _SafeScreenWrapper(child: ProfileScreenV2()),

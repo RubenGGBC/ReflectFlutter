@@ -107,21 +107,24 @@ class MentalHealthChatProvider extends ChangeNotifier {
     }
   }
 
-  /// 🎯 Initialize therapeutic session context
+  /// 🎯 Initialize therapeutic session context - PER CONVERSATION
   Future<void> _initializeSessionContext() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final contextJson = prefs.getString('session_context');
-
-      if (contextJson != null) {
-        _sessionContext = jsonDecode(contextJson);
-      } else {
+      // Session context is now per conversation, not global
+      if (_currentConversation != null) {
+        _sessionContext = _currentConversation!.metadata ?? {};
+      }
+      
+      // Initialize default context if empty
+      if (_sessionContext.isEmpty) {
         _sessionContext = {
           'session_count': 0,
           'preferred_name': null,
           'therapeutic_goals': [],
           'conversation_style': 'supportive',
           'session_history': [],
+          'conversation_id': _currentConversation?.id ?? '',
+          'created_at': DateTime.now().toIso8601String(),
         };
       }
 
@@ -132,11 +135,24 @@ class MentalHealthChatProvider extends ChangeNotifier {
     }
   }
 
-  /// 💾 Save session context
+  /// 💾 Save session context - PER CONVERSATION
   Future<void> _saveSessionContext() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('session_context', jsonEncode(_sessionContext));
+      if (_currentConversation != null) {
+        // Save context to current conversation metadata
+        _currentConversation = _currentConversation!.copyWith(
+          metadata: _sessionContext,
+        );
+        
+        // Update conversation in list
+        final index = _conversations.indexWhere((conv) => conv.id == _currentConversation!.id);
+        if (index != -1) {
+          _conversations[index] = _currentConversation!;
+        }
+        
+        // Save all conversations
+        await _saveConversations();
+      }
     } catch (e) {
       _logger.e('Error saving session context: $e');
     }
@@ -248,13 +264,13 @@ Este es nuestro espacio seguro para conversar. No hay prisa ni expectativas, sol
     }
   }
 
-  /// 🧠 Generate therapeutic response - REAL AI ONLY
+  /// 🧠 Generate therapeutic response - REAL AI ONLY, NO FALLBACKS
   Future<String> _generateTherapeuticResponse(String userMessage) async {
     _logger.i('🧠 Generating REAL AI therapeutic response for: "${userMessage.substring(0, userMessage.length > 50 ? 50 : userMessage.length)}..."');
 
     if (!_isAIReady) {
       _logger.e('🚫 AI not ready - status: $_aiStatus');
-      throw Exception('AI not ready - refusing to use fallback');
+      throw Exception('La IA no está disponible. Por favor, espera a que se inicialice.');
     }
 
     try {
@@ -262,7 +278,7 @@ Este es nuestro espacio seguro para conversar. No hay prisa ni expectativas, sol
       final response = await _generateAITherapeuticResponse(userMessage);
 
       if (response.isEmpty) {
-        throw Exception('AI generated empty response');
+        throw Exception('La IA generó una respuesta vacía');
       }
 
       _logger.i('✅ REAL AI therapeutic response generated: ${response.length} characters');
@@ -272,7 +288,7 @@ Este es nuestro espacio seguro para conversar. No hay prisa ni expectativas, sol
     } catch (e) {
       _logger.e('❌ REAL AI failed: $e');
       // NO FALLBACK - throw error to user
-      throw Exception('AI temporarily unavailable. Please try again.');
+      throw Exception('La IA no está disponible temporalmente. Intenta de nuevo en un momento.');
     }
   }
 
@@ -379,90 +395,9 @@ ${conversationHistory.isNotEmpty ? 'Contexto de conversación previa:\n$conversa
     return cleaned;
   }
 
-  /// 💙 Generate basic therapeutic response
-  String _generateBasicTherapeuticResponse(String userMessage) {
-    final message = userMessage.toLowerCase();
+  // REMOVED: Basic therapeutic response - NO FALLBACKS ALLOWED
 
-    _logger.i('🔍 Analyzing message for emotional patterns');
-
-    // Crisis or urgent help patterns
-    if (message.contains(RegExp(r'\b(suicid|matarme|no puedo m[aá]s|quiero morir|ayuda urgente)\b'))) {
-      return 'Escucho que estás pasando por un momento muy difícil y eso me preocupa. Tu vida es valiosa. Si estás en crisis, te recomiendo contactar inmediatamente a un profesional o línea de crisis. Estoy aquí para acompañarte, pero es importante que busques ayuda profesional ahora mismo.';
-    }
-
-    // Depression and sadness patterns
-    if (message.contains(RegExp(r'\b(triste|deprimido|deprimida|mal|horrible|terrible|vac[íi]o|sin sentido|desesperan)\b'))) {
-      return 'Escucho que estás pasando por un momento muy difícil. Es completamente válido sentirse así, y me alegra que hayas decidido compartirlo conmigo. La tristeza es una emoción natural, aunque dolorosa. ¿Te gustaría contarme más sobre lo que está contribuyendo a estos sentimientos?';
-    }
-
-    // Anxiety patterns
-    if (message.contains(RegExp(r'\b(ansioso|ansiosa|ansiedad|nervioso|nerviosa|preocupado|preocupada|estresado|estresada|p[aá]nico)\b'))) {
-      return 'La ansiedad puede ser muy abrumadora y agotadora. Es importante que reconozcas que has tenido el valor de expresar lo que sientes, eso no es fácil. ¿Hay algo específico que está generando esta ansiedad, o es más bien una sensación general que has estado experimentando?';
-    }
-
-    // Loneliness patterns
-    if (message.contains(RegExp(r'\b(solo|sola|aislado|aislada|nadie|abandono|soledad)\b'))) {
-      return 'La soledad es una experiencia humana muy real y puede ser muy dolorosa. Quiero que sepas que aquí, en este momento, no estás solo/a. Estoy aquí para escucharte sin juzgarte. ¿Cómo ha sido para ti experimentar esta soledad últimamente?';
-    }
-
-    // Anger patterns
-    if (message.contains(RegExp(r'\b(enojado|enojada|furioso|furiosa|ira|rabia|odio|frustra)\b'))) {
-      return 'El enojo es una emoción completamente válida y a menudo nos está comunicando algo muy importante sobre nuestras necesidades o límites. Es bueno que puedas reconocerlo y expresarlo aquí. ¿Qué crees que podría estar detrás de esta ira o frustración?';
-    }
-
-    // Positive emotions
-    if (message.contains(RegExp(r'\b(bien|mejor|contento|contenta|feliz|alegre|esperanza|optimis)\b'))) {
-      return 'Me alegra mucho escuchar que te sientes así. Es importante celebrar y reconocer estos momentos positivos en tu vida. A veces no les damos la atención que merecen. ¿Hay algo en particular que haya contribuido a que te sientas de esta manera?';
-    }
-
-    // Confusion or uncertainty
-    if (message.contains(RegExp(r'\b(no s[eé]|confundido|confundida|perdido|perdida|duda|insegur)\b'))) {
-      return 'Es completamente normal sentirse confundido/a a veces. La incertidumbre puede ser muy incómoda, pero también puede ser el inicio de un nuevo entendimiento sobre nosotros mismos. ¿Te gustaría explorar juntos qué es lo que te genera esta confusión?';
-    }
-
-    // Work or study stress
-    if (message.contains(RegExp(r'\b(trabajo|laboral|jefe|empleo|universidad|estudios|ex[aá]men)\b'))) {
-      return 'Los desafíos en el trabajo o los estudios pueden generar mucha presión. Es normal que esto afecte nuestro bienestar emocional. ¿Cómo está impactando esta situación en tu día a día y en cómo te sientes contigo mismo/a?';
-    }
-
-    // Relationship issues
-    if (message.contains(RegExp(r'\b(pareja|relaci[oó]n|novio|novia|matrimonio|familia|amigos)\b'))) {
-      return 'Las relaciones son una parte fundamental de nuestra experiencia humana, y cuando hay dificultades pueden afectarnos profundamente. ¿Te sientes cómodo/a compartiendo más sobre lo que está pasando en esta relación?';
-    }
-
-    // Self-esteem issues
-    if (message.contains(RegExp(r'\b(no valgo|in[uú]til|fracaso|mal conmigo|odio como soy)\b'))) {
-      return 'Escucho mucha autocrítica en tus palabras, y eso debe ser muy doloroso de cargar. La forma en que nos hablamos a nosotros mismos tiene un impacto enorme en cómo nos sentimos. ¿Cuándo empezaste a sentirte así sobre ti mismo/a?';
-    }
-
-    // Greeting patterns
-    if (message.contains(RegExp(r'\b(hola|buenas|saludos|hey)\b'))) {
-      return 'Hola, me alegra que estés aquí. Este es un espacio donde puedes sentirte libre de expresar lo que necesites, sin juicio alguno. ¿Hay algo que te gustaría compartir conmigo hoy?';
-    }
-
-    // General supportive response for anything else
-    final supportiveResponses = [
-      'Te escucho y valoro que hayas compartido esto conmigo. Cada experiencia que vives es importante y merece ser escuchada. ¿Hay algo más que te gustaría explorar sobre lo que me has contado?',
-      'Gracias por confiar en mí para compartir esto. Es valiente de tu parte expresar lo que sientes. ¿Cómo te sientes al poner en palabras esta experiencia?',
-      'Aprecio tu honestidad al compartir esto conmigo. Tu experiencia es válida e importante. ¿Qué más te gustaría que conversemos sobre este tema?',
-      'Me parece importante lo que acabas de compartir. A veces simplemente expresar nuestros pensamientos puede ser muy liberador. ¿Hay algo específico en lo que te gustaría enfocarte?',
-    ];
-
-    final randomIndex = DateTime.now().millisecond % supportiveResponses.length;
-    return supportiveResponses[randomIndex];
-  }
-
-  /// 🛟 Generate fallback response
-  String _generateFallbackResponse() {
-    final responses = [
-      'Estoy aquí para escucharte. ¿Puedes contarme más sobre lo que estás experimentando?',
-      'Tu experiencia es válida e importante. ¿Cómo te sientes al compartir esto?',
-      'Gracias por confiar en mí para compartir esto. ¿Qué más te gustaría explorar?',
-      'Te acompaño en lo que estás sintiendo. ¿Hay algo específico en lo que te gustaría enfocarte?',
-    ];
-
-    return responses[DateTime.now().millisecond % responses.length];
-  }
+  // REMOVED: Fallback response - NO FALLBACKS ALLOWED
 
   /// 📝 Update session context based on conversation
   Future<void> _updateSessionContext(String userMessage, String aiResponse) async {
@@ -529,11 +464,13 @@ ${conversationHistory.isNotEmpty ? 'Contexto de conversación previa:\n$conversa
     return 'general_support';
   }
 
-  /// 📚 Build conversation history for AI context
+  /// 📚 Build conversation history for AI context - CURRENT CONVERSATION ONLY
   List<Map<String, String>> _buildConversationHistory() {
     if (_currentConversation == null) return [];
 
+    // Only use messages from current conversation - NO cross-conversation memory
     return _currentConversation!.messages
+        .where((msg) => !msg.isThinking && !msg.isSystem) // Filter out thinking/system messages
         .take(20) // Last 20 messages for context
         .map((msg) => {
       'role': msg.isUser ? 'user' : 'assistant',
@@ -542,11 +479,13 @@ ${conversationHistory.isNotEmpty ? 'Contexto de conversación previa:\n$conversa
         .toList();
   }
 
-  /// 📚 Build conversation history as string for AI
+  /// 📚 Build conversation history as string for AI - CURRENT CONVERSATION ONLY
   String _buildConversationHistoryString() {
     if (_currentConversation == null) return '';
 
+    // Only use messages from current conversation - NO cross-conversation memory
     return _currentConversation!.messages
+        .where((msg) => !msg.isThinking && !msg.isSystem) // Filter out thinking/system messages
         .take(10) // Last 10 messages for context
         .map((msg) {
       final role = msg.isUser ? 'Usuario' : 'Asistente';
@@ -638,16 +577,49 @@ ${conversationHistory.isNotEmpty ? 'Contexto de conversación previa:\n$conversa
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('mental_health_conversations');
-    await prefs.remove('session_context');
+    // Note: No need to remove 'session_context' as it's now per-conversation
 
     // Create fresh conversation
     await _createTherapeuticConversation();
     notifyListeners();
   }
 
-  /// 🆕 Start new conversation
+  /// 🆕 Start new conversation - ISOLATED MEMORY
   Future<void> startNewConversation() async {
+    // Reset session context for new conversation
+    _sessionContext = {};
+    
+    // Create new conversation
     await _createTherapeuticConversation();
+    
+    // Initialize fresh context for this conversation
+    await _initializeSessionContext();
+    
     notifyListeners();
+  }
+  
+  /// 🔄 Switch to existing conversation - LOAD ITS MEMORY
+  Future<void> switchToConversation(String conversationId) async {
+    try {
+      final conversation = _conversations.firstWhere(
+        (conv) => conv.id == conversationId,
+        orElse: () => throw Exception('Conversation not found'),
+      );
+      
+      _currentConversation = conversation;
+      
+      // Load the specific memory for this conversation
+      _sessionContext = conversation.metadata ?? {};
+      
+      // If no context exists, initialize it
+      if (_sessionContext.isEmpty) {
+        await _initializeSessionContext();
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      _logger.e('Error switching conversation: $e');
+      _setError('Error cambiando conversación');
+    }
   }
 }

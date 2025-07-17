@@ -1,6 +1,8 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest.dart' as tz;
 import 'package:logger/logger.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -9,7 +11,7 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
   final Logger _logger = Logger();
-  
+
   // Notification IDs
   static const int _dailyReviewId = 1;
   static const int _momentReminderMorningId = 2;
@@ -17,100 +19,260 @@ class NotificationService {
   static const int _momentReminderEveningId = 4;
   static const int _weeklyReflectionId = 5;
 
+  // Notification Channels
+  static const String _dailyReviewChannel = 'daily_review';
+  static const String _momentRemindersChannel = 'moment_reminders';
+  static const String _weeklyReflectionChannel = 'weekly_reflection';
+  static const String _generalChannel = 'reflect_general';
+
   Future<void> init() async {
+    // Initialize timezone data
+    tz.initializeTimeZones();
+    tz.setLocalLocation(tz.getLocation('Europe/Madrid')); // Adjust to your timezone
+
+    // Request permissions first
+    await _requestPermissions();
+
+    // Initialize notification settings
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: false, // We handle this manually
+      requestBadgePermission: false,
+      requestSoundPermission: false,
     );
     const macos = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
+      requestAlertPermission: false,
+      requestBadgePermission: false,
+      requestSoundPermission: false,
     );
-    
+
     const settings = InitializationSettings(
-      android: android, 
+      android: android,
       iOS: ios,
       macOS: macos,
     );
-    await _notifications.initialize(settings);
-    _logger.i('✅ Notification service initialized');
+
+    // Initialize with notification response handler
+    await _notifications.initialize(
+      settings,
+      onDidReceiveNotificationResponse: _onNotificationTapped,
+    );
+
+    // Create notification channels for Android
+    await _createNotificationChannels();
+
+    _logger.i('✅ Notification service initialized with system-level notifications');
   }
 
-  Future<void> showNotification(String title, String body, {int id = 0}) async {
+  // Handle notification taps
+  void _onNotificationTapped(NotificationResponse response) {
+    _logger.i('📱 Notification tapped: ${response.id} - ${response.payload}');
+    // Add your navigation logic here based on notification ID
+    switch (response.id) {
+      case _dailyReviewId:
+      // Navigate to daily review screen
+        break;
+      case _momentReminderMorningId:
+      case _momentReminderAfternoonId:
+      case _momentReminderEveningId:
+      // Navigate to moment capture screen
+        break;
+      case _weeklyReflectionId:
+      // Navigate to weekly reflection screen
+        break;
+    }
+  }
+
+  // Request all necessary permissions
+  Future<bool> _requestPermissions() async {
+    bool allGranted = true;
+
+    // Android 13+ requires POST_NOTIFICATIONS permission
+    if (await Permission.notification.isDenied) {
+      final status = await Permission.notification.request();
+      if (status != PermissionStatus.granted) {
+        _logger.w('⚠️ Notification permission denied');
+        allGranted = false;
+      }
+    }
+
+    // iOS permissions
+    final result = await _notifications
+        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (result == false) {
+      _logger.w('⚠️ iOS notification permissions denied');
+      allGranted = false;
+    }
+
+    // macOS permissions
+    await _notifications
+        .resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>()
+        ?.requestPermissions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
+    if (allGranted) {
+      _logger.i('✅ All notification permissions granted');
+    }
+
+    return allGranted;
+  }
+
+  // Create notification channels for Android
+  Future<void> _createNotificationChannels() async {
+    final androidPlugin = _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+    if (androidPlugin == null) return;
+
+    // Daily Review Channel
+    const dailyReviewChannel = AndroidNotificationChannel(
+      _dailyReviewChannel,
+      'Daily Reviews',
+      description: 'Daily mental health check-ins and reflections',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+      showBadge: true,
+    );
+
+    // Moment Reminders Channel
+    const momentRemindersChannel = AndroidNotificationChannel(
+      _momentRemindersChannel,
+      'Moment Reminders',
+      description: 'Reminders to capture special moments throughout the day',
+      importance: Importance.defaultImportance,
+      playSound: true,
+      enableVibration: true,
+      showBadge: true,
+    );
+
+    // Weekly Reflection Channel
+    const weeklyReflectionChannel = AndroidNotificationChannel(
+      _weeklyReflectionChannel,
+      'Weekly Reflections',
+      description: 'Weekly mental health progress reviews',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+      showBadge: true,
+    );
+
+    // General Channel
+    const generalChannel = AndroidNotificationChannel(
+      _generalChannel,
+      'General Notifications',
+      description: 'General app notifications and reminders',
+      importance: Importance.defaultImportance,
+      playSound: true,
+      enableVibration: true,
+      showBadge: true,
+    );
+
+    // Create all channels
+    await androidPlugin.createNotificationChannel(dailyReviewChannel);
+    await androidPlugin.createNotificationChannel(momentRemindersChannel);
+    await androidPlugin.createNotificationChannel(weeklyReflectionChannel);
+    await androidPlugin.createNotificationChannel(generalChannel);
+
+    _logger.i('✅ Notification channels created');
+  }
+
+  // Show immediate notification
+  Future<void> showNotification(String title, String body, {int id = 0, String? payload}) async {
     const android = AndroidNotificationDetails(
-      'reflect_channel',
-      'Reflect Notifications',
-      channelDescription: 'Mental health and wellness reminders',
+      _generalChannel,
+      'General Notifications',
+      channelDescription: 'General app notifications and reminders',
       importance: Importance.high,
       priority: Priority.high,
-      showWhen: false,
+      showWhen: true,
+      icon: '@mipmap/ic_launcher',
+      largeIcon: DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+      styleInformation: BigTextStyleInformation(''),
     );
-    
+
     const ios = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      badgeNumber: 1,
     );
-    
+
     const macos = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
+      badgeNumber: 1,
     );
-    
+
     const details = NotificationDetails(android: android, iOS: ios, macOS: macos);
-    await _notifications.show(id, title, body, details);
+    await _notifications.show(id, title, body, details, payload: payload);
+    _logger.i('📱 Immediate notification shown: $title');
   }
 
-  /// Schedule daily review reminder
+  // Schedule daily review reminder
   Future<void> scheduleDailyReviewReminder({int hour = 20, int minute = 0}) async {
     try {
       await _notifications.zonedSchedule(
         _dailyReviewId,
         '📝 Reflexión Diaria',
-        '¿Cómo te sientes hoy? Tómate un momento para reflexionar',
+        '¿Cómo te sientes hoy? Es momento de reflexionar sobre tu día',
         _nextInstanceOfTime(hour, minute),
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
-            'daily_review',
-            'Daily Review',
-            channelDescription: 'Daily reflection reminders',
+            _dailyReviewChannel,
+            'Daily Reviews',
+            channelDescription: 'Daily mental health check-ins',
             importance: Importance.high,
             priority: Priority.high,
+            showWhen: true,
+            icon: '@mipmap/ic_launcher',
+            largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+            styleInformation: const BigTextStyleInformation(
+              '¿Cómo te sientes hoy? Es momento de reflexionar sobre tu día',
+            ),
           ),
-          iOS: DarwinNotificationDetails(
+          iOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
+            badgeNumber: 1,
           ),
-          macOS: DarwinNotificationDetails(
+          macOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
+            badgeNumber: 1,
           ),
         ),
-        androidAllowWhileIdle: true,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
+        payload: 'daily_review',
       );
       _logger.i('📅 Daily review reminder scheduled for $hour:${minute.toString().padLeft(2, '0')}');
     } catch (e) {
-      _logger.w('⚠️ Could not schedule exact alarm, using inexact: $e');
-      // Fallback to inexact scheduling
+      _logger.w('⚠️ Could not schedule exact daily reminder, using inexact: $e');
       await _scheduleInexactNotification(
         _dailyReviewId,
         '📝 Reflexión Diaria',
-        '¿Cómo te sientes hoy? Tómate un momento para reflexionar',
+        '¿Cómo te sientes hoy? Es momento de reflexionar sobre tu día',
         hour,
         minute,
+        _dailyReviewChannel,
       );
     }
   }
 
-  /// Schedule moment capture reminders
+  // Schedule moment reminders
   Future<void> scheduleMomentReminders() async {
     try {
       // Morning reminder
@@ -119,28 +281,32 @@ class NotificationService {
         '🌅 Momento Matutino',
         '¡Buenos días! Captura un momento especial para empezar el día',
         _nextInstanceOfTime(9, 0),
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
-            'moment_reminders',
+            _momentRemindersChannel,
             'Moment Reminders',
             channelDescription: 'Reminders to capture special moments',
             importance: Importance.defaultImportance,
             priority: Priority.defaultPriority,
+            showWhen: true,
+            icon: '@mipmap/ic_launcher',
+            largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
           ),
-          iOS: DarwinNotificationDetails(
+          iOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
           ),
-          macOS: DarwinNotificationDetails(
+          macOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
           ),
         ),
-        androidAllowWhileIdle: true,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
+        payload: 'moment_morning',
       );
 
       // Afternoon reminder
@@ -149,28 +315,32 @@ class NotificationService {
         '☀️ Momento de Mediodía',
         '¿Qué tal tu día? Comparte un momento que te haya llamado la atención',
         _nextInstanceOfTime(14, 30),
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
-            'moment_reminders',
+            _momentRemindersChannel,
             'Moment Reminders',
             channelDescription: 'Reminders to capture special moments',
             importance: Importance.defaultImportance,
             priority: Priority.defaultPriority,
+            showWhen: true,
+            icon: '@mipmap/ic_launcher',
+            largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
           ),
-          iOS: DarwinNotificationDetails(
+          iOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
           ),
-          macOS: DarwinNotificationDetails(
+          macOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
           ),
         ),
-        androidAllowWhileIdle: true,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
+        payload: 'moment_afternoon',
       );
 
       // Evening reminder
@@ -179,41 +349,44 @@ class NotificationService {
         '🌙 Momento Nocturno',
         'Antes de descansar, captura un momento que te haya marcado hoy',
         _nextInstanceOfTime(18, 0),
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
-            'moment_reminders',
+            _momentRemindersChannel,
             'Moment Reminders',
             channelDescription: 'Reminders to capture special moments',
             importance: Importance.defaultImportance,
             priority: Priority.defaultPriority,
+            showWhen: true,
+            icon: '@mipmap/ic_launcher',
+            largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
           ),
-          iOS: DarwinNotificationDetails(
+          iOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
           ),
-          macOS: DarwinNotificationDetails(
+          macOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
           ),
         ),
-        androidAllowWhileIdle: true,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
+        payload: 'moment_evening',
       );
-      
+
       _logger.i('📅 Moment reminders scheduled for 9:00, 14:30, and 18:00');
     } catch (e) {
       _logger.w('⚠️ Could not schedule exact moment reminders, using inexact: $e');
-      // Fallback to inexact scheduling
-      await _scheduleInexactNotification(_momentReminderMorningId, '🌅 Momento Matutino', '¡Buenos días! Captura un momento especial para empezar el día', 9, 0);
-      await _scheduleInexactNotification(_momentReminderAfternoonId, '☀️ Momento de Mediodía', '¿Qué tal tu día? Comparte un momento que te haya llamado la atención', 14, 30);
-      await _scheduleInexactNotification(_momentReminderEveningId, '🌙 Momento Nocturno', 'Antes de descansar, captura un momento que te haya marcado hoy', 18, 0);
+      await _scheduleInexactNotification(_momentReminderMorningId, '🌅 Momento Matutino', '¡Buenos días! Captura un momento especial para empezar el día', 9, 0, _momentRemindersChannel);
+      await _scheduleInexactNotification(_momentReminderAfternoonId, '☀️ Momento de Mediodía', '¿Qué tal tu día? Comparte un momento que te haya llamado la atención', 14, 30, _momentRemindersChannel);
+      await _scheduleInexactNotification(_momentReminderEveningId, '🌙 Momento Nocturno', 'Antes de descansar, captura un momento que te haya marcado hoy', 18, 0, _momentRemindersChannel);
     }
   }
 
-  /// Schedule weekly reflection reminder
+  // Schedule weekly reflection reminder
   Future<void> scheduleWeeklyReflection() async {
     try {
       await _notifications.zonedSchedule(
@@ -221,38 +394,46 @@ class NotificationService {
         '🔄 Reflexión Semanal',
         'Ha pasado una semana. ¿Cómo te sientes? Revisa tu progreso',
         _nextInstanceOfWeekday(DateTime.sunday, 19, 0),
-        const NotificationDetails(
+        NotificationDetails(
           android: AndroidNotificationDetails(
-            'weekly_reflection',
-            'Weekly Reflection',
-            channelDescription: 'Weekly reflection reminders',
+            _weeklyReflectionChannel,
+            'Weekly Reflections',
+            channelDescription: 'Weekly mental health progress reviews',
             importance: Importance.high,
             priority: Priority.high,
+            showWhen: true,
+            icon: '@mipmap/ic_launcher',
+            largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+            styleInformation: const BigTextStyleInformation(
+              'Ha pasado una semana. ¿Cómo te sientes? Revisa tu progreso',
+            ),
           ),
-          iOS: DarwinNotificationDetails(
+          iOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
+            badgeNumber: 1,
           ),
-          macOS: DarwinNotificationDetails(
+          macOS: const DarwinNotificationDetails(
             presentAlert: true,
             presentBadge: true,
             presentSound: true,
+            badgeNumber: 1,
           ),
         ),
-        androidAllowWhileIdle: true,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+        payload: 'weekly_reflection',
       );
       _logger.i('📅 Weekly reflection reminder scheduled for Sundays at 19:00');
     } catch (e) {
       _logger.w('⚠️ Could not schedule exact weekly reflection, using inexact: $e');
-      // For weekly, we'll schedule a simple notification for next Sunday
-      await _scheduleInexactNotification(_weeklyReflectionId, '🔄 Reflexión Semanal', 'Ha pasado una semana. ¿Cómo te sientes? Revisa tu progreso', 19, 0);
+      await _scheduleInexactNotification(_weeklyReflectionId, '🔄 Reflexión Semanal', 'Ha pasado una semana. ¿Cómo te sientes? Revisa tu progreso', 19, 0, _weeklyReflectionChannel);
     }
   }
 
-  /// Setup all default reminders
+  // Setup all default reminders
   Future<void> setupDefaultReminders() async {
     try {
       await scheduleDailyReviewReminder(hour: 20, minute: 0);
@@ -261,104 +442,61 @@ class NotificationService {
       _logger.i('✅ All default reminders set up');
     } catch (e) {
       _logger.w('⚠️ Some reminders could not be set up: $e');
-      // Continue anyway - app should still work without perfect notifications
     }
   }
 
-  /// Cancel all notifications
+  // Cancel all notifications
   Future<void> cancelAllNotifications() async {
     await _notifications.cancelAll();
     _logger.i('🔕 All notifications cancelled');
   }
 
-  /// Cancel specific notification
+  // Cancel specific notification
   Future<void> cancelNotification(int id) async {
     await _notifications.cancel(id);
     _logger.i('🔕 Notification $id cancelled');
   }
 
-  /// Check if notifications are enabled
+  // Check if notifications are enabled
   Future<bool> areNotificationsEnabled() async {
-    final settings = await _notifications.getNotificationAppLaunchDetails();
-    return settings?.notificationResponse != null;
-  }
-
-  /// Get next instance of a specific time
-  tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-    
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    if (await Permission.notification.isDenied) {
+      return false;
     }
-    
-    return scheduledDate;
+    return true;
   }
 
-  /// Get next instance of a specific weekday and time
-  tz.TZDateTime _nextInstanceOfWeekday(int weekday, int hour, int minute) {
-    final now = tz.TZDateTime.now(tz.local);
-    var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-    
-    while (scheduledDate.weekday != weekday) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
-    }
-    
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 7));
-    }
-    
-    return scheduledDate;
-  }
-
-  /// Show instant daily reminder
-  Future<void> showDailyReminder() async {
-    await showNotification(
-      '📝 Reflexión Diaria',
-      'Tómate un momento para reflexionar sobre tu día y registrar tu estado de ánimo',
-      id: _dailyReviewId,
-    );
-  }
-
-  /// Show instant moment reminder
-  Future<void> showMomentReminder() async {
-    await showNotification(
-      '📸 Captura un Momento',
-      '¿Hay algo especial que quieras recordar de este momento?',
-      id: _momentReminderMorningId,
-    );
-  }
-
-  /// Fallback method for inexact scheduling when exact alarms are not permitted
+  // Fallback method for inexact scheduling
   Future<void> _scheduleInexactNotification(
-    int id,
-    String title,
-    String body,
-    int hour,
-    int minute,
-  ) async {
-    // Schedule a simple notification without exact timing
+      int id,
+      String title,
+      String body,
+      int hour,
+      int minute,
+      String channelId,
+      ) async {
     final scheduledDate = _nextInstanceOfTime(hour, minute);
-    
+
     await _notifications.zonedSchedule(
       id,
       title,
       body,
       scheduledDate,
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
-          'inexact_reminders',
+          channelId,
           'Inexact Reminders',
           channelDescription: 'Inexact timing reminders',
           importance: Importance.defaultImportance,
           priority: Priority.defaultPriority,
+          showWhen: true,
+          icon: '@mipmap/ic_launcher',
         ),
-        iOS: DarwinNotificationDetails(
+        iOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
         ),
-        macOS: DarwinNotificationDetails(
+        macOS: const DarwinNotificationDetails(
           presentAlert: true,
           presentBadge: true,
           presentSound: true,
@@ -367,7 +505,65 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
     );
-    
+
     _logger.i('📅 Inexact notification scheduled for $hour:${minute.toString().padLeft(2, '0')}');
+  }
+
+  // Get next instance of a specific time
+  tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    return scheduledDate;
+  }
+
+  // Get next instance of a specific weekday and time
+  tz.TZDateTime _nextInstanceOfWeekday(int weekday, int hour, int minute) {
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+
+    while (scheduledDate.weekday != weekday) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 7));
+    }
+
+    return scheduledDate;
+  }
+
+  // Test notification (for debugging)
+  Future<void> showTestNotification() async {
+    await showNotification(
+      'Test Notification 🔔',
+      'This is a test system notification. If you see this, notifications are working!',
+      id: 999,
+      payload: 'test',
+    );
+  }
+
+  // Show instant daily reminder
+  Future<void> showDailyReminder() async {
+    await showNotification(
+      '📝 Reflexión Diaria',
+      'Tómate un momento para reflexionar sobre tu día y registrar tu estado de ánimo',
+      id: _dailyReviewId,
+      payload: 'daily_review',
+    );
+  }
+
+  // Show instant moment reminder
+  Future<void> showMomentReminder() async {
+    await showNotification(
+      '📸 Captura un Momento',
+      '¿Hay algo especial que quieras recordar de este momento?',
+      id: _momentReminderMorningId,
+      payload: 'moment_capture',
+    );
   }
 }

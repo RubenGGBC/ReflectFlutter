@@ -221,12 +221,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
             ),
           );
         }
-        
+
         // Check for first time user
         if (auth.isFirstTimeUser) {
           return const WelcomeOnboardingScreen();
         }
-        
+
         // Single profile per device - skip login screen
         if (auth.isLoggedIn) {
           return const MainNavigationScreenV2();
