@@ -14,52 +14,9 @@ import '../../providers/image_moments_provider.dart';
 import '../../providers/challenges_provider.dart';
 import '../../providers/streak_provider.dart';
 
-// Modelos
-import '../../../data/models/optimized_models.dart';
 
-// Pantalla de destino (comentado para evitar dependencias circulares)
-// import 'home_screen_v2.dart';
-// import 'main_navigation_screen_v2.dart';
-
-// ============================================================================
-// 🎨 PALETA DE COLORES UNIFICADA (MISMA QUE OTRAS PANTALLAS V2)
-// ============================================================================
-class UnifiedColors {
-  // Fondo principal - Negro profundo (igual que otras pantallas)
-  static const Color backgroundPrimary = Color(0xFF000000);
-  static const Color backgroundCard = Color(0xFF0F0F0F);
-  static const Color backgroundSecondary = Color(0xFF1A1A1A);
-
-  // Gradientes Azul Oscuro a Morado (idénticos a otras pantallas)
-  static const List<Color> primaryGradient = [
-    Color(0xFF1e3a8a), // Azul oscuro
-    Color(0xFF581c87), // Morado oscuro
-  ];
-
-  static const List<Color> accentGradient = [
-    Color(0xFF3b82f6), // Azul
-    Color(0xFF8b5cf6), // Morado
-  ];
-
-  static const List<Color> lightGradient = [
-    Color(0xFF60a5fa), // Azul claro
-    Color(0xFFa855f7), // Morado claro
-  ];
-
-  // Colores de texto (consistentes)
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB3B3B3);
-  static const Color textTertiary = Color(0xFF666666);
-
-  // Estados emocionales
-  static const Color positive = Color(0xFF10b981);
-  static const Color neutral = Color(0xFFf59e0b);
-  static const Color negative = Color(0xFFef4444);
-
-  // Nuevos colores para mejor visual
-  static const Color cardBorder = Color(0xFF2A2A2A);
-  static const Color selectedBorder = Color(0xFF4F46E5);
-}
+// Sistema de colores
+import 'components/minimal_colors.dart';
 
 class QuickMomentsScreen extends StatefulWidget {
   final bool startWithCamera;
@@ -84,6 +41,10 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
   late AnimationController _progressController;
   late AnimationController _slideController;
   late AnimationController _glowController;
+  late AnimationController _fadeController;
+  
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   int _currentStep = 0;
   final int _totalSteps = 3;
@@ -118,13 +79,36 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
       vsync: this,
     );
     _slideController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
     _glowController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     )..repeat(reverse: true);
+    
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut));
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOutBack));
+
+    // Start animations
+    _fadeController.forward();
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) {
+        _slideController.forward();
+      }
+    });
   }
 
   @override
@@ -133,6 +117,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
     _progressController.dispose();
     _slideController.dispose();
     _glowController.dispose();
+    _fadeController.dispose();
     _descriptionController.dispose();
     _locationController.dispose();
     super.dispose();
@@ -245,11 +230,6 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
 
       // Obtener todos los providers necesarios
       final momentsProvider = context.read<OptimizedMomentsProvider>();
-      final dailyEntriesProvider = context.read<OptimizedDailyEntriesProvider>();
-      final analyticsProvider = context.read<OptimizedAnalyticsProvider>();
-      final goalsProvider = context.read<GoalsProvider>();
-      final challengesProvider = context.read<ChallengesProvider>();
-      final streakProvider = context.read<StreakProvider>();
       final imageProvider = context.read<ImageMomentsProvider>();
       final userId = context.read<OptimizedAuthProvider>().currentUser?.id;
 
@@ -279,22 +259,30 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         }
 
         // ✅ RECARGAR TODOS LOS DATOS DE LA HOME SCREEN
-        await _reloadData(context, userId);
+        if (mounted) {
+          await _reloadData(context, userId);
+          
+          if (mounted) {
+            Navigator.pop(context); // Cerrar loading
+            HapticFeedback.heavyImpact();
+            _showSuccessSnackBar('¡Momento guardado exitosamente!');
 
-        Navigator.pop(context); // Cerrar loading
-        HapticFeedback.heavyImpact();
-        _showSuccessSnackBar('¡Momento guardado exitosamente!');
-
-        // ✅ NAVEGACIÓN CORREGIDA - Regresar a la pantalla principal
-        Navigator.of(context).popUntil((route) => route.isFirst);
+            // ✅ NAVEGACIÓN CORREGIDA - Regresar a la pantalla principal
+            Navigator.of(context).popUntil((route) => route.isFirst);
+          }
+        }
 
       } else {
-        Navigator.pop(context); // Cerrar loading
-        _showErrorSnackBar('Error al guardar el momento');
+        if (mounted) {
+          Navigator.pop(context); // Cerrar loading
+          _showErrorSnackBar('Error al guardar el momento');
+        }
       }
     } catch (e) {
-      Navigator.pop(context); // Cerrar loading
-      _showErrorSnackBar('Error inesperado: $e');
+      if (mounted) {
+        Navigator.pop(context); // Cerrar loading
+        _showErrorSnackBar('Error inesperado: $e');
+      }
     }
   }
 
@@ -326,38 +314,43 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: UnifiedColors.backgroundPrimary,
+      backgroundColor: MinimalColors.backgroundPrimary(context),
       extendBodyBehindAppBar: true,
       appBar: _buildModernAppBar(),
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
-              UnifiedColors.backgroundPrimary,
-              UnifiedColors.backgroundSecondary,
+              MinimalColors.backgroundPrimary(context),
+              MinimalColors.backgroundSecondary(context).withValues(alpha: 0.8),
+              MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.1),
             ],
+            stops: const [0.0, 0.7, 1.0],
           ),
         ),
         child: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              _buildProgressIndicator(),
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  physics: const NeverScrollableScrollPhysics(),
-                  children: [
-                    _buildStep1(),
-                    _buildStep2(),
-                    _buildStep3(),
-                  ],
+          child: FadeTransition(
+            opacity: _fadeAnimation,
+            child: Column(
+              children: [
+                _buildHeader(),
+                _buildProgressIndicator(),
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _buildStep1(),
+                      _buildStep2(),
+                      _buildStep3(),
+                    ],
+                  ),
                 ),
-              ),
-              _buildBottomActions(),
-            ],
+                _buildBottomActions(),
+              ],
+            ),
           ),
         ),
       ),
@@ -377,16 +370,16 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         icon: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: UnifiedColors.backgroundCard.withOpacity(0.8),
+            color: MinimalColors.backgroundCard(context).withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: UnifiedColors.cardBorder,
+              color: MinimalColors.textSecondary(context).withValues(alpha: 0.2),
               width: 1,
             ),
           ),
-          child: const Icon(
+          child: Icon(
             Icons.arrow_back_ios_new,
-            color: UnifiedColors.textPrimary,
+            color: MinimalColors.textPrimary(context),
             size: 18,
           ),
         ),
@@ -395,21 +388,21 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: UnifiedColors.primaryGradient,
+            colors: MinimalColors.primaryGradient(context),
           ),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(
-              color: UnifiedColors.primaryGradient[1].withOpacity(0.3),
+              color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: const Text(
+        child: Text(
           'Nuevo Momento',
           style: TextStyle(
-            color: UnifiedColors.textPrimary,
+            color: MinimalColors.textPrimary(context),
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -430,45 +423,135 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
       'Revisa y confirma'
     ];
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: UnifiedColors.accentGradient,
+    return SlideTransition(
+      position: _slideAnimation,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: MinimalColors.primaryGradient(context),
+                    ),
+                    borderRadius: BorderRadius.circular(16),
                   ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  'Paso ${_currentStep + 1}',
-                  style: const TextStyle(
-                    color: UnifiedColors.textPrimary,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  stepTitles[_currentStep],
-                  style: const TextStyle(
-                    color: UnifiedColors.textPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
+                  child: const Icon(
+                    Icons.camera_alt,
+                    color: Colors.white,
+                    size: 28,
                   ),
                 ),
-              ),
-            ],
-          ),
-        ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Nuevo Momento',
+                        style: TextStyle(
+                          color: MinimalColors.textPrimary(context),
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      Text(
+                        stepTitles[_currentStep],
+                        style: TextStyle(
+                          color: MinimalColors.textSecondary(context),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _buildQuickStepIndicator(),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildQuickStepIndicator() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.timeline,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Paso ${_currentStep + 1}: ${_getStepDescription()}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: MinimalColors.accentGradient(context),
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            '${_currentStep + 1}/$_totalSteps',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getStepDescription() {
+    switch (_currentStep) {
+      case 0: return 'Elige emoji y tipo';
+      case 1: return 'Añade descripción';
+      case 2: return 'Confirma momento';
+      default: return '';
+    }
   }
 
   // ============================================================================
@@ -476,35 +559,144 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
   // ============================================================================
 
   Widget _buildProgressIndicator() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 20),
-      height: 6,
-      child: AnimatedBuilder(
-        animation: _progressController,
-        builder: (context, child) {
-          return Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(3),
-              boxShadow: [
-                BoxShadow(
-                  color: UnifiedColors.accentGradient[1].withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+    return SlideTransition(
+      position: _slideAnimation,
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              MinimalColors.backgroundCard(context),
+              MinimalColors.backgroundSecondary(context).withValues(alpha: 0.8),
+              MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.08),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(
-                value: _progressController.value,
-                backgroundColor: UnifiedColors.backgroundSecondary,
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  UnifiedColors.accentGradient[1],
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: List.generate(_totalSteps, (index) {
+                final isCompleted = index <= _currentStep;
+                final isActive = index == _currentStep;
+
+                return Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 400),
+                    height: isActive ? 8 : 6,
+                    margin: EdgeInsets.only(right: index < _totalSteps - 1 ? 12 : 0),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4),
+                      gradient: isCompleted
+                          ? LinearGradient(
+                              colors: isActive 
+                                  ? MinimalColors.primaryGradient(context)
+                                  : MinimalColors.accentGradient(context),
+                            )
+                          : null,
+                      color: isCompleted
+                          ? null
+                          : MinimalColors.textMuted(context).withValues(alpha: 0.3),
+                      boxShadow: isActive
+                          ? [
+                              BoxShadow(
+                                color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.4),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: MinimalColors.primaryGradient(context).map(
+                    (c) => c.withValues(alpha: 0.1)
+                  ).toList(),
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
+                  width: 1,
                 ),
               ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: MinimalColors.primaryGradient(context),
+                          ),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Icon(
+                          Icons.camera_alt,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Paso ${_currentStep + 1} de $_totalSteps',
+                        style: TextStyle(
+                          color: MinimalColors.textPrimary(context),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: MinimalColors.accentGradient(context),
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${((_currentStep + 1) / _totalSteps * 100).round()}%',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          );
-        },
+          ],
+        ),
       ),
     );
   }
@@ -514,17 +706,20 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
   // ============================================================================
 
   Widget _buildStep1() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          const SizedBox(height: 20),
-          _buildEnhancedPhotoSection(),
-          const SizedBox(height: 30),
-          _buildEnhancedEmojiSelector(),
-          const SizedBox(height: 30),
-          _buildEnhancedTypeSelector(),
-        ],
+    return SlideTransition(
+      position: _slideAnimation,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            const SizedBox(height: 20),
+            _buildEnhancedPhotoSection(),
+            const SizedBox(height: 30),
+            _buildEnhancedEmojiSelector(),
+            const SizedBox(height: 30),
+            _buildEnhancedTypeSelector(),
+          ],
+        ),
       ),
     );
   }
@@ -538,18 +733,18 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            UnifiedColors.backgroundCard,
-            UnifiedColors.backgroundSecondary,
+            MinimalColors.backgroundCard(context),
+            MinimalColors.backgroundSecondary(context),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: UnifiedColors.cardBorder,
+          color: MinimalColors.textSecondary(context).withValues(alpha: 0.2),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -580,7 +775,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
               end: Alignment.bottomCenter,
               colors: [
                 Colors.transparent,
-                Colors.black.withOpacity(0.7),
+                Colors.black.withValues(alpha: 0.7),
               ],
             ),
           ),
@@ -594,7 +789,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
             child: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.7),
+                color: Colors.black.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: const Icon(
@@ -645,33 +840,33 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: UnifiedColors.lightGradient.map((color) =>
-                      color.withOpacity(0.1 + (_glowController.value * 0.1))).toList(),
+                  colors: MinimalColors.lightGradient(context).map((color) =>
+                      color.withValues(alpha: 0.1 + (_glowController.value * 0.1))).toList(),
                 ),
                 borderRadius: BorderRadius.circular(30),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.add_a_photo,
                 size: 48,
-                color: UnifiedColors.textSecondary,
+                color: MinimalColors.textSecondary(context),
               ),
             );
           },
         ),
         const SizedBox(height: 16),
-        const Text(
+        Text(
           'Agrega una foto (opcional)',
           style: TextStyle(
-            color: UnifiedColors.textPrimary,
+            color: MinimalColors.textPrimary(context),
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Captura el momento con una imagen',
           style: TextStyle(
-            color: UnifiedColors.textSecondary,
+            color: MinimalColors.textSecondary(context),
             fontSize: 14,
           ),
         ),
@@ -712,14 +907,14 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         decoration: BoxDecoration(
           gradient: isPrimary
-              ? LinearGradient(colors: UnifiedColors.accentGradient)
+              ? LinearGradient(colors: MinimalColors.accentGradient(context))
               : null,
-          color: isPrimary ? null : UnifiedColors.backgroundSecondary,
+          color: isPrimary ? null : MinimalColors.backgroundSecondary(context),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isPrimary
                 ? Colors.transparent
-                : UnifiedColors.cardBorder,
+                : MinimalColors.textSecondary(context).withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -728,14 +923,14 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           children: [
             Icon(
               icon,
-              color: UnifiedColors.textPrimary,
+              color: MinimalColors.textPrimary(context),
               size: 20,
             ),
             const SizedBox(width: 8),
             Text(
               label,
-              style: const TextStyle(
-                color: UnifiedColors.textPrimary,
+              style: TextStyle(
+                color: MinimalColors.textPrimary(context),
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -756,10 +951,10 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           '¿Cómo te sientes?',
           style: TextStyle(
-            color: UnifiedColors.textPrimary,
+            color: MinimalColors.textPrimary(context),
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
@@ -770,13 +965,13 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                UnifiedColors.backgroundCard,
-                UnifiedColors.backgroundSecondary,
+                MinimalColors.backgroundCard(context),
+                MinimalColors.backgroundSecondary(context),
               ],
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: UnifiedColors.cardBorder,
+              color: MinimalColors.textSecondary(context).withValues(alpha: 0.2),
               width: 1,
             ),
           ),
@@ -803,20 +998,20 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: isSelected
-                        ? LinearGradient(colors: UnifiedColors.lightGradient)
+                        ? LinearGradient(colors: MinimalColors.lightGradient(context))
                         : null,
-                    color: isSelected ? null : UnifiedColors.backgroundSecondary,
+                    color: isSelected ? null : MinimalColors.backgroundSecondary(context),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isSelected
-                          ? UnifiedColors.selectedBorder
-                          : UnifiedColors.cardBorder,
+                          ? MinimalColors.accentGradient(context)[0]
+                          : MinimalColors.textSecondary(context).withValues(alpha: 0.2),
                       width: isSelected ? 2 : 1,
                     ),
                     boxShadow: isSelected
                         ? [
                       BoxShadow(
-                        color: UnifiedColors.selectedBorder.withOpacity(0.3),
+                        color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -844,18 +1039,18 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
 
   Widget _buildEnhancedTypeSelector() {
     final types = [
-      {'label': 'Positivo', 'value': 'positive', 'color': UnifiedColors.positive},
-      {'label': 'Neutral', 'value': 'neutral', 'color': UnifiedColors.neutral},
-      {'label': 'Negativo', 'value': 'negative', 'color': UnifiedColors.negative},
+      {'label': 'Positivo', 'value': 'positive', 'color': const Color(0xFF10b981)},
+      {'label': 'Neutral', 'value': 'neutral', 'color': const Color(0xFFf59e0b)},
+      {'label': 'Negativo', 'value': 'negative', 'color': const Color(0xFFef4444)},
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Tipo de momento',
           style: TextStyle(
-            color: UnifiedColors.textPrimary,
+            color: MinimalColors.textPrimary(context),
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
@@ -879,17 +1074,17 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? color.withOpacity(0.2)
-                        : UnifiedColors.backgroundCard,
+                        ? color.withValues(alpha: 0.2)
+                        : MinimalColors.backgroundCard(context),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isSelected ? color : UnifiedColors.cardBorder,
+                      color: isSelected ? color : MinimalColors.textSecondary(context).withValues(alpha: 0.2),
                       width: isSelected ? 2 : 1,
                     ),
                     boxShadow: isSelected
                         ? [
                       BoxShadow(
-                        color: color.withOpacity(0.3),
+                        color: color.withValues(alpha: 0.3),
                         blurRadius: 8,
                         offset: const Offset(0, 2),
                       ),
@@ -899,7 +1094,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                   child: Text(
                     type['label'] as String,
                     style: TextStyle(
-                      color: isSelected ? color : UnifiedColors.textSecondary,
+                      color: isSelected ? color : MinimalColors.textSecondary(context),
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -919,20 +1114,23 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
   // ============================================================================
 
   Widget _buildStep2() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
-          _buildDescriptionField(),
-          const SizedBox(height: 24),
-          _buildIntensitySlider(),
-          const SizedBox(height: 24),
-          _buildCategorySelector(),
-          const SizedBox(height: 24),
-          _buildLocationField(),
-        ],
+    return SlideTransition(
+      position: _slideAnimation,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
+            _buildDescriptionField(),
+            const SizedBox(height: 24),
+            _buildIntensitySlider(),
+            const SizedBox(height: 24),
+            _buildCategorySelector(),
+            const SizedBox(height: 24),
+            _buildLocationField(),
+          ],
+        ),
       ),
     );
   }
@@ -941,19 +1139,19 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Describe tu momento',
           style: TextStyle(
-            color: UnifiedColors.textPrimary,
+            color: MinimalColors.textPrimary(context),
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Cuéntanos qué pasó y cómo te hizo sentir',
           style: TextStyle(
-            color: UnifiedColors.textSecondary,
+            color: MinimalColors.textSecondary(context),
             fontSize: 14,
           ),
         ),
@@ -962,13 +1160,13 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                UnifiedColors.backgroundCard,
-                UnifiedColors.backgroundSecondary,
+                MinimalColors.backgroundCard(context),
+                MinimalColors.backgroundSecondary(context),
               ],
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: UnifiedColors.cardBorder,
+              color: MinimalColors.textSecondary(context).withValues(alpha: 0.2),
               width: 1,
             ),
           ),
@@ -981,20 +1179,20 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
             },
             maxLines: 4,
             maxLength: 200,
-            style: const TextStyle(
-              color: UnifiedColors.textPrimary,
+            style: TextStyle(
+              color: MinimalColors.textPrimary(context),
               fontSize: 16,
             ),
             decoration: InputDecoration(
               hintText: 'Ej: "Terminé mi proyecto y me siento orgulloso del resultado..."',
-              hintStyle: const TextStyle(
-                color: UnifiedColors.textTertiary,
+              hintStyle: TextStyle(
+                color: MinimalColors.textMuted(context),
                 fontSize: 14,
               ),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(16),
-              counterStyle: const TextStyle(
-                color: UnifiedColors.textTertiary,
+              counterStyle: TextStyle(
+                color: MinimalColors.textMuted(context),
                 fontSize: 12,
               ),
             ),
@@ -1011,10 +1209,10 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'Intensidad',
               style: TextStyle(
-                color: UnifiedColors.textPrimary,
+                color: MinimalColors.textPrimary(context),
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -1022,13 +1220,13 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: UnifiedColors.accentGradient),
+                gradient: LinearGradient(colors: MinimalColors.accentGradient(context)),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 '$_intensity/10',
-                style: const TextStyle(
-                  color: UnifiedColors.textPrimary,
+                style: TextStyle(
+                  color: MinimalColors.textPrimary(context),
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
@@ -1042,22 +1240,22 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                UnifiedColors.backgroundCard,
-                UnifiedColors.backgroundSecondary,
+                MinimalColors.backgroundCard(context),
+                MinimalColors.backgroundSecondary(context),
               ],
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: UnifiedColors.cardBorder,
+              color: MinimalColors.textSecondary(context).withValues(alpha: 0.2),
               width: 1,
             ),
           ),
           child: SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: UnifiedColors.accentGradient[1],
-              inactiveTrackColor: UnifiedColors.backgroundSecondary,
-              thumbColor: UnifiedColors.accentGradient[1],
-              overlayColor: UnifiedColors.accentGradient[1].withOpacity(0.2),
+              activeTrackColor: MinimalColors.accentGradient(context)[1],
+              inactiveTrackColor: MinimalColors.backgroundSecondary(context),
+              thumbColor: MinimalColors.accentGradient(context)[1],
+              overlayColor: MinimalColors.accentGradient(context)[1].withValues(alpha: 0.2),
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
               trackHeight: 6,
             ),
@@ -1087,10 +1285,10 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Categoría',
           style: TextStyle(
-            color: UnifiedColors.textPrimary,
+            color: MinimalColors.textPrimary(context),
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -1112,14 +1310,14 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 decoration: BoxDecoration(
                   gradient: isSelected
-                      ? LinearGradient(colors: UnifiedColors.accentGradient)
+                      ? LinearGradient(colors: MinimalColors.accentGradient(context))
                       : null,
-                  color: isSelected ? null : UnifiedColors.backgroundCard,
+                  color: isSelected ? null : MinimalColors.backgroundCard(context),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
                     color: isSelected
                         ? Colors.transparent
-                        : UnifiedColors.cardBorder,
+                        : MinimalColors.textSecondary(context).withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),
@@ -1127,8 +1325,8 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                   cat,
                   style: TextStyle(
                     color: isSelected
-                        ? UnifiedColors.textPrimary
-                        : UnifiedColors.textSecondary,
+                        ? MinimalColors.textPrimary(context)
+                        : MinimalColors.textSecondary(context),
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -1145,10 +1343,10 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Ubicación (opcional)',
           style: TextStyle(
-            color: UnifiedColors.textPrimary,
+            color: MinimalColors.textPrimary(context),
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),
@@ -1158,13 +1356,13 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                UnifiedColors.backgroundCard,
-                UnifiedColors.backgroundSecondary,
+                MinimalColors.backgroundCard(context),
+                MinimalColors.backgroundSecondary(context),
               ],
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: UnifiedColors.cardBorder,
+              color: MinimalColors.textSecondary(context).withValues(alpha: 0.2),
               width: 1,
             ),
           ),
@@ -1175,22 +1373,22 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                 _location = value;
               });
             },
-            style: const TextStyle(
-              color: UnifiedColors.textPrimary,
+            style: TextStyle(
+              color: MinimalColors.textPrimary(context),
               fontSize: 16,
             ),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: 'Ej: Casa, Oficina, Parque...',
               hintStyle: TextStyle(
-                color: UnifiedColors.textTertiary,
+                color: MinimalColors.textMuted(context),
                 fontSize: 14,
               ),
               prefixIcon: Icon(
                 Icons.location_on_outlined,
-                color: UnifiedColors.textTertiary,
+                color: MinimalColors.textMuted(context),
               ),
               border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16),
+              contentPadding: const EdgeInsets.all(16),
             ),
           ),
         ),
@@ -1203,23 +1401,26 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
   // ============================================================================
 
   Widget _buildStep3() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 20),
-          const Text(
-            'Resumen de tu momento',
-            style: TextStyle(
-              color: UnifiedColors.textPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.w600,
+    return SlideTransition(
+      position: _slideAnimation,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 20),
+            Text(
+              'Resumen de tu momento',
+              style: TextStyle(
+                color: MinimalColors.textPrimary(context),
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          const SizedBox(height: 20),
-          _buildSummaryCard(),
-        ],
+            const SizedBox(height: 20),
+            _buildSummaryCard(),
+          ],
+        ),
       ),
     );
   }
@@ -1233,18 +1434,18 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            UnifiedColors.backgroundCard,
-            UnifiedColors.backgroundSecondary,
+            MinimalColors.backgroundCard(context),
+            MinimalColors.backgroundSecondary(context),
           ],
         ),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: UnifiedColors.cardBorder,
+          color: MinimalColors.textSecondary(context).withValues(alpha: 0.2),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -1273,7 +1474,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: UnifiedColors.lightGradient),
+                  gradient: LinearGradient(colors: MinimalColors.lightGradient(context)),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
@@ -1287,17 +1488,17 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Momento ${_momentType}',
-                      style: const TextStyle(
-                        color: UnifiedColors.textPrimary,
+                      'Momento $_momentType',
+                      style: TextStyle(
+                        color: MinimalColors.textPrimary(context),
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     Text(
                       'Intensidad: $_intensity/10',
-                      style: const TextStyle(
-                        color: UnifiedColors.textSecondary,
+                      style: TextStyle(
+                        color: MinimalColors.textSecondary(context),
                         fontSize: 14,
                       ),
                     ),
@@ -1314,10 +1515,10 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: UnifiedColors.backgroundSecondary,
+              color: MinimalColors.backgroundSecondary(context),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: UnifiedColors.cardBorder,
+                color: MinimalColors.textSecondary(context).withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
@@ -1325,8 +1526,8 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
               _description.isEmpty ? 'Sin descripción' : _description,
               style: TextStyle(
                 color: _description.isEmpty
-                    ? UnifiedColors.textTertiary
-                    : UnifiedColors.textPrimary,
+                    ? MinimalColors.textMuted(context)
+                    : MinimalColors.textPrimary(context),
                 fontSize: 14,
                 fontStyle: _description.isEmpty ? FontStyle.italic : FontStyle.normal,
               ),
@@ -1365,10 +1566,10 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
-        color: UnifiedColors.backgroundSecondary,
+        color: MinimalColors.backgroundSecondary(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: UnifiedColors.cardBorder,
+          color: MinimalColors.textSecondary(context).withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -1378,13 +1579,13 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           Icon(
             icon,
             size: 16,
-            color: UnifiedColors.textTertiary,
+            color: MinimalColors.textMuted(context),
           ),
           const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(
-              color: UnifiedColors.textSecondary,
+            style: TextStyle(
+              color: MinimalColors.textSecondary(context),
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -1407,8 +1608,8 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           end: Alignment.bottomCenter,
           colors: [
             Colors.transparent,
-            UnifiedColors.backgroundPrimary.withOpacity(0.8),
-            UnifiedColors.backgroundPrimary,
+            MinimalColors.backgroundPrimary(context).withValues(alpha: 0.8),
+            MinimalColors.backgroundPrimary(context),
           ],
         ),
       ),
@@ -1420,9 +1621,9 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
               child: OutlinedButton(
                 onPressed: _previousStep,
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: UnifiedColors.textPrimary,
-                  side: const BorderSide(
-                    color: UnifiedColors.cardBorder,
+                  foregroundColor: MinimalColors.textPrimary(context),
+                  side: BorderSide(
+                    color: MinimalColors.textSecondary(context).withValues(alpha: 0.2),
                     width: 1,
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 16),
@@ -1458,13 +1659,13 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
             child: Container(
               decoration: BoxDecoration(
                 gradient: _canContinue()
-                    ? LinearGradient(colors: UnifiedColors.accentGradient)
+                    ? LinearGradient(colors: MinimalColors.accentGradient(context))
                     : null,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: _canContinue()
                     ? [
                   BoxShadow(
-                    color: UnifiedColors.accentGradient[1].withOpacity(0.4),
+                    color: MinimalColors.accentGradient(context)[1].withValues(alpha: 0.4),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -1477,9 +1678,9 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                     : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.transparent,
-                  disabledBackgroundColor: UnifiedColors.backgroundSecondary,
+                  disabledBackgroundColor: MinimalColors.backgroundSecondary(context),
                   foregroundColor: Colors.white,
-                  disabledForegroundColor: UnifiedColors.textTertiary,
+                  disabledForegroundColor: MinimalColors.textMuted(context),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
@@ -1527,7 +1728,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: UnifiedColors.primaryGradient,
+              colors: MinimalColors.primaryGradient(context),
             ),
             borderRadius: BorderRadius.circular(16),
           ),
@@ -1575,7 +1776,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
             ),
           ],
         ),
-        backgroundColor: UnifiedColors.negative,
+        backgroundColor: const Color(0xFFef4444),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -1607,7 +1808,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
             ),
           ],
         ),
-        backgroundColor: UnifiedColors.positive,
+        backgroundColor: const Color(0xFF10b981),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),

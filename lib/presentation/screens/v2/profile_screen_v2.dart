@@ -8,45 +8,16 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 
+import 'package:untitled3/presentation/screens/v2/notification_settings_screen.dart';
+
 // Providers optimizados
 import '../../providers/optimized_providers.dart';
 
 // Componentes modernos
 import '../components/modern_design_system.dart';
+import 'components/minimal_colors.dart';
 
 // Modelos
-import '../../../data/models/optimized_models.dart';
-
-// ============================================================================
-// MISMA PALETA DE COLORES MINIMALISTA DE HOME Y ANALYTICS
-// ============================================================================
-class ProfileColors {
-  // Fondo principal - Negro profundo
-  static const Color backgroundPrimary = Color(0xFF000000);
-  static const Color backgroundCard = Color(0xFF0F0F0F);
-  static const Color backgroundSecondary = Color(0xFF1A1A1A);
-
-  // Gradientes Azul Oscuro a Morado (idénticos a HomeScreen)
-  static const List<Color> primaryGradient = [
-    Color(0xFF1e3a8a), // Azul oscuro
-    Color(0xFF581c87), // Morado oscuro
-  ];
-
-  static const List<Color> accentGradient = [
-    Color(0xFF3b82f6), // Azul
-    Color(0xFF8b5cf6), // Morado
-  ];
-
-  static const List<Color> lightGradient = [
-    Color(0xFF60a5fa), // Azul claro
-    Color(0xFFa855f7), // Morado claro
-  ];
-
-  // Colores de texto
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB3B3B3);
-  static const Color textHint = Color(0xFF666666);
-}
 
 class ProfileScreenV2 extends StatefulWidget {
   const ProfileScreenV2({super.key});
@@ -159,18 +130,18 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
 
     if (user == null) {
       return Scaffold(
-        backgroundColor: ProfileColors.backgroundPrimary,
+        backgroundColor: MinimalColors.backgroundPrimary(context),
         body: Center(
           child: Text(
             'Error: Usuario no encontrado.',
-            style: ModernTypography.bodyLarge.copyWith(color: ProfileColors.textPrimary),
+            style: ModernTypography.bodyLarge.copyWith(color: MinimalColors.textPrimary(context)),
           ),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor: ProfileColors.backgroundPrimary,
+      backgroundColor: MinimalColors.backgroundPrimary(context),
       body: SafeArea(
         child: FadeTransition(
           opacity: _fadeAnimation,
@@ -209,8 +180,8 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
       children: [
         // Título con gradiente
         ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: ProfileColors.accentGradient,
+          shaderCallback: (bounds) => LinearGradient(
+            colors: MinimalColors.accentGradient(context),
           ).createShader(bounds),
           child: const Text(
             'Mi Perfil',
@@ -225,13 +196,13 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
         // Botón de editar/guardar
         Container(
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: ProfileColors.lightGradient,
+            gradient: LinearGradient(
+              colors: MinimalColors.lightGradient(context),
             ),
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: ProfileColors.lightGradient[0].withOpacity(0.3),
+                color: MinimalColors.lightGradient(context)[0].withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -275,15 +246,15 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: ProfileColors.backgroundCard,
+        color: MinimalColors.backgroundCard(context),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: MinimalColors.textSecondary(context).withValues(alpha: 0.1),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: MinimalColors.textSecondary(context).withValues(alpha: 0.3),
             blurRadius: 15,
             offset: const Offset(0, 5),
           ),
@@ -308,8 +279,8 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
           )
               : Text(
             _nameController.text.isNotEmpty ? _nameController.text : 'Sin nombre',
-            style: const TextStyle(
-              color: ProfileColors.textPrimary,
+            style: TextStyle(
+              color: MinimalColors.textPrimary(context),
               fontSize: 24,
               fontWeight: FontWeight.bold,
             ),
@@ -330,8 +301,8 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
             _bioController.text.isNotEmpty ? _bioController.text : 'Sin biografía',
             style: TextStyle(
               color: _bioController.text.isNotEmpty
-                  ? ProfileColors.textSecondary
-                  : ProfileColors.textHint,
+                  ? MinimalColors.textSecondary(context)
+                  : MinimalColors.textMuted(context),
               fontSize: 16,
             ),
             textAlign: TextAlign.center,
@@ -354,14 +325,14 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
             height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const LinearGradient(
-                colors: ProfileColors.primaryGradient,
+              gradient: LinearGradient(
+                colors: MinimalColors.primaryGradient(context),
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: ProfileColors.primaryGradient[1].withOpacity(0.4),
+                  color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.4),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -369,9 +340,9 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
             ),
             padding: const EdgeInsets.all(4),
             child: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: ProfileColors.backgroundCard,
+                color: MinimalColors.backgroundCard(context),
               ),
               child: ClipOval(
                 child: _buildAvatarContent(),
@@ -424,8 +395,8 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
       height: 112,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: ProfileColors.accentGradient,
+        gradient: LinearGradient(
+          colors: MinimalColors.accentGradient(context),
         ),
       ),
       child: Center(
@@ -449,14 +420,14 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           gradient: isSelected
-              ? const LinearGradient(colors: ProfileColors.accentGradient)
+              ? LinearGradient(colors: MinimalColors.accentGradient(context))
               : null,
-          color: isSelected ? null : ProfileColors.backgroundSecondary,
+          color: isSelected ? null : MinimalColors.backgroundSecondary(context),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
             color: isSelected
                 ? Colors.transparent
-                : Colors.white.withOpacity(0.2),
+                : MinimalColors.textSecondary(context).withValues(alpha: 0.2),
           ),
         ),
         child: Row(
@@ -492,8 +463,8 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: ProfileColors.textSecondary,
+          style: TextStyle(
+            color: MinimalColors.textSecondary(context),
             fontSize: 14,
             fontWeight: FontWeight.w500,
           ),
@@ -501,26 +472,26 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: ProfileColors.backgroundSecondary,
+            color: MinimalColors.backgroundSecondary(context),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.white.withOpacity(0.1),
+              color: MinimalColors.textSecondary(context).withValues(alpha: 0.1),
             ),
           ),
           child: TextFormField(
             controller: controller,
             maxLines: maxLines,
-            style: const TextStyle(
-              color: ProfileColors.textPrimary,
+            style: TextStyle(
+              color: MinimalColors.textPrimary(context),
               fontSize: 16,
             ),
             decoration: InputDecoration(
-              prefixIcon: Icon(icon, color: ProfileColors.textHint),
+              prefixIcon: Icon(icon, color: MinimalColors.textMuted(context)),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.all(16),
               hintText: 'Ingresa tu $label...',
-              hintStyle: const TextStyle(
-                color: ProfileColors.textHint,
+              hintStyle: TextStyle(
+                color: MinimalColors.textMuted(context),
                 fontSize: 16,
               ),
             ),
@@ -539,19 +510,19 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: ProfileColors.backgroundCard,
+        color: MinimalColors.backgroundCard(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: MinimalColors.textSecondary(context).withValues(alpha: 0.1),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '📊 Resumen de Actividad',
             style: TextStyle(
-              color: ProfileColors.textPrimary,
+              color: MinimalColors.textPrimary(context),
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
@@ -594,16 +565,16 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
         const SizedBox(height: 8),
         Text(
           value,
-          style: const TextStyle(
-            color: ProfileColors.textPrimary,
+          style: TextStyle(
+            color: MinimalColors.textPrimary(context),
             fontSize: 16,
             fontWeight: FontWeight.bold,
           ),
         ),
         Text(
           label,
-          style: const TextStyle(
-            color: ProfileColors.textSecondary,
+          style: TextStyle(
+            color: MinimalColors.textSecondary(context),
             fontSize: 12,
           ),
         ),
@@ -618,19 +589,19 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: ProfileColors.backgroundCard,
+        color: MinimalColors.backgroundCard(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: MinimalColors.textSecondary(context).withValues(alpha: 0.1),
         ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             '⚙️ Configuración',
             style: TextStyle(
-              color: ProfileColors.textPrimary,
+              color: MinimalColors.textPrimary(context),
               fontSize: 18,
               fontWeight: FontWeight.w600,
             ),
@@ -641,7 +612,12 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
             title: 'Notificaciones',
             subtitle: 'Gestionar recordatorios',
             onTap: () {
-              _showSnackBar('Próximamente disponible');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const NotificationSettingsScreen(),
+                ),
+              );
             },
           ),
           _buildSettingItem(
@@ -676,8 +652,8 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
       leading: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: ProfileColors.lightGradient,
+          gradient: LinearGradient(
+            colors: MinimalColors.lightGradient(context),
           ),
           borderRadius: BorderRadius.circular(8),
         ),
@@ -685,22 +661,22 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
       ),
       title: Text(
         title,
-        style: const TextStyle(
-          color: ProfileColors.textPrimary,
+        style: TextStyle(
+          color: MinimalColors.textPrimary(context),
           fontSize: 16,
           fontWeight: FontWeight.w600,
         ),
       ),
       subtitle: Text(
         subtitle,
-        style: const TextStyle(
-          color: ProfileColors.textSecondary,
+        style: TextStyle(
+          color: MinimalColors.textSecondary(context),
           fontSize: 14,
         ),
       ),
-      trailing: const Icon(
+      trailing: Icon(
         Icons.chevron_right,
-        color: ProfileColors.textHint,
+        color: MinimalColors.textMuted(context),
       ),
       onTap: onTap,
     );
@@ -710,10 +686,10 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: ProfileColors.backgroundCard,
+        color: MinimalColors.backgroundCard(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: MinimalColors.textSecondary(context).withValues(alpha: 0.1),
         ),
       ),
       child: SizedBox(
@@ -726,7 +702,7 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFdc2626).withOpacity(0.3),
+                color: const Color(0xFFdc2626).withValues(alpha: 0.3),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -796,7 +772,7 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
   void _showAvatarOptions() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: ProfileColors.backgroundCard,
+      backgroundColor: MinimalColors.backgroundCard(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -805,10 +781,10 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Seleccionar Avatar',
               style: TextStyle(
-                color: ProfileColors.textPrimary,
+                color: MinimalColors.textPrimary(context),
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
@@ -827,8 +803,8 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: _selectedAvatar == emoji
-                        ? ProfileColors.accentGradient[0]
-                        : ProfileColors.backgroundSecondary,
+                        ? MinimalColors.accentGradient(context)[0]
+                        : MinimalColors.backgroundSecondary(context),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(emoji, style: const TextStyle(fontSize: 24)),
@@ -846,7 +822,7 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
   void _showPhotoOptions() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: ProfileColors.backgroundCard,
+      backgroundColor: MinimalColors.backgroundCard(context),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -855,10 +831,10 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text(
+            Text(
               'Seleccionar Foto',
               style: TextStyle(
-                color: ProfileColors.textPrimary,
+                color: MinimalColors.textPrimary(context),
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
               ),
@@ -866,9 +842,9 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
             const SizedBox(height: 20),
             ListTile(
               leading: const Icon(Icons.camera_alt, color: Colors.white),
-              title: const Text(
+              title: Text(
                 'Tomar foto',
-                style: TextStyle(color: ProfileColors.textPrimary),
+                style: TextStyle(color: MinimalColors.textPrimary(context)),
               ),
               onTap: () async {
                 Navigator.pop(context);
@@ -877,9 +853,9 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
             ),
             ListTile(
               leading: const Icon(Icons.photo_library, color: Colors.white),
-              title: const Text(
+              title: Text(
                 'Elegir de galería',
-                style: TextStyle(color: ProfileColors.textPrimary),
+                style: TextStyle(color: MinimalColors.textPrimary(context)),
               ),
               onTap: () async {
                 Navigator.pop(context);
@@ -908,24 +884,24 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: ProfileColors.backgroundCard,
+        backgroundColor: MinimalColors.backgroundCard(context),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Text(
+        title: Text(
           '👋 Cerrar Sesión',
-          style: TextStyle(color: ProfileColors.textPrimary),
+          style: TextStyle(color: MinimalColors.textPrimary(context)),
         ),
-        content: const Text(
+        content: Text(
           '¿Estás seguro de que quieres cerrar sesión?',
-          style: TextStyle(color: ProfileColors.textSecondary),
+          style: TextStyle(color: MinimalColors.textSecondary(context)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'Cancelar',
-              style: TextStyle(color: ProfileColors.textHint),
+              style: TextStyle(color: MinimalColors.textMuted(context)),
             ),
           ),
           Container(
@@ -957,7 +933,7 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
         content: Text(message),
         backgroundColor: isError
             ? const Color(0xFFdc2626)
-            : ProfileColors.accentGradient[0],
+            : MinimalColors.accentGradient(context)[0],
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),

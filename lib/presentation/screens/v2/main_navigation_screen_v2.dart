@@ -14,18 +14,12 @@ import '../../providers/image_moments_provider.dart';
 import 'home_screen_v2.dart';
 import 'quick_moments_screen.dart'; // ✅ NUEVA PANTALLA RÁPIDA
 import 'daily_review_screen_v2.dart';
-import 'analytics_screen_v2.dart';
 import 'profile_screen_v2.dart';
-import 'analytics_screen_v2_upgraded.dart';
 import 'goals_screen.dart';
-import 'predective_analysis_screen.dart';
-import 'ai_chat_screen.dart';
-import '../v2/mental_health_chat_screen.dart';
-import 'analytics_screen_optimized.dart';
 import 'user_progression_analytics_screen.dart';
+import 'goals_screen_enhanced.dart';
 
 // Componentes modernos
-import '../components/modern_design_system.dart';
 
 class MainNavigationScreenV2 extends StatefulWidget {
   const MainNavigationScreenV2({super.key});
@@ -143,7 +137,7 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
       const _SafeScreenWrapper(child: QuickMomentsScreen()),
       const _SafeScreenWrapper(child: DailyReviewScreenV2()),
       const _SafeScreenWrapper(child: UserProgressionAnalyticsScreen()),
-      const _SafeScreenWrapper(child: GoalsScreen()),
+      const _SafeScreenWrapper(child: GoalsScreenEnhanced()),
       const _SafeScreenWrapper(child: ProfileScreenV2()),
     ];
   }

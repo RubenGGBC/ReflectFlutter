@@ -7,6 +7,8 @@ import 'package:logger/logger.dart';
 // Imports corregidos
 import 'optimized_reflect_app.dart';
 import 'injection_container_clean.dart' as clean_di;
+import 'services/notification_service.dart';
+import 'package:timezone/data/latest.dart' as tz;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -30,8 +32,16 @@ void main() async {
   );
 
   try {
+    // Initialize timezone data
+    tz.initializeTimeZones();
+    
     // Inicializar dependencias
     await clean_di.initCleanDependencies();
+
+    // Initialize notification service
+    final notificationService = NotificationService();
+    await notificationService.init();
+    await notificationService.setupDefaultReminders();
 
     // Verificar que todo esté listo
     if (!clean_di.areCleanServicesRegistered()) {

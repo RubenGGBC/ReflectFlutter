@@ -19,7 +19,7 @@ import '../models/optimized_models.dart';
 
 class OptimizedDatabaseService {
   static const String _databaseName = 'reflect_optimized_v2.db';
-  static const int _databaseVersion = 4;
+  static const int _databaseVersion = 6;
 
   static Database? _database;
   static final OptimizedDatabaseService _instance = OptimizedDatabaseService
@@ -250,6 +250,8 @@ class OptimizedDatabaseService {
           avatar_emoji TEXT DEFAULT '🧘‍♀️',
           profile_picture_path TEXT,
           bio TEXT,
+          age INTEGER,
+          is_first_time_user INTEGER DEFAULT 1,
           preferences TEXT DEFAULT '{}',
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
           last_login INTEGER,
@@ -303,6 +305,7 @@ class OptimizedDatabaseService {
           gratitude_items TEXT,
           positive_tags TEXT DEFAULT '[]',
           negative_tags TEXT DEFAULT '[]',
+          voice_recording_path TEXT,
 
           -- Timestamps
           created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
@@ -369,10 +372,21 @@ class OptimizedDatabaseService {
             status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused', 'cancelled')),
             target_value REAL NOT NULL CHECK (target_value > 0),
             current_value REAL NOT NULL DEFAULT 0.0 CHECK (current_value >= 0),
+            progress_notes TEXT,
 
             -- Timestamps
             created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
             completed_at INTEGER,
+            last_updated INTEGER,
+
+            -- Goal Metadata
+            category TEXT,
+            difficulty TEXT,
+            estimated_days INTEGER,
+
+            -- JSON encoded fields
+            milestones TEXT,
+            metrics TEXT,
 
             FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
           )
@@ -470,6 +484,12 @@ class OptimizedDatabaseService {
       if (oldVersion < 4) {
         await _migrateToV4(db);
       }
+      if (oldVersion < 5) {
+        await _migrateToV5(db);
+      }
+      if (oldVersion < 6) {
+        await _migrateToV6(db);
+      }
     } catch (e) {
       _logger.e('❌ Error en migración: $e');
       // En APK, mejor recrear la BD si hay errores críticos
@@ -548,6 +568,7 @@ class OptimizedDatabaseService {
       'gratitude_items TEXT',
       'positive_tags TEXT DEFAULT \'[]\'',
       'negative_tags TEXT DEFAULT \'[]\'',
+      'voice_recording_path TEXT',
       'updated_at INTEGER NOT NULL DEFAULT (strftime(\'%s\', \'now\'))',
     ];
 
@@ -582,6 +603,35 @@ class OptimizedDatabaseService {
       _logger.i('✅ Migración v4 completada - Agregadas columnas focus_level y life_satisfaction');
     } catch (e) {
       _logger.e('❌ Error en migración v4: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _migrateToV5(Database db) async {
+    try {
+      // Add voice recording path column to daily_entries table
+      await db.execute('''
+        ALTER TABLE daily_entries ADD COLUMN voice_recording_path TEXT;
+      ''');
+      _logger.i('✅ Migración v5 completada - Agregada columna voice_recording_path');
+    } catch (e) {
+      _logger.e('❌ Error en migración v5: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _migrateToV6(Database db) async {
+    try {
+      await db.execute('ALTER TABLE user_goals ADD COLUMN last_updated INTEGER;');
+      await db.execute('ALTER TABLE user_goals ADD COLUMN category TEXT;');
+      await db.execute('ALTER TABLE user_goals ADD COLUMN difficulty TEXT;');
+      await db.execute('ALTER TABLE user_goals ADD COLUMN estimated_days INTEGER;');
+      await db.execute('ALTER TABLE user_goals ADD COLUMN milestones TEXT;');
+      await db.execute('ALTER TABLE user_goals ADD COLUMN metrics TEXT;');
+      await db.execute('ALTER TABLE user_goals ADD COLUMN progress_notes TEXT;');
+      _logger.i('✅ Migración v6 completada - Agregadas columnas a user_goals');
+    } catch (e) {
+      _logger.e('❌ Error en migración v6: $e');
       rethrow;
     }
   }
@@ -3194,6 +3244,32 @@ Físicamente me siento bien - he mantenido mi rutina de ejercicio y eso definiti
       return [];
     }
   }
+  
+  /// Add a goal for a user
+  Future<bool> addGoal(int userId, GoalModel goal) async {
+    try {
+      final db = await database;
+      await db.insert(
+        'user_goals',
+        {
+          'user_id': userId,
+          'title': goal.title,
+          'description': goal.description,
+          'type': goal.type,
+          'target_value': goal.targetValue,
+          'current_value': goal.currentValue,
+          'unit': goal.suggestedUnit,
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        },
+      );
+      _logger.i('✅ Goal added successfully: ${goal.title}');
+      return true;
+    } catch (e) {
+      _logger.e('❌ Error adding goal: $e');
+      return false;
+    }
+  }
 
   /// Actualizar progreso de un goal
   Future<bool> updateGoalProgress(int goalId, double newValue) async {
@@ -5043,6 +5119,54 @@ Físicamente me siento bien - he mantenido mi rutina de ejercicio y eso definiti
         'user_goals': 0,
         'tags': 0,
       };
+    }
+  }
+
+  /// Check if any users exist in the database
+  Future<bool> hasAnyUsers() async {
+    try {
+      final db = await database;
+      final result = await db.rawQuery('SELECT COUNT(*) as count FROM users');
+      final count = Sqflite.firstIntValue(result) ?? 0;
+      _logger.i('📊 Total users in database: $count');
+      return count > 0;
+    } catch (e) {
+      _logger.e('❌ Error checking if users exist: $e');
+      return false;
+    }
+  }
+  
+  /// Get the first user from the database (for single profile per device)
+  Future<OptimizedUserModel?> getFirstUser() async {
+    try {
+      final db = await database;
+      final result = await db.query(
+        'users',
+        limit: 1,
+        orderBy: 'id ASC',
+      );
+      
+      if (result.isNotEmpty) {
+        final user = OptimizedUserModel.fromDatabase(result.first);
+        _logger.i('👤 Retrieved first user: ${user.name}');
+        return user;
+      }
+      
+      return null;
+    } catch (e) {
+      _logger.e('❌ Error getting first user: $e');
+      return null;
+    }
+  }
+
+  /// Clear all users from database (for testing first-time user flow)
+  Future<void> clearAllUsers() async {
+    try {
+      final db = await database;
+      await db.delete('users');
+      _logger.i('🧹 All users cleared from database for testing');
+    } catch (e) {
+      _logger.e('❌ Error clearing users: $e');
     }
   }
 

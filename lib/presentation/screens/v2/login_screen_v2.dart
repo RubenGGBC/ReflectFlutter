@@ -11,6 +11,7 @@ import '../../providers/optimized_providers.dart';
 
 // Navigation Screen
 import 'main_navigation_screen_v2.dart';
+import 'welcome_onboarding_screen.dart';
 
 // ✅ NEW: App Theme System
 import '../../../core/themes/app_theme.dart';
@@ -134,6 +135,8 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
                     _buildDeveloperLoginButton(),
                     const SizedBox(height: ModernSpacing.sm),
                     _buildAdminButton(),
+                    const SizedBox(height: ModernSpacing.md),
+                    _buildWelcomeScreenButton(),
                     const SizedBox(height: ModernSpacing.lg),
                     _buildFooter(),
                   ],
@@ -427,6 +430,47 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
     );
   }
 
+  Widget _buildWelcomeScreenButton() {
+    final authProvider = context.watch<OptimizedAuthProvider>();
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.symmetric(horizontal: ModernSpacing.md),
+      child: ElevatedButton(
+        onPressed: authProvider.isLoading ? null : () {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const WelcomeOnboardingScreen(),
+            ),
+          );
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Theme.of(context).extension<AppColors>()?.accentPrimary ?? Colors.blue,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: ModernSpacing.md),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(ModernSpacing.radiusMedium),
+          ),
+          elevation: 2,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.launch, size: 20),
+            const SizedBox(width: ModernSpacing.sm),
+            Text(
+              '🎯 Probar Welcome Screen',
+              style: ModernTypography.bodyLarge.copyWith(
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildErrorMessage() {
     return ModernCard(
       backgroundColor: (Theme.of(context).extension<AppColors>()?.negativeMain ?? Colors.red).withOpacity(0.15),
@@ -480,12 +524,13 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
           _passwordController.text,
         );
       } else {
-        success = await authProvider.register(
+        final user = await authProvider.register(
           email: _emailController.text.trim(),
           password: _passwordController.text,
           name: _nameController.text.trim(),
           profilePicturePath: _selectedProfilePicture,
         );
+        success = user != null;
       }
 
       if (success && mounted) {
@@ -548,6 +593,13 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
                 'Eliminar todos los datos de prueba',
                 () => _clearAllData(),
                 isDestructive: true,
+              ),
+              const SizedBox(height: ModernSpacing.md),
+              _buildSeedButton(
+                '🎯 Probar Onboarding',
+                'Limpiar usuarios y mostrar welcome screen',
+                () => _testOnboarding(),
+                isDestructive: false,
               ),
             ],
           ),
@@ -694,6 +746,39 @@ class _LoginScreenV2State extends State<LoginScreenV2> with TickerProviderStateM
     } catch (e) {
       Navigator.pop(context); // Cerrar loading
       _showErrorDialog(e.toString());
+    }
+  }
+
+  Future<void> _testOnboarding() async {
+    Navigator.pop(context); // Close dialog
+    
+    try {
+      final databaseService = clean_di.sl<OptimizedDatabaseService>();
+      final authProvider = context.read<OptimizedAuthProvider>();
+      
+      // Clear all users to trigger first-time user flow
+      await databaseService.clearAllUsers();
+      
+      // Force check first time user
+      await authProvider.checkFirstTimeUser();
+      
+      // Navigate directly to welcome screen
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const WelcomeOnboardingScreen(),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

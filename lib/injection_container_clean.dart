@@ -7,8 +7,10 @@ import 'package:logger/logger.dart';
 
 // Services optimizados
 import 'data/services/optimized_database_service.dart';
+import 'data/services/image_picker_service.dart';
 import 'ai/services/predictive_analysis_service.dart';
 import 'services/notification_service.dart';
+import 'services/voice_recording_service.dart';
 
 // Providers optimizados
 import 'presentation/providers/optimized_providers.dart';
@@ -51,12 +53,20 @@ Future<void> initCleanDependencies() async {
           () => OptimizedDatabaseService(),
     );
     
+    sl.registerLazySingleton<ImagePickerService>(
+          () => ImagePickerService(),
+    );
+    
     sl.registerLazySingleton<PredictiveAnalysisService>(
           () => PredictiveAnalysisService.instance,
     );
     
     sl.registerLazySingleton<NotificationService>(
           () => NotificationService(),
+    );
+    
+    sl.registerLazySingleton<VoiceRecordingService>(
+          () => VoiceRecordingService(),
     );
 
 
@@ -182,6 +192,7 @@ bool areCleanServicesRegistered() {
     // Verificar servicios core
     sl<Logger>();
     sl<OptimizedDatabaseService>();
+    sl<ImagePickerService>();
     sl<PredictiveAnalysisService>();
     sl<NotificationService>();
 
@@ -218,6 +229,7 @@ Map<String, dynamic> getCleanContainerInfo() {
     'core_services': [
       'Logger',
       'OptimizedDatabaseService',
+      'ImagePickerService', // ✅ NUEVO
       'PredictiveAnalysisService', // ✅ NUEVO
       'NotificationService', // ✅ NUEVO
     ],

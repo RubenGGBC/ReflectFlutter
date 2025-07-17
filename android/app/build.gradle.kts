@@ -24,7 +24,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.temp_clean_project"
-        minSdk = 21  // Minimum for desugaring
+        minSdk = 23  // Required for record_android plugin
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -58,4 +58,8 @@ dependencies {
     // Keep any other dependencies you need
      implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
      implementation("com.microsoft.onnxruntime:onnxruntime-android:1.15.1")
+     
+    // ✅ NOTIFICATION DEPENDENCIES
+    implementation("androidx.core:core:1.10.1")
+    implementation("androidx.annotation:annotation:1.7.0")
 }

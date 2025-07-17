@@ -62,6 +62,7 @@ class ExtendedDailyEntriesProvider extends OptimizedDailyEntriesProvider {
     int? emotionalStability,
     int? focusLevel,
     int? lifeSatisfaction,
+    String? voiceRecordingPath,
 
     // ✅ NUEVOS PARÁMETROS
     String userName = 'Usuario',
@@ -96,6 +97,7 @@ class ExtendedDailyEntriesProvider extends OptimizedDailyEntriesProvider {
       emotionalStability: emotionalStability,
       focusLevel: focusLevel,
       lifeSatisfaction: lifeSatisfaction,
+      voiceRecordingPath: voiceRecordingPath,
     );
 
     // 2. Si se guardó exitosamente Y se solicita IA, generar recomendaciones

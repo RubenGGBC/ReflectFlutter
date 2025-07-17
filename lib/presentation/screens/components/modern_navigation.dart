@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 // ✅ IMPORTS ARREGLADOS - usar optimized providers directamente
 import '../../providers/optimized_providers.dart';
 import '../v2/home_screen_v2.dart';
-import '../v2/interactive_moments_screen_v2.dart';
+import '../v2/quick_moments_screen.dart';
 import '../v2/calendar_screen_v2.dart';
 import '../v2/profile_screen_v2.dart';
 import 'modern_design_system.dart';
@@ -36,11 +36,11 @@ class _ModernNavigationWrapperState extends State<ModernNavigationWrapper> {
     });
   }
 
-  void _navigateToInteractiveMoments() {
+  void _navigateToQuickMoments() {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const InteractiveMomentsScreenV2(),
+        builder: (_) => const QuickMomentsScreen(),
       ),
     );
   }
@@ -56,7 +56,7 @@ class _ModernNavigationWrapperState extends State<ModernNavigationWrapper> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: _navigateToInteractiveMoments,
+        onPressed: _navigateToQuickMoments,
         backgroundColor: ModernColors.accentBlue,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_reaction_outlined),

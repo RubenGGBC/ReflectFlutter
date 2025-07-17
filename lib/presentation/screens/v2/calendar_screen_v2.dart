@@ -13,42 +13,8 @@ import '../../providers/optimized_providers.dart';
 import 'daily_detail_screen_v2.dart';
 import 'daily_review_screen_v2.dart';
 
-// ============================================================================
-// PALETA DE COLORES CONSISTENTE
-// ============================================================================
-class CalendarColors {
-  // Fondo principal - Negro profundo
-  static const Color backgroundPrimary = Color(0xFF000000);
-  static const Color backgroundCard = Color(0xFF0F0F0F);
-  static const Color backgroundSecondary = Color(0xFF1A1A1A);
-
-  // Gradientes Azul Oscuro a Morado
-  static const List<Color> primaryGradient = [
-    Color(0xFF1e3a8a), // Azul oscuro
-    Color(0xFF581c87), // Morado oscuro
-  ];
-
-  static const List<Color> accentGradient = [
-    Color(0xFF3b82f6), // Azul
-    Color(0xFF8b5cf6), // Morado
-  ];
-
-  static const List<Color> lightGradient = [
-    Color(0xFF60a5fa), // Azul claro
-    Color(0xFFa855f7), // Morado claro
-  ];
-
-  // Colores específicos del calendario
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFFB3FFFFFF);
-  static const Color textHint = Color(0xFF66FFFFFF);
-
-  // Estados de mood
-  static const Color moodExcellent = Color(0xFF10b981);
-  static const Color moodGood = Color(0xFF3b82f6);
-  static const Color moodNeutral = Color(0xFFf59e0b);
-  static const Color moodBad = Color(0xFFef4444);
-}
+// Sistema de colores
+import 'components/minimal_colors.dart';
 
 class CalendarScreenV2 extends StatefulWidget {
   const CalendarScreenV2({super.key});
@@ -136,7 +102,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: CalendarColors.backgroundPrimary,
+      backgroundColor: MinimalColors.backgroundPrimary(context),
       body: SafeArea(
         child: Column(
           children: [
@@ -165,7 +131,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: CalendarColors.primaryGradient,
+            colors: MinimalColors.primaryGradient(context),
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
@@ -223,7 +189,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -262,7 +228,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
+          color: Colors.white.withValues(alpha: 0.2),
           borderRadius: BorderRadius.circular(16),
         ),
         child: Row(
@@ -335,12 +301,12 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: CalendarColors.backgroundCard,
+          color: MinimalColors.backgroundCard(context),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withValues(alpha: 0.3),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -378,9 +344,9 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(colors: CalendarColors.accentGradient.map((c) => c.withOpacity(0.1)).toList()),
+        gradient: LinearGradient(colors: MinimalColors.accentGradient(context).map((c) => c.withValues(alpha: 0.1)).toList()),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: CalendarColors.accentGradient[0].withOpacity(0.3)),
+        border: Border.all(color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -414,9 +380,9 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: CalendarColors.backgroundCard,
+        color: MinimalColors.backgroundCard(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
@@ -428,7 +394,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: CalendarColors.lightGradient.map((c) => c.withOpacity(0.2)).toList()),
+                gradient: LinearGradient(colors: MinimalColors.lightGradient(context).map((c) => c.withValues(alpha: 0.2)).toList()),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(
@@ -484,15 +450,15 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
     Color textColor = Colors.white70;
 
     if (isSelected) {
-      backgroundColor = CalendarColors.accentGradient[0];
-      borderColor = CalendarColors.accentGradient[1];
+      backgroundColor = MinimalColors.accentGradient(context)[0];
+      borderColor = MinimalColors.accentGradient(context)[1];
       textColor = Colors.white;
     } else if (isToday) {
-      borderColor = CalendarColors.lightGradient[0];
-      textColor = CalendarColors.lightGradient[0];
+      borderColor = MinimalColors.lightGradient(context)[0];
+      textColor = MinimalColors.lightGradient(context)[0];
     } else if (entry != null) {
       final moodScore = entry.moodScore ?? 5;
-      backgroundColor = _getMoodColor(moodScore).withOpacity(0.3);
+      backgroundColor = _getMoodColor(moodScore).withValues(alpha: 0.3);
       borderColor = _getMoodColor(moodScore);
       textColor = Colors.white;
     }
@@ -516,7 +482,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
           border: Border.all(color: borderColor, width: isSelected ? 2 : 1),
           boxShadow: isSelected ? [
             BoxShadow(
-              color: CalendarColors.accentGradient[0].withOpacity(0.3),
+              color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.3),
               blurRadius: 8,
               offset: const Offset(0, 4),
             ),
@@ -566,9 +532,9 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
         width: double.infinity,
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: CalendarColors.backgroundCard,
+          color: MinimalColors.backgroundCard(context),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -577,7 +543,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
               children: [
                 Icon(
                   Icons.event_note,
-                  color: CalendarColors.accentGradient[0],
+                  color: MinimalColors.accentGradient(context)[0],
                   size: 24,
                 ),
                 const SizedBox(width: 12),
@@ -622,9 +588,9 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade800.withOpacity(0.3),
+                  color: Colors.grey.shade800.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withOpacity(0.1)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                 ),
                 child: Column(
                   children: [
@@ -665,12 +631,12 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            _getMoodColor(moodScore).withOpacity(0.1),
-            _getMoodColor(moodScore).withOpacity(0.05),
+            _getMoodColor(moodScore).withValues(alpha: 0.1),
+            _getMoodColor(moodScore).withValues(alpha: 0.05),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _getMoodColor(moodScore).withOpacity(0.3)),
+        border: Border.all(color: _getMoodColor(moodScore).withValues(alpha: 0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -734,7 +700,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: CalendarColors.accentGradient),
+          gradient: LinearGradient(colors: MinimalColors.accentGradient(context)),
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
@@ -795,9 +761,9 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: CalendarColors.backgroundCard,
+        color: MinimalColors.backgroundCard(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
@@ -864,14 +830,14 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: CalendarColors.backgroundCard,
+              color: MinimalColors.backgroundCard(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               gradient: monthEntries.isNotEmpty
                   ? LinearGradient(
                 colors: [
-                  _getMoodColor(avgMood.round()).withOpacity(0.1),
-                  _getMoodColor(avgMood.round()).withOpacity(0.05),
+                  _getMoodColor(avgMood.round()).withValues(alpha: 0.1),
+                  _getMoodColor(avgMood.round()).withValues(alpha: 0.05),
                 ],
               )
                   : null,
@@ -941,11 +907,11 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
       elevation: 0,
       label: Container(
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: CalendarColors.accentGradient),
+          gradient: LinearGradient(colors: MinimalColors.accentGradient(context)),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: CalendarColors.accentGradient[0].withOpacity(0.3),
+              color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.3),
               blurRadius: 12,
               offset: const Offset(0, 6),
             ),
@@ -1006,11 +972,11 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: ColorScheme.dark(
-              primary: CalendarColors.accentGradient[0],
-              surface: CalendarColors.backgroundCard,
+              primary: MinimalColors.accentGradient(context)[0],
+              surface: MinimalColors.backgroundCard(context),
               onSurface: Colors.white,
             ),
-            dialogBackgroundColor: CalendarColors.backgroundSecondary,
+            dialogBackgroundColor: MinimalColors.backgroundSecondary(context),
           ),
           child: child!,
         );
@@ -1097,10 +1063,10 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
   }
 
   Color _getMoodColor(int score) {
-    if (score <= 3) return CalendarColors.moodBad;
-    if (score <= 5) return CalendarColors.moodNeutral;
-    if (score <= 7) return CalendarColors.moodGood;
-    return CalendarColors.moodExcellent;
+    if (score <= 3) return const Color(0xFFef4444);
+    if (score <= 5) return const Color(0xFFf59e0b);
+    if (score <= 7) return const Color(0xFF3b82f6);
+    return const Color(0xFF10b981);
   }
 
   String _getMoodLabel(int score) {

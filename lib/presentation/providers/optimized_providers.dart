@@ -24,6 +24,7 @@ class OptimizedAuthProvider with ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   bool _isInitialized = false;
+  bool _isFirstTimeUser = false;
 
   OptimizedAuthProvider(this._databaseService);
 
@@ -33,15 +34,18 @@ class OptimizedAuthProvider with ChangeNotifier {
   String? get errorMessage => _errorMessage;
   bool get isLoggedIn => _currentUser != null;
   bool get isInitialized => _isInitialized;
+  bool get isFirstTimeUser => _isFirstTimeUser;
 
-  // ✅ MÉTODO ACTUALIZADO PARA REGISTRO CON FOTO
-  Future<bool> register({
+  // ✅ MÉTODO ACTUALIZADO PARA REGISTRO CON FOTO Y ONBOARDING
+  Future<OptimizedUserModel?> register({
     required String email,
     required String password,
     required String name,
     String avatarEmoji = '🧘‍♀️',
-    String? profilePicturePath, // ✅ NUEVO PARÁMETRO
+    String? profilePicturePath,
+    int? age,
     String bio = '',
+    bool isFirstTimeUser = false,
   }) async {
     _logger.i('📝 Registrando usuario: $email');
     _setLoading(true);
@@ -53,23 +57,24 @@ class OptimizedAuthProvider with ChangeNotifier {
         password: password,
         name: name,
         avatarEmoji: avatarEmoji,
-        profilePicturePath: profilePicturePath, // ✅ NUEVO
+        profilePicturePath: profilePicturePath,
         bio: bio,
       );
 
       if (user != null) {
         _currentUser = user;
+        _isFirstTimeUser = false; // Mark as not first time after registration
         _logger.i('✅ Usuario registrado exitosamente: ${user.name}');
         notifyListeners();
-        return true;
+        return user;
       } else {
         _setError('No se pudo crear el usuario');
-        return false;
+        return null;
       }
     } catch (e) {
       _logger.e('❌ Error en registro: $e');
       _setError('Error durante el registro');
-      return false;
+      return null;
     } finally {
       _setLoading(false);
     }
@@ -247,6 +252,93 @@ class OptimizedAuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  /// Check if this is a first time user by checking if any users exist in the database
+  Future<void> checkFirstTimeUser() async {
+    _setLoading(true);
+    try {
+      final hasUsers = await _databaseService.hasAnyUsers();
+      _isFirstTimeUser = !hasUsers;
+      _logger.i('🔍 First time user check: ${_isFirstTimeUser ? "Yes" : "No"}');
+      
+      // If there are users but no one is logged in, automatically log in the first user
+      if (hasUsers && _currentUser == null) {
+        await _autoLoginExistingUser();
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      _logger.e('❌ Error checking first time user: $e');
+      _isFirstTimeUser = false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+  
+  /// Automatically log in the existing user (single profile per device)
+  Future<void> _autoLoginExistingUser() async {
+    try {
+      final user = await _databaseService.getFirstUser();
+      if (user != null) {
+        _currentUser = user;
+        _logger.i('✅ Auto-logged in existing user: ${user.name}');
+      }
+    } catch (e) {
+      _logger.e('❌ Error auto-logging in existing user: $e');
+    }
+  }
+  
+  /// Create default profile after onboarding (single profile per device)
+  Future<bool> createDefaultProfile({
+    required String name,
+    String avatarEmoji = '🧘‍♀️',
+    String? profilePicturePath,
+    int? age,
+    String bio = '',
+    List<GoalModel>? goals,
+  }) async {
+    _logger.i('👤 Creating default profile for device');
+    _setLoading(true);
+    _clearError();
+
+    try {
+      // Create user with default email based on device
+      final deviceEmail = 'user@device.local';
+      final user = await _databaseService.createUser(
+        email: deviceEmail,
+        password: 'device_user', // Not used for authentication in single profile mode
+        name: name,
+        avatarEmoji: avatarEmoji,
+        profilePicturePath: profilePicturePath,
+        bio: bio,
+      );
+
+      if (user != null) {
+        _currentUser = user;
+        _isFirstTimeUser = false;
+        
+        // Add goals if provided
+        if (goals != null && goals.isNotEmpty) {
+          for (final goal in goals) {
+            await _databaseService.addGoal(user.id, goal);
+          }
+        }
+        
+        _logger.i('✅ Default profile created successfully: ${user.name}');
+        notifyListeners();
+        return true;
+      } else {
+        _setError('No se pudo crear el perfil');
+        return false;
+      }
+    } catch (e) {
+      _logger.e('❌ Error creating default profile: $e');
+      _setError('Error creando el perfil');
+      return false;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
   // Métodos privados
   void _setLoading(bool loading) {
     _isLoading = loading;
@@ -360,6 +452,7 @@ class OptimizedDailyEntriesProvider with ChangeNotifier {
     int? emotionalStability,
     int? focusLevel,
     int? lifeSatisfaction,
+    String? voiceRecordingPath,
   }) async {
     _logger.i('💾 Guardando entrada diaria');
     _setLoading(true);
@@ -393,6 +486,7 @@ class OptimizedDailyEntriesProvider with ChangeNotifier {
         emotionalStability: emotionalStability,
         focusLevel: focusLevel,
         lifeSatisfaction: lifeSatisfaction,
+        voiceRecordingPath: voiceRecordingPath,
       );
 
       final entryId = await _databaseService.saveDailyEntry(entry);

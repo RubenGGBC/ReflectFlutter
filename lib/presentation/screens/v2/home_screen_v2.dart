@@ -8,13 +8,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
-import 'dart:ui';
 
 // Providers optimizados
 import '../../providers/optimized_providers.dart';
 import '../../providers/image_moments_provider.dart';
 import '../../providers/challenges_provider.dart';
 import '../../providers/streak_provider.dart';
+import '../../providers/theme_provider.dart';
 
 // Modelos
 import '../../../data/models/optimized_models.dart';
@@ -22,38 +22,8 @@ import '../../../data/models/optimized_models.dart';
 // Enhancement widgets
 import '../../widgets/home_enhancement_widgets.dart';
 
-
-// ============================================================================
-// PALETA DE COLORES MINIMALISTA OSCURA
-// ============================================================================
-class MinimalColors {
-  // Fondo principal - Negro profundo
-  static const Color backgroundPrimary = Color(0xFF000000);
-  static const Color backgroundCard = Color(0xFF0F0F0F);
-  static const Color backgroundSecondary = Color(0xFF1A1A1A);
-
-  // Gradientes Azul Oscuro a Morado
-  static const List<Color> primaryGradient = [
-    Color(0xFF1e3a8a), // Azul oscuro
-    Color(0xFF581c87), // Morado oscuro
-  ];
-
-  static const List<Color> accentGradient = [
-    Color(0xFF3b82f6), // Azul
-    Color(0xFF8b5cf6), // Morado
-  ];
-
-  static const List<Color> lightGradient = [
-    Color(0xFF60a5fa), // Azul claro
-    Color(0xFFa855f7), // Morado claro
-  ];
-
-  // Colores de texto
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF9CA3AF);
-  static const Color textTertiary = Color(0xFF6B7280);
-  static const Color textMuted = Color(0xFF4B5563);
-}
+// Componentes
+import 'components/minimal_colors.dart';
 
 class HomeScreenV2 extends StatefulWidget {
   const HomeScreenV2({super.key});
@@ -148,7 +118,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
 
   Future<void> _loadInitialData() async {
     if (!mounted) return;
-    
+
     try {
       final authProvider = Provider.of<OptimizedAuthProvider>(context, listen: false);
       final user = authProvider.currentUser;
@@ -157,24 +127,24 @@ class _HomeScreenV2State extends State<HomeScreenV2>
         // Load data sequentially to avoid overwhelming the database
         await Provider.of<OptimizedMomentsProvider>(context, listen: false).loadTodayMoments(user.id);
         if (!mounted) return;
-        
+
         await Provider.of<OptimizedDailyEntriesProvider>(context, listen: false).loadEntries(user.id);
         if (!mounted) return;
-        
+
         await Provider.of<GoalsProvider>(context, listen: false).loadUserGoals(user.id);
         if (!mounted) return;
-        
+
         await Provider.of<OptimizedAnalyticsProvider>(context, listen: false).loadCompleteAnalytics(user.id);
         if (!mounted) return;
-        
+
         await Provider.of<ChallengesProvider>(context, listen: false).loadChallenges(user.id);
         if (!mounted) return;
-        
+
         await Provider.of<StreakProvider>(context, listen: false).loadStreakData(user.id);
       }
     } catch (e) {
       // Log error but don't break the UI
-      print('Error loading initial data: $e');
+      // Error loading initial data: $e
     }
   }
 
@@ -190,21 +160,26 @@ class _HomeScreenV2State extends State<HomeScreenV2>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MinimalColors.backgroundPrimary,
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              MinimalColors.backgroundPrimary,
-              MinimalColors.backgroundSecondary.withOpacity(0.8),
-              MinimalColors.primaryGradient[0].withOpacity(0.1),
-            ],
-            stops: const [0.0, 0.7, 1.0],
-          ),
-        ),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return AnimatedTheme(
+          duration: const Duration(milliseconds: 300),
+          data: themeProvider.currentThemeData,
+          child: Scaffold(
+            backgroundColor: MinimalColors.backgroundPrimary(context),
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    MinimalColors.backgroundPrimary(context),
+                    MinimalColors.backgroundSecondary(context).withValues(alpha: 0.8),
+                    MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.1),
+                  ],
+                  stops: const [0.0, 0.7, 1.0],
+                ),
+              ),
         child: SafeArea(
           child: Consumer<StreakProvider>(
             builder: (context, streakProvider, _) {
@@ -227,7 +202,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
             return Stack(
               children: [
                 // Animated background particles
-                ...List.generate(3, (index) => 
+                ...List.generate(3, (index) =>
                   AnimatedBuilder(
                     animation: _floatingAnimation,
                     builder: (context, child) {
@@ -241,8 +216,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                             shape: BoxShape.circle,
                             gradient: LinearGradient(
                               colors: [
-                                MinimalColors.accentGradient[index % 2].withOpacity(0.1),
-                                MinimalColors.lightGradient[index % 2].withOpacity(0.05),
+                                MinimalColors.accentGradient(context)[index % 2].withValues(alpha: 0.1),
+                                MinimalColors.lightGradient(context)[index % 2].withValues(alpha: 0.05),
                               ],
                             ),
                           ),
@@ -260,12 +235,18 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                       children: [
                     // 1. ✅ HEADER CON FOTO GRANDE Y BIENVENIDA - CENTRADO
                     _buildCenteredHeader(user),
+                    const SizedBox(height: 16),
+                    // 🆕 THEME TOGGLE BUTTON
+                    _buildThemeToggleButton(),
                     const SizedBox(height: 24),
                     // 🆕 WELLBEING SCORE DE HOY
                     _buildTodaysWellbeingScore(analyticsProvider),
                     const SizedBox(height: 24),
                     // 2. FACE CARD CON MOMENTOS DEL DÍA
                     _buildMomentsFaceCard(momentsProvider),
+                    const SizedBox(height: 24),
+                    // 🆕 PHOTO GALLERY WIDGET
+                    _buildWeeklyPhotosWidget(momentsProvider, imageProvider),
                     const SizedBox(height: 24),
                     // 3. ✅ GRÁFICO SEMANAL MEJORADO CON DÍAS REALES
                     _buildRealWeeklyChart(analyticsProvider),
@@ -297,6 +278,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           ),
         ),
       ),
+          ),
+        );
+      },
     );
   }
 
@@ -319,14 +303,14 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                 height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: MinimalColors.primaryGradient,
+                  gradient: LinearGradient(
+                    colors: MinimalColors.primaryGradient(context),
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: MinimalColors.primaryGradient[1].withOpacity(0.4),
+                      color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.4),
                       blurRadius: 20,
                       offset: const Offset(0, 8),
                     ),
@@ -355,12 +339,12 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                 return Transform.translate(
                   offset: Offset(0, math.sin(_shimmerAnimation.value * math.pi * 2) * 1), // Movimiento sutil
                   child: ShaderMask(
-                    shaderCallback: (bounds) => const LinearGradient(
-                      colors: MinimalColors.accentGradient,
+                    shaderCallback: (bounds) => LinearGradient(
+                      colors: MinimalColors.accentGradientStatic,
                     ).createShader(bounds),
                     child: Text(
                       _getGreeting(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w500,
                         color: Colors.white,
@@ -377,10 +361,10 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               const SizedBox(height: 8),
               Text(
                 user.name!,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: MinimalColors.textPrimary,
+                  color: MinimalColors.textPrimary(context),
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -397,7 +381,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       decoration: const BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
-          colors: MinimalColors.primaryGradient,
+          colors: MinimalColors.primaryGradientStatic,
         ),
       ),
       child: const Icon(
@@ -434,21 +418,21 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: MinimalColors.backgroundCard,
+              color: MinimalColors.backgroundCard(context),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: MinimalColors.primaryGradient[0].withOpacity(0.3),
+                color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                 width: 1,
               ),
               // 🎨 SOMBRA DEGRADADA AÑADIDA
               boxShadow: [
                 BoxShadow(
-                  color: MinimalColors.primaryGradient[0].withOpacity(0.3),
+                  color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(-5, 5),
                 ),
                 BoxShadow(
-                  color: MinimalColors.primaryGradient[1].withOpacity(0.3),
+                  color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(5, 5),
                 ),
@@ -462,8 +446,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: MinimalColors.accentGradient,
+                        gradient: LinearGradient(
+                          colors: MinimalColors.accentGradientStatic,
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -474,25 +458,25 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'Tu Semana',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: MinimalColors.textPrimary,
+                        color: MinimalColors.textPrimary(context),
                       ),
                     ),
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: MinimalColors.accentGradient,
+                        gradient: LinearGradient(
+                          colors: MinimalColors.accentGradientStatic,
                         ),
                         borderRadius: BorderRadius.circular(12),
                         boxShadow: [
                           BoxShadow(
-                            color: MinimalColors.accentGradient[1].withOpacity(0.4),
+                            color: MinimalColors.accentGradient(context)[1].withValues(alpha: 0.4),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -500,7 +484,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                       ),
                       child: Text(
                         '${weeklyProgress['trend']}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: Colors.white,
@@ -538,8 +522,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                             fontSize: 12,
                             fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                             color: isToday
-                                ? MinimalColors.accentGradient[0]
-                                : MinimalColors.textSecondary,
+                                ? MinimalColors.accentGradient(context)[0]
+                                : MinimalColors.textSecondary(context),
                           ),
                         ),
                         if (isToday) ...[
@@ -550,7 +534,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                             decoration: const BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
-                                colors: MinimalColors.accentGradient,
+                                colors: MinimalColors.accentGradientStatic,
                               ),
                             ),
                           ),
@@ -572,7 +556,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     final now = DateTime.now();
     final weeklyData = <Map<String, dynamic>>[];
 
-    // Obtener datos reales de daily entries  
+    // Obtener datos reales de daily entries
     final dailyEntriesProvider = Provider.of<OptimizedDailyEntriesProvider>(context, listen: false);
     final dailyEntries = dailyEntriesProvider.entries;
 
@@ -603,7 +587,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       final dayData = dataByDate[dateStr];
       final hasEntry = dayData?['hasEntry'] ?? false;
       final mood = dayData?['mood'] ?? 0.0;
-      
+
       // Calcular score basado en mood (1-5 -> 0.0-1.0)
       final score = hasEntry ? ((mood - 1) / 4).clamp(0.0, 1.0) : 0.0;
 
@@ -648,14 +632,14 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                   ? LinearGradient(
                 colors: isToday
                     ? [const Color(0xFF10B981), const Color(0xFF34D399)] // Verde para hoy
-                    : MinimalColors.accentGradient,
+                    : MinimalColors.accentGradient(context),
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
               )
                   : LinearGradient(
                 colors: [
-                  MinimalColors.textMuted.withOpacity(0.3),
-                  MinimalColors.textMuted.withOpacity(0.1),
+                  MinimalColors.textMuted(context).withValues(alpha: 0.3),
+                  MinimalColors.textMuted(context).withValues(alpha: 0.1),
                 ],
                 begin: Alignment.bottomCenter,
                 end: Alignment.topCenter,
@@ -665,8 +649,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                   ? [
                 BoxShadow(
                   color: isToday
-                      ? const Color(0xFF10B981).withOpacity(0.4)
-                      : MinimalColors.accentGradient[1].withOpacity(0.4),
+                      ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                      : MinimalColors.accentGradient(context)[1].withValues(alpha: 0.4),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -677,7 +661,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                 ? Center(
               child: Text(
                 score.toStringAsFixed(1),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 8,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -741,21 +725,21 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: MinimalColors.backgroundCard,
+              color: MinimalColors.backgroundCard(context),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: MinimalColors.primaryGradient[0].withOpacity(0.3),
+                color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                 width: 1,
               ),
               // 🎨 SOMBRA DEGRADADA AÑADIDA
               boxShadow: [
                 BoxShadow(
-                  color: MinimalColors.primaryGradient[0].withOpacity(0.3),
+                  color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(-5, 5),
                 ),
                 BoxShadow(
-                  color: MinimalColors.primaryGradient[1].withOpacity(0.3),
+                  color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(5, 5),
                 ),
@@ -769,8 +753,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: MinimalColors.accentGradient,
+                        gradient: LinearGradient(
+                          colors: MinimalColors.accentGradientStatic,
                         ),
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -781,12 +765,12 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Text(
+                    Text(
                       'Tus Logros',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: MinimalColors.textPrimary,
+                        color: MinimalColors.textPrimary(context),
                       ),
                     ),
                   ],
@@ -811,13 +795,13 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isCompleted
-            ? const Color(0xFF10B981).withOpacity(0.1) // Verde suave para completados
-            : MinimalColors.backgroundSecondary,
+            ? const Color(0xFF10B981).withValues(alpha: 0.1) // Verde suave para completados
+            : MinimalColors.backgroundSecondary(context),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isCompleted
-              ? const Color(0xFF10B981).withOpacity(0.3) // Borde verde para completados
-              : MinimalColors.primaryGradient[0].withOpacity(0.2),
+              ? const Color(0xFF10B981).withValues(alpha: 0.3) // Borde verde para completados
+              : MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -831,8 +815,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
                   gradient: isCompleted
-                      ? const LinearGradient(colors: [Color(0xFF10B981), Color(0xFF34D399)]) // Verde
-                      : const LinearGradient(colors: MinimalColors.accentGradient), // Azul-morado
+                      ? LinearGradient(colors: [Color(0xFF10B981), Color(0xFF34D399)]) // Verde
+                      : LinearGradient(colors: MinimalColors.accentGradient(context)), // Azul-morado
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
@@ -848,18 +832,18 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                   children: [
                     Text(
                       goal.title ?? 'Objetivo',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: MinimalColors.textPrimary,
+                        color: MinimalColors.textPrimary(context),
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       goal.description ?? '',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 14,
-                        color: MinimalColors.textSecondary,
+                        color: MinimalColors.textSecondary(context),
                       ),
                     ),
                   ],
@@ -871,7 +855,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                 decoration: BoxDecoration(
                   color: isCompleted
                       ? const Color(0xFF10B981) // Verde sólido para completados
-                      : MinimalColors.accentGradient[0].withOpacity(0.2),
+                      : MinimalColors.accentGradient(context)[0].withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
@@ -881,7 +865,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: isCompleted ? Colors.white : MinimalColors.accentGradient[0],
+                    color: isCompleted ? Colors.white : MinimalColors.accentGradient(context)[0],
                   ),
                 ),
               ),
@@ -895,9 +879,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               borderRadius: BorderRadius.circular(8),
               child: LinearProgressIndicator(
                 value: progress,
-                backgroundColor: MinimalColors.textMuted.withOpacity(0.2),
+                backgroundColor: MinimalColors.textMuted(context).withValues(alpha: 0.2),
                 valueColor: AlwaysStoppedAnimation<Color>(
-                  MinimalColors.accentGradient[0],
+                  MinimalColors.accentGradient(context)[0],
                 ),
                 minHeight: 6,
               ),
@@ -932,13 +916,13 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   List _getGoalsNearCompletion(GoalsProvider goalsProvider) {
     // Mostrar todos los objetivos activos, priorizando los que están cerca de completarse
     final allActiveGoals = goalsProvider.activeGoals.toList();
-    
+
     // Si no hay objetivos activos, retornar lista vacía
     if (allActiveGoals.isEmpty) return [];
-    
+
     // Ordenar por progreso (mayor progreso primero) y tomar hasta 3
     allActiveGoals.sort((a, b) => b.progress.compareTo(a.progress));
-    
+
     return allActiveGoals.take(3).toList();
   }
 
@@ -955,22 +939,22 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   gradient: LinearGradient(
-                    colors: MinimalColors.primaryGradient.map((c) => c.withOpacity(0.3)).toList(),
+                    colors: MinimalColors.primaryGradient(context).map((c) => c.withValues(alpha: 0.3)).toList(),
                   ),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.rocket_launch_rounded,
-                  color: MinimalColors.textSecondary,
+                  color: MinimalColors.textSecondary(context),
                   size: 36,
                 ),
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'Próximamente nuevos objetivos',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: MinimalColors.textSecondary,
+                  color: MinimalColors.textSecondary(context),
                 ),
               ),
             ],
@@ -999,20 +983,20 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               child: Container(
                 padding: const EdgeInsets.all(24),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: MinimalColors.primaryGradient,
+                  gradient: LinearGradient(
+                    colors: MinimalColors.primaryGradient(context),
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: MinimalColors.primaryGradient[0].withOpacity(0.4),
+                      color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.4),
                       blurRadius: 25,
                       offset: const Offset(-5, 10),
                     ),
                     BoxShadow(
-                      color: MinimalColors.primaryGradient[1].withOpacity(0.4),
+                      color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.4),
                       blurRadius: 25,
                       offset: const Offset(5, 10),
                     ),
@@ -1047,7 +1031,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               const SizedBox(height: 8),
               Text(
                 score.toStringAsFixed(1),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -1055,7 +1039,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               ),
               Text(
                 _getScoreDescription(score),
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   color: Colors.white70,
                 ),
@@ -1068,12 +1052,12 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           height: 80,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
           ),
           child: Center(
             child: Text(
               _getScoreEmoji(score),
-              style: const TextStyle(fontSize: 32),
+              style: TextStyle(fontSize: 32),
             ),
           ),
         ),
@@ -1120,7 +1104,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           height: 80,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
           ),
           child: const Center(
             child: Icon(
@@ -1163,21 +1147,21 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: MinimalColors.backgroundCard,
+              color: MinimalColors.backgroundCard(context),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: MinimalColors.primaryGradient[0].withOpacity(0.3),
+                color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                 width: 1,
               ),
               // 🎨 SOMBRA DEGRADADA AÑADIDA
               boxShadow: [
                 BoxShadow(
-                  color: MinimalColors.primaryGradient[0].withOpacity(0.3),
+                  color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(-5, 5),
                 ),
                 BoxShadow(
-                  color: MinimalColors.primaryGradient[1].withOpacity(0.3),
+                  color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
                   blurRadius: 20,
                   offset: const Offset(5, 5),
                 ),
@@ -1195,7 +1179,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                 Container(
                   width: 1,
                   height: 60,
-                  color: MinimalColors.textMuted.withOpacity(0.3),
+                  color: MinimalColors.textMuted(context).withValues(alpha: 0.3),
                 ),
                 _buildMomentCounter(
                   icon: Icons.sentiment_dissatisfied,
@@ -1234,13 +1218,13 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                   // ✅ SOMBRAS MEJORADAS PARA CONTADORES
                   boxShadow: [
                     BoxShadow(
-                      color: gradient[0].withOpacity(0.4),
+                      color: gradient[0].withValues(alpha: 0.4),
                       blurRadius: 15,
                       offset: const Offset(0, 8),
                       spreadRadius: 2,
                     ),
                     BoxShadow(
-                      color: gradient[1].withOpacity(0.3),
+                      color: gradient[1].withValues(alpha: 0.3),
                       blurRadius: 25,
                       offset: const Offset(0, 12),
                       spreadRadius: 4,
@@ -1260,19 +1244,19 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                 child: Text(
                   count.toString(),
                   key: ValueKey(count), // Key para animar cambios
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: MinimalColors.textPrimary,
+                    color: MinimalColors.textPrimary(context),
                   ),
                 ),
               ),
               const SizedBox(height: 4),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: MinimalColors.textSecondary,
+                  color: MinimalColors.textSecondary(context),
                 ),
               ),
             ],
@@ -1287,7 +1271,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
 // ============================================================================
   Widget _buildWeeklyPhotosWidget(OptimizedMomentsProvider momentsProvider, ImageMomentsProvider imageProvider) {
     final weeklyMoments = _getWeeklyMomentsWithImages(momentsProvider);
-    
+
     if (weeklyMoments.isEmpty) {
       return _buildEmptyPhotosWidget();
     }
@@ -1302,20 +1286,20 @@ class _HomeScreenV2State extends State<HomeScreenV2>
             child: Container(
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: MinimalColors.backgroundCard,
+                color: MinimalColors.backgroundCard(context),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: MinimalColors.primaryGradient[0].withOpacity(0.3),
+                  color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                   width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: MinimalColors.primaryGradient[0].withOpacity(0.3),
+                    color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                     blurRadius: 20,
                     offset: const Offset(-5, 5),
                   ),
                   BoxShadow(
-                    color: MinimalColors.primaryGradient[1].withOpacity(0.3),
+                    color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
                     blurRadius: 20,
                     offset: const Offset(5, 5),
                   ),
@@ -1329,8 +1313,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: MinimalColors.accentGradient,
+                          gradient: LinearGradient(
+                            colors: MinimalColors.accentGradientStatic,
                           ),
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -1341,27 +1325,27 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Fotos de la Semana',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: MinimalColors.textPrimary,
+                            color: MinimalColors.textPrimary(context),
                           ),
                         ),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: MinimalColors.lightGradient,
+                          gradient: LinearGradient(
+                            colors: MinimalColors.lightGradientStatic,
                           ),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '${weeklyMoments.length}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -1429,7 +1413,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                             end: Alignment.bottomCenter,
                             colors: [
                               Colors.transparent,
-                              Colors.black.withOpacity(0.7),
+                              Colors.black.withValues(alpha: 0.7),
                             ],
                           ),
                         ),
@@ -1443,7 +1427,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                           children: [
                             Text(
                               moment.emoji ?? '📷',
-                              style: const TextStyle(fontSize: 20),
+                              style: TextStyle(fontSize: 20),
                             ),
                             const SizedBox(height: 2),
                             Container(
@@ -1482,11 +1466,11 @@ class _HomeScreenV2State extends State<HomeScreenV2>
             height: 120,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: MinimalColors.primaryGradient.map((c) => c.withOpacity(0.3)).toList(),
+                colors: MinimalColors.primaryGradient(context).map((c) => c.withValues(alpha: 0.3)).toList(),
               ),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                color: MinimalColors.primaryGradient[0].withOpacity(0.2),
+                color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
@@ -1495,12 +1479,12 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               children: [
                 Text(
                   emoji,
-                  style: const TextStyle(fontSize: 24),
+                  style: TextStyle(fontSize: 24),
                 ),
                 const SizedBox(height: 4),
-                const Icon(
+                Icon(
                   Icons.photo_camera,
-                  color: MinimalColors.textSecondary,
+                  color: MinimalColors.textSecondary(context),
                   size: 16,
                 ),
               ],
@@ -1520,10 +1504,10 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: MinimalColors.backgroundCard.withOpacity(0.7),
+              color: MinimalColors.backgroundCard(context).withValues(alpha: 0.7),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: MinimalColors.primaryGradient[0].withOpacity(0.2),
+                color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
                 width: 1,
               ),
             ),
@@ -1534,30 +1518,30 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
-                      colors: MinimalColors.primaryGradient.map((c) => c.withOpacity(0.3)).toList(),
+                      colors: MinimalColors.primaryGradient(context).map((c) => c.withValues(alpha: 0.3)).toList(),
                     ),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.photo_camera_outlined,
-                    color: MinimalColors.textSecondary,
+                    color: MinimalColors.textSecondary(context),
                     size: 32,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Agrega fotos a tus momentos',
                   style: TextStyle(
                     fontSize: 14,
-                    color: MinimalColors.textSecondary,
+                    color: MinimalColors.textSecondary(context),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Captura instantes especiales de tu semana',
                   style: TextStyle(
                     fontSize: 12,
-                    color: MinimalColors.textTertiary,
+                    color: MinimalColors.textTertiary(context),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -1573,7 +1557,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     final now = DateTime.now();
     final weekStart = now.subtract(Duration(days: now.weekday - 1));
     final weekEnd = weekStart.add(const Duration(days: 7));
-    
+
     return momentsProvider.moments
         .where((moment) {
           final momentDate = moment.createdAt;
@@ -1595,6 +1579,69 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   }
 
 // ============================================================================
+// 🆕 THEME TOGGLE BUTTON
+// ============================================================================
+  Widget _buildThemeToggleButton() {
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return AnimatedBuilder(
+          animation: _pulseAnimation,
+          builder: (context, child) {
+            return Transform.scale(
+              scale: 1.0 + (_pulseAnimation.value * 0.02),
+              child: GestureDetector(
+                onTap: () async {
+                  await themeProvider.toggleTheme();
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: themeProvider.isDarkMode
+                          ? [const Color(0xFFfbbf24), const Color(0xFFf59e0b)]
+                          : [const Color(0xFF1e3a8a), const Color(0xFF581c87)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: themeProvider.isDarkMode
+                            ? const Color(0xFFfbbf24).withValues(alpha: 0.3)
+                            : const Color(0xFF1e3a8a).withValues(alpha: 0.3),
+                        blurRadius: 15,
+                        offset: const Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        themeProvider.isDarkMode ? Icons.wb_sunny : Icons.nightlight_round,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        themeProvider.isDarkMode ? 'Modo Claro' : 'Modo Oscuro',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+// ============================================================================
 // RECOMENDACIONES CONTEXTUALES MEJORADAS
 // ============================================================================
   Widget _buildContextualRecommendations(OptimizedUserModel user, OptimizedAnalyticsProvider analyticsProvider) {
@@ -1607,21 +1654,21 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: MinimalColors.backgroundCard,
+        color: MinimalColors.backgroundCard(context),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: MinimalColors.primaryGradient[0].withOpacity(0.3),
+          color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
           width: 1,
         ),
         // 🎨 SOMBRA DEGRADADA AÑADIDA
         boxShadow: [
           BoxShadow(
-            color: MinimalColors.primaryGradient[0].withOpacity(0.3),
+            color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(-5, 5),
           ),
           BoxShadow(
-            color: MinimalColors.primaryGradient[1].withOpacity(0.3),
+            color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(5, 5),
           ),
@@ -1635,8 +1682,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: MinimalColors.accentGradient,
+                  gradient: LinearGradient(
+                    colors: MinimalColors.accentGradient(context),
                   ),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -1647,12 +1694,12 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 'Recomendaciones',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: MinimalColors.textPrimary,
+                  color: MinimalColors.textPrimary(context),
                 ),
               ),
             ],
@@ -1667,22 +1714,22 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: MinimalColors.backgroundSecondary,
+                    color: MinimalColors.backgroundSecondary(context),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: MinimalColors.primaryGradient[0].withOpacity(0.2),
+                      color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
                       width: 1,
                     ),
                     // ✅ SOMBRAS MEJORADAS
                     boxShadow: [
                       BoxShadow(
-                        color: MinimalColors.backgroundSecondary.withOpacity(0.3),
+                        color: MinimalColors.backgroundSecondary(context).withValues(alpha: 0.3),
                         blurRadius: 10,
                         offset: const Offset(0, 5),
                         spreadRadius: 1,
                       ),
                       BoxShadow(
-                        color: MinimalColors.accentGradient[0].withOpacity(0.15),
+                        color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.15),
                         blurRadius: 15,
                         offset: const Offset(0, 8),
                         spreadRadius: 2,
@@ -1693,7 +1740,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     children: [
                       Text(
                         rec['emoji'] ?? '💡',
-                        style: const TextStyle(fontSize: 24),
+                        style: TextStyle(fontSize: 24),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -1702,18 +1749,18 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                           children: [
                             Text(
                               rec['title'] ?? '',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: MinimalColors.textPrimary,
+                                color: MinimalColors.textPrimary(context),
                               ),
                             ),
                             const SizedBox(height: 4),
                             Text(
                               rec['description'] ?? '',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: MinimalColors.textSecondary,
+                                color: MinimalColors.textSecondary(context),
                               ),
                             ),
                           ],

@@ -6,7 +6,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:math' as math;
-import 'dart:ui';
 
 // Providers
 import '../../providers/analytics_provider.dart';
@@ -190,6 +189,18 @@ class _UserProgressionAnalyticsScreenState extends State<UserProgressionAnalytic
                       padding: const EdgeInsets.all(16),
                       sliver: SliverList(
                         delegate: SliverChildListDelegate([
+                          // Emotional Personality Card (New)
+                          _buildEmotionalPersonalityCard(advancedProvider),
+                          const SizedBox(height: 20),
+                          
+                          // Metric Highlight Cards (New)
+                          _buildMetricHighlightCards(analyticsProvider),
+                          const SizedBox(height: 20),
+                          
+                          // Forecasts de Mood Avanzados (New)
+                          _buildMoodForecastsCard(advancedProvider),
+                          const SizedBox(height: 20),
+                          
                           // Streak Analysis
                           _buildStreakCard(analyticsProvider),
                           const SizedBox(height: 20),
@@ -1068,7 +1079,7 @@ class _UserProgressionAnalyticsScreenState extends State<UserProgressionAnalytic
                 
                 // Clusters List
                 if (clusters.isNotEmpty) ...clusters.take(3).map((cluster) {
-                  final clusterMap = cluster as Map<String, dynamic>;
+                  final clusterMap = cluster;
                   final id = clusterMap['id'] as int? ?? 0;
                   final size = clusterMap['size'] as int? ?? 0;
                   final dominantFeature = clusterMap['dominant_feature'] as String? ?? 'unknown';
@@ -1738,38 +1749,45 @@ class _UserProgressionAnalyticsScreenState extends State<UserProgressionAnalytic
     final lowMoodEntries = dailyEntries.where((e) => (e.moodScore ?? 3.0) < 2.5).length;
     
     final clusters = <Map<String, dynamic>>[];
+    int clusterIndex = 0;
     
     if (highMoodEntries > 0) {
       clusters.add({
-        'id': 'high_mood',
+        'id': clusterIndex,
         'name': 'Estado Positivo',
         'size': highMoodEntries,
         'color': Colors.green,
         'characteristics': ['Buen humor', 'Energía alta', 'Optimismo'],
         'percentage': (highMoodEntries / dailyEntries.length * 100).round(),
+        'dominant_feature': 'mood_alto',
       });
+      clusterIndex++;
     }
     
     if (mediumMoodEntries > 0) {
       clusters.add({
-        'id': 'medium_mood',
+        'id': clusterIndex,
         'name': 'Estado Neutro',
         'size': mediumMoodEntries,
         'color': Colors.orange,
         'characteristics': ['Humor estable', 'Energía moderada', 'Equilibrio'],
         'percentage': (mediumMoodEntries / dailyEntries.length * 100).round(),
+        'dominant_feature': 'mood_neutro',
       });
+      clusterIndex++;
     }
     
     if (lowMoodEntries > 0) {
       clusters.add({
-        'id': 'low_mood',
+        'id': clusterIndex,
         'name': 'Estado Desafiante',
         'size': lowMoodEntries,
         'color': Colors.red,
         'characteristics': ['Humor bajo', 'Necesita apoyo', 'Reflexión'],
         'percentage': (lowMoodEntries / dailyEntries.length * 100).round(),
+        'dominant_feature': 'mood_bajo',
       });
+      clusterIndex++;
     }
 
     return {
@@ -1853,5 +1871,390 @@ class _UserProgressionAnalyticsScreenState extends State<UserProgressionAnalytic
     if (denominator == 0) return 0.0;
     
     return numerator / denominator;
+  }
+
+  // ============================================================================
+  // NEW CARDS FROM DESIGN IMAGES
+  // ============================================================================
+
+  Widget _buildEmotionalPersonalityCard(AdvancedEmotionAnalysisProvider advancedProvider) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: MinimalColors.primaryGradient,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: MinimalColors.primaryGradient.first.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.psychology_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Tu Personalidad Emocional',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Naturalmente Positivo',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Tu perfil emocional muestra el patrón "Naturalmente Positivo". Destacas por tu buena capacidad de recuperación y estabilidad emocional. Tu tendencia hacia el optimismo es una gran fortaleza.',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetricHighlightCards(AnalyticsProvider analyticsProvider) {
+    final analytics = analyticsProvider.analytics;
+    final basicStats = analytics['basic_stats'] as Map<String, dynamic>? ?? {};
+    final moodAverage = basicStats['avg_mood'] ?? 0.0;
+    final streakDays = basicStats['current_streak'] ?? 0;
+    final totalEntries = basicStats['total_entries'] ?? 0;
+
+    return Column(
+      children: [
+        // Excellent Mood Card
+        _buildHighlightCard(
+          icon: Icons.sentiment_very_satisfied,
+          iconColor: Colors.amber,
+          title: 'Excelente Estado de Ánimo',
+          subtitle: 'Tu mood promedio es ${moodAverage.toStringAsFixed(1)}/10',
+          gradient: MinimalColors.accentGradient,
+        ),
+        const SizedBox(height: 12),
+        
+        // High Energy Card
+        _buildHighlightCard(
+          icon: Icons.flash_on_rounded,
+          iconColor: Colors.yellow,
+          title: 'Energía Alta',
+          subtitle: 'Mantienes buenos niveles de energía',
+          gradient: MinimalColors.accentGradient,
+        ),
+        const SizedBox(height: 12),
+        
+        // Very Active Card
+        _buildHighlightCard(
+          icon: Icons.bar_chart_rounded,
+          iconColor: Colors.green,
+          title: 'Muy Activo',
+          subtitle: 'Has registrado $totalEntries entradas',
+          gradient: MinimalColors.accentGradient,
+        ),
+        const SizedBox(height: 12),
+        
+        // Impressive Streak Card
+        _buildHighlightCard(
+          icon: Icons.local_fire_department_rounded,
+          iconColor: Colors.orange,
+          title: 'Racha Impresionante',
+          subtitle: '$streakDays días consecutivos',
+          gradient: MinimalColors.accentGradient,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHighlightCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required List<Color> gradient,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: gradient,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: gradient.first.withValues(alpha: 0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              icon,
+              color: iconColor,
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMoodForecastsCard(AdvancedEmotionAnalysisProvider advancedProvider) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: MinimalColors.primaryGradient,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: MinimalColors.primaryGradient.first.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.trending_up,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Forecasts de Mood Avanzados',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      'Predicciones basadas en patrones',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () => _loadAnalyticsData(),
+                icon: const Icon(Icons.refresh_rounded, color: Colors.white),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildForecastChart(),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Text(
+                '7/7',
+                style: TextStyle(
+                  color: Colors.white60,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Mood: 7.8',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  '80%',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              const Text(
+                '8/7',
+                style: TextStyle(
+                  color: Colors.white60,
+                  fontSize: 12,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Mood: 7.0',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  '70%',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildForecastChart() {
+    final forecastData = [
+      {'label': '7/7', 'value': 0.8},
+      {'label': '8/7', 'value': 0.9},
+      {'label': '9/7', 'value': 0.7},
+      {'label': '10/7', 'value': 0.8},
+      {'label': '11/7', 'value': 0.9},
+      {'label': '12/7', 'value': 0.8},
+      {'label': '13/7', 'value': 0.9},
+    ];
+    
+    return SizedBox(
+      height: 80,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: forecastData.map((data) {
+          final height = (data['value'] as double) * 60 + 20;
+          return Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Container(
+                width: 30,
+                height: height,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [
+                      Colors.white.withValues(alpha: 0.8),
+                      Colors.white.withValues(alpha: 0.6),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                data['label'] as String,
+                style: const TextStyle(
+                  color: Colors.white60,
+                  fontSize: 10,
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
   }
 }

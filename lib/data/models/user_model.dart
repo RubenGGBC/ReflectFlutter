@@ -13,7 +13,10 @@ class UserModel {
   final String email;
   final String name;
   final String avatarEmoji;
-  final String? bio; // ← AÑADIR ESTE CAMPO
+  final String? bio;
+  final int? age;
+  final String? profilePicturePath;
+  final bool isFirstTimeUser;
   final Map<String, dynamic> preferences;
   final DateTime? createdAt;
   final DateTime? lastLogin;
@@ -23,7 +26,10 @@ class UserModel {
     required this.email,
     required this.name,
     this.avatarEmoji = '🧘‍♀️',
-    this.bio, // ← AÑADIR ESTE CAMPO
+    this.bio,
+    this.age,
+    this.profilePicturePath,
+    this.isFirstTimeUser = true,
     this.preferences = const {},
     this.createdAt,
     this.lastLogin,
@@ -39,7 +45,10 @@ class UserModel {
       email: map['email'] as String,
       name: map['name'] as String,
       avatarEmoji: map['avatar_emoji'] as String? ?? '🧘‍♀️',
-      bio: map['bio'] as String?, // ← AÑADIR ESTE CAMPO
+      bio: map['bio'] as String?,
+      age: map['age'] as int?,
+      profilePicturePath: map['profile_picture_path'] as String?,
+      isFirstTimeUser: (map['is_first_time_user'] as int? ?? 1) == 1,
       preferences: map['preferences'] != null
           ? Map<String, dynamic>.from(json.decode(map['preferences']))
           : {},
@@ -59,7 +68,10 @@ class UserModel {
       'email': email,
       'name': name,
       'avatar_emoji': avatarEmoji,
-      'bio': bio, // ← AÑADIR ESTE CAMPO
+      'bio': bio,
+      'age': age,
+      'profile_picture_path': profilePicturePath,
+      'is_first_time_user': isFirstTimeUser ? 1 : 0,
       'preferences': json.encode(preferences),
       if (createdAt != null) 'created_at': createdAt!.toIso8601String(),
       if (lastLogin != null) 'last_login': lastLogin!.toIso8601String(),
@@ -71,7 +83,10 @@ class UserModel {
     String? email,
     String? name,
     String? avatarEmoji,
-    String? bio, // ← AÑADIR ESTE CAMPO
+    String? bio,
+    int? age,
+    String? profilePicturePath,
+    bool? isFirstTimeUser,
     Map<String, dynamic>? preferences,
     DateTime? createdAt,
     DateTime? lastLogin,
@@ -81,7 +96,10 @@ class UserModel {
       email: email ?? this.email,
       name: name ?? this.name,
       avatarEmoji: avatarEmoji ?? this.avatarEmoji,
-      bio: bio ?? this.bio, // ← AÑADIR ESTE CAMPO
+      bio: bio ?? this.bio,
+      age: age ?? this.age,
+      profilePicturePath: profilePicturePath ?? this.profilePicturePath,
+      isFirstTimeUser: isFirstTimeUser ?? this.isFirstTimeUser,
       preferences: preferences ?? this.preferences,
       createdAt: createdAt ?? this.createdAt,
       lastLogin: lastLogin ?? this.lastLogin,

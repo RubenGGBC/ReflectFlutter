@@ -5,51 +5,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import 'dart:math' as math;
 
 // Providers optimizados
 import '../../providers/optimized_providers.dart';
+import '../../providers/theme_provider.dart';
 
 // Pantallas relacionadas
 import 'calendar_screen_v2.dart';
-import 'daily_detail_screen_v2.dart';
 
-// ============================================================================
-// PALETA DE COLORES MINIMALISTA (IGUAL QUE HOME Y ANALYTICS)
-// ============================================================================
-class MinimalColors {
-  // Fondo principal - Negro profundo
-  static const Color backgroundPrimary = Color(0xFF000000);
-  static const Color backgroundCard = Color(0xFF0F0F0F);
-  static const Color backgroundSecondary = Color(0xFF1A1A1A);
-
-  // Gradientes Azul Oscuro a Morado
-  static const List<Color> primaryGradient = [
-    Color(0xFF1e3a8a), // Azul oscuro
-    Color(0xFF581c87), // Morado oscuro
-  ];
-
-  static const List<Color> accentGradient = [
-    Color(0xFF3b82f6), // Azul
-    Color(0xFF8b5cf6), // Morado
-  ];
-
-  static const List<Color> lightGradient = [
-    Color(0xFF60a5fa), // Azul claro
-    Color(0xFFa855f7), // Morado claro
-  ];
-
-  // Colores de texto
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF9CA3AF);
-  static const Color textTertiary = Color(0xFF6B7280);
-  static const Color textMuted = Color(0xFF4B5563);
-
-  // Gradientes específicos para métricas
-  static const List<Color> positiveGradient = [Color(0xFF10b981), Color(0xFF34d399)];
-  static const List<Color> neutralGradient = [Color(0xFFf59e0b), Color(0xFFfbbf24)];
-  static const List<Color> negativeGradient = [Color(0xFFef4444), Color(0xFFf87171)];
-}
+// Componentes
+import 'components/minimal_colors.dart';
+import '../../widgets/voice_recording_widget.dart';
 
 class DailyReviewScreenV2 extends StatefulWidget {
   const DailyReviewScreenV2({super.key});
@@ -69,6 +35,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
   late AnimationController _progressController;
   late AnimationController _cardController;
   late AnimationController _pulseController;
+  
+  late Animation<double> _fadeAnimation;
 
   int _currentStep = 0;
   final int _totalSteps = 5;
@@ -108,6 +76,10 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
   int _lifeSatisfaction = 5;
   int _weatherMoodImpact = 0;
 
+  // Voice recording state
+  bool _isVoiceRecordingExpanded = false;
+  String? _voiceRecordingPath;
+
   @override
   void initState() {
     super.initState();
@@ -141,7 +113,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     );
 
     _cardController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
@@ -150,7 +122,18 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       vsync: this,
     )..repeat();
 
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _cardController, curve: Curves.easeInOut));
+
+    // Start animations with staggered delays
     _cardController.forward();
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) {
+        _updateProgress();
+      }
+    });
   }
 
   void _loadExistingEntry() {
@@ -353,41 +336,60 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MinimalColors.backgroundPrimary,
-      body: SafeArea(
-        child: SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 1),
-            end: Offset.zero,
-          ).animate(_cardController),
-          child: Column(
-            children: [
-              _buildHeader(),
-              _buildProgressIndicator(),
-              Expanded(
-                child: PageView(
-                  controller: _pageController,
-                  onPageChanged: (index) {
-                    setState(() {
-                      _currentStep = index;
-                    });
-                    _updateProgress();
-                  },
-                  children: [
-                    _buildReflectionStep(),    // Paso 1: Reflexión libre
-                    _buildMoodStep(),          // Paso 2: Estado de ánimo
-                    _buildWellbeingStep(),     // Paso 3: Bienestar básico
-                    _buildMetricsStep(),       // Paso 4: Métricas detalladas
-                    _buildFinalStep(),         // Paso 5: Evaluación final
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return AnimatedTheme(
+          duration: const Duration(milliseconds: 300),
+          data: themeProvider.currentThemeData,
+          child: Scaffold(
+            backgroundColor: MinimalColors.backgroundPrimary(context),
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    MinimalColors.backgroundPrimary(context),
+                    MinimalColors.backgroundSecondary(context).withValues(alpha: 0.8),
+                    MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.1),
                   ],
+                  stops: const [0.0, 0.7, 1.0],
                 ),
               ),
-              _buildBottomActions(),
-            ],
+              child: SafeArea(
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: Column(
+                    children: [
+                      _buildHeader(),
+                      _buildProgressIndicator(),
+                      Expanded(
+                        child: PageView(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _currentStep = index;
+                            });
+                            _updateProgress();
+                          },
+                          children: [
+                            _buildReflectionStep(),    // Paso 1: Reflexión libre
+                            _buildMoodStep(),          // Paso 2: Estado de ánimo
+                            _buildWellbeingStep(),     // Paso 3: Bienestar básico
+                            _buildMetricsStep(),       // Paso 4: Métricas detalladas
+                            _buildFinalStep(),         // Paso 5: Evaluación final
+                          ],
+                        ),
+                      ),
+                      _buildBottomActions(),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -404,74 +406,141 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     final dayName = weekDays[now.weekday - 1];
     final monthName = months[now.month - 1];
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: MinimalColors.primaryGradient,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: MinimalColors.primaryGradient[1].withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, -0.3),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: _cardController, curve: Curves.easeOutBack)),
+      child: Container(
+        margin: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: MinimalColors.primaryGradient(context),
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.4),
+              blurRadius: 25,
+              offset: const Offset(0, 12),
+              spreadRadius: 2,
+            ),
+            BoxShadow(
+              color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
+              blurRadius: 40,
+              offset: const Offset(0, 20),
+            ),
+          ],
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
-                onPressed: () => Navigator.pop(context),
-                icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '📝 Reflexión del Día',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              AnimatedBuilder(
-                animation: _pulseController,
-                builder: (context, child) {
-                  return Transform.scale(
-                    scale: 1.0 + (_pulseController.value * 0.1),
-                    child: IconButton(
-                      onPressed: _navigateToCalendar,
-                      icon: const Icon(Icons.calendar_month, color: Colors.white),
-                      tooltip: 'Ver todas las reflexiones',
+              Row(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                  );
-                },
+                    child: IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                      iconSize: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: MinimalColors.primaryGradient(context),
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(
+                                Icons.auto_awesome,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Reflexión del Día',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      letterSpacing: 0.5,
+                                    ),
+                                  ),
+                                  Text(
+                                    '$dayName, ${now.day} de $monthName',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) {
+                      return Transform.scale(
+                        scale: 1.0 + (_pulseController.value * 0.1),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: IconButton(
+                            onPressed: _navigateToCalendar,
+                            icon: const Icon(Icons.calendar_month, color: Colors.white),
+                            iconSize: 20,
+                            tooltip: 'Ver todas las reflexiones',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
+              const SizedBox(height: 20),
+              _buildQuickStepsIndicator(),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            '$dayName, ${now.day} de $monthName',
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _getStepTitle(),
-            style: const TextStyle(
-              color: Colors.white60,
-              fontSize: 14,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -487,56 +556,213 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     }
   }
 
-  Widget _buildProgressIndicator() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        children: [
-          Row(
-            children: List.generate(_totalSteps, (index) {
-              final isCompleted = index <= _currentStep;
-              final isActive = index == _currentStep;
-
-              return Expanded(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  height: 4,
-                  margin: EdgeInsets.only(right: index < _totalSteps - 1 ? 8 : 0),
+  Widget _buildQuickStepsIndicator() {
+    return Row(
+      children: [
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.2),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(2),
-                    gradient: isCompleted
-                        ? LinearGradient(colors: MinimalColors.accentGradient)
-                        : null,
-                    color: isCompleted
-                        ? null
-                        : Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.timeline,
+                    color: Colors.white,
+                    size: 20,
                   ),
                 ),
-              );
-            }),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    _getStepTitle(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Paso ${_currentStep + 1} de $_totalSteps',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                ),
-              ),
-              Text(
-                '${((_currentStep + 1) / _totalSteps * 100).round()}%',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+        ),
+        const SizedBox(width: 12),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: MinimalColors.accentGradient(context),
+            ),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Text(
+            '${_currentStep + 1}/$_totalSteps',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressIndicator() {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, 0.2),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: _cardController, curve: Curves.easeOutBack)),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              MinimalColors.backgroundCard(context),
+              MinimalColors.backgroundSecondary(context).withValues(alpha: 0.8),
+              MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.08),
             ],
           ),
-        ],
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: List.generate(_totalSteps, (index) {
+                final isCompleted = index <= _currentStep;
+                final isActive = index == _currentStep;
+
+                return Expanded(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 400),
+                    height: isActive ? 8 : 6,
+                    margin: EdgeInsets.only(right: index < _totalSteps - 1 ? 12 : 0),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(4),
+                      gradient: isCompleted
+                          ? LinearGradient(
+                              colors: isActive 
+                                  ? MinimalColors.primaryGradient(context)
+                                  : MinimalColors.accentGradient(context),
+                            )
+                          : null,
+                      color: isCompleted
+                          ? null
+                          : MinimalColors.textMuted(context).withValues(alpha: 0.3),
+                      boxShadow: isActive
+                          ? [
+                              BoxShadow(
+                                color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.4),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
+                    ),
+                  ),
+                );
+              }),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: MinimalColors.primaryGradient(context).map(
+                    (c) => c.withValues(alpha: 0.1)
+                  ).toList(),
+                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: MinimalColors.primaryGradient(context),
+                          ),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Icon(
+                          Icons.timeline,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Paso ${_currentStep + 1} de $_totalSteps',
+                        style: TextStyle(
+                          color: MinimalColors.textPrimary(context),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: MinimalColors.accentGradient(context),
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${((_currentStep + 1) / _totalSteps * 100).round()}%',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -558,6 +784,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             child: Column(
               children: [
                 _buildReflectionField(),
+                const SizedBox(height: 16),
+                _buildVoiceRecordingWidget(),
                 const SizedBox(height: 16),
                 _buildGratitudeField(),
                 const SizedBox(height: 16),
@@ -582,23 +810,23 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                MinimalColors.backgroundCard,
-                MinimalColors.backgroundSecondary,
+                MinimalColors.backgroundCard(context),
+                MinimalColors.backgroundSecondary(context),
               ],
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: MinimalColors.primaryGradient[0].withOpacity(0.3),
+              color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: MinimalColors.primaryGradient[1].withOpacity(0.2),
+                color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.2),
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),
               BoxShadow(
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -614,23 +842,23 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: MinimalColors.primaryGradient,
+                        gradient: LinearGradient(
+                          colors: MinimalColors.primaryGradientStatic,
                         ),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.edit_note_rounded,
-                        color: Colors.white,
+                        color: MinimalColors.textPrimary(context),
                         size: 20,
                       ),
                     ),
                     const SizedBox(width: 12),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Reflexión Libre',
                         style: TextStyle(
-                          color: MinimalColors.textPrimary,
+                          color: MinimalColors.textPrimary(context),
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -647,8 +875,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                         ),
                         child: Text(
                           '${_getSmartEmoji()} ${analysis['wordCount']} palabras',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: MinimalColors.textPrimary(context),
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -660,15 +888,15 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               TextField(
                 controller: _reflectionController,
                 maxLines: 6,
-                style: const TextStyle(
-                  color: MinimalColors.textPrimary,
+                style: TextStyle(
+                  color: MinimalColors.textPrimary(context),
                   fontSize: 16,
                   height: 1.5,
                 ),
                 decoration: InputDecoration(
                   hintText: _getPersonalizedHint(),
-                  hintStyle: const TextStyle(
-                    color: MinimalColors.textMuted,
+                  hintStyle: TextStyle(
+                    color: MinimalColors.textMuted(context),
                     fontSize: 15,
                   ),
                   border: InputBorder.none,
@@ -687,11 +915,11 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: MinimalColors.backgroundSecondary,
+                color: MinimalColors.backgroundSecondary(context),
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -700,10 +928,10 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Emociones detectadas:',
                     style: TextStyle(
-                      color: MinimalColors.textSecondary,
+                      color: MinimalColors.textSecondary(context),
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -721,8 +949,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                         ),
                         child: Text(
                           '${_getEmotionEmoji(emotion)} ${_translateEmotion(emotion)}',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: MinimalColors.textPrimary(context),
                             fontSize: 11,
                             fontWeight: FontWeight.w500,
                           ),
@@ -744,13 +972,13 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    MinimalColors.lightGradient[0].withOpacity(0.1),
-                    MinimalColors.lightGradient[1].withOpacity(0.1),
+                    MinimalColors.lightGradient(context)[0].withValues(alpha: 0.1),
+                    MinimalColors.lightGradient(context)[1].withValues(alpha: 0.1),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: MinimalColors.lightGradient[0].withOpacity(0.3),
+                  color: MinimalColors.lightGradient(context)[0].withValues(alpha: 0.3),
                   width: 1,
                 ),
               ),
@@ -761,14 +989,14 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                     children: [
                       Icon(
                         Icons.lightbulb_outline_rounded,
-                        color: MinimalColors.lightGradient[0],
+                        color: MinimalColors.lightGradient(context)[0],
                         size: 18,
                       ),
                       const SizedBox(width: 8),
-                      const Text(
+                      Text(
                         'Sugerencias para reflexionar:',
                         style: TextStyle(
-                          color: MinimalColors.textPrimary,
+                          color: MinimalColors.textPrimary(context),
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -780,7 +1008,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                     padding: const EdgeInsets.only(bottom: 8),
                     child: GestureDetector(
                       onTap: () {
-                        _reflectionController.text = suggestion + '\n\n';
+                        _reflectionController.text = '$suggestion\n\n';
                         _reflectionController.selection = TextSelection.fromPosition(
                           TextPosition(offset: _reflectionController.text.length),
                         );
@@ -789,25 +1017,25 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: MinimalColors.backgroundCard,
+                          color: MinimalColors.backgroundCard(context),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: MinimalColors.lightGradient[0].withOpacity(0.2),
+                            color: MinimalColors.lightGradient(context)[0].withValues(alpha: 0.2),
                           ),
                         ),
                         child: Row(
                           children: [
                             Icon(
                               Icons.add_circle_outline_rounded,
-                              color: MinimalColors.lightGradient[0],
+                              color: MinimalColors.lightGradient(context)[0],
                               size: 16,
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 suggestion,
-                                style: const TextStyle(
-                                  color: MinimalColors.textSecondary,
+                                style: TextStyle(
+                                  color: MinimalColors.textSecondary(context),
                                   fontSize: 13,
                                 ),
                               ),
@@ -816,7 +1044,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                         ),
                       ),
                     ),
-                  )).toList(),
+                  )),
                 ],
               ),
             ),
@@ -840,11 +1068,11 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   List<Color> _getSentimentGradient(double sentiment) {
     if (sentiment > 0.3) {
-      return MinimalColors.positiveGradient;
+      return MinimalColors.positiveGradient(context);
     } else if (sentiment < -0.3) {
-      return MinimalColors.negativeGradient;
+      return MinimalColors.negativeGradient(context);
     } else {
-      return MinimalColors.neutralGradient;
+      return MinimalColors.neutralGradient(context);
     }
   }
 
@@ -890,28 +1118,54 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     }
   }
 
+  Widget _buildVoiceRecordingWidget() {
+    return VoiceRecordingWidget(
+      isExpanded: _isVoiceRecordingExpanded,
+      existingRecordingPath: _voiceRecordingPath,
+      onExpand: () {
+        setState(() {
+          _isVoiceRecordingExpanded = !_isVoiceRecordingExpanded;
+        });
+      },
+      onRecordingComplete: (path) {
+        setState(() {
+          _voiceRecordingPath = path;
+        });
+        
+        // Opcionalmente, mostrar un mensaje de confirmación
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Grabación de voz guardada exitosamente'),
+            backgroundColor: Colors.green.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildGratitudeField() {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            MinimalColors.backgroundCard,
-            MinimalColors.backgroundSecondary,
+            MinimalColors.backgroundCard(context),
+            MinimalColors.backgroundSecondary(context),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: MinimalColors.positiveGradient[0].withOpacity(0.3),
+          color: MinimalColors.positiveGradient(context)[0].withValues(alpha: 0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: MinimalColors.positiveGradient[1].withOpacity(0.2),
+            color: MinimalColors.positiveGradient(context)[1].withValues(alpha: 0.2),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
+            color: Colors.black.withValues(alpha: 0.4),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -927,23 +1181,23 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: MinimalColors.positiveGradient,
+                    gradient: LinearGradient(
+                      colors: MinimalColors.positiveGradientStatic,
                     ),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.favorite_rounded,
-                    color: Colors.white,
+                    color: MinimalColors.textPrimary(context),
                     size: 20,
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Gratitud y Apreciación',
                     style: TextStyle(
-                      color: MinimalColors.textPrimary,
+                      color: MinimalColors.textPrimary(context),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -953,15 +1207,15 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: MinimalColors.positiveGradient,
+                      gradient: LinearGradient(
+                        colors: MinimalColors.positiveGradientStatic,
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
+                    child: Text(
                       '💚 Gratitud',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: MinimalColors.textPrimary(context),
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -973,19 +1227,19 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           TextField(
             controller: _gratitudeController,
             maxLines: 3,
-            style: const TextStyle(
-              color: MinimalColors.textPrimary,
+            style: TextStyle(
+              color: MinimalColors.textPrimary(context),
               fontSize: 16,
               height: 1.5,
             ),
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               hintText: '¿Por qué estás agradecido hoy? Menciona personas, momentos o experiencias...',
               hintStyle: TextStyle(
-                color: MinimalColors.textMuted,
+                color: MinimalColors.textMuted(context),
                 fontSize: 15,
               ),
               border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16),
+              contentPadding: const EdgeInsets.all(16),
             ),
             onChanged: (_) => setState(() {}),
           ),
@@ -1000,12 +1254,12 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: MinimalColors.backgroundCard,
+              color: MinimalColors.backgroundCard(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.green.withOpacity(0.3)),
+              border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -1013,7 +1267,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             ),
             child: TextField(
               controller: _positiveTagsController,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: MinimalColors.textPrimary(context)),
               decoration: const InputDecoration(
                 labelText: '✅ Aspectos positivos',
                 labelStyle: TextStyle(color: Colors.green),
@@ -1029,12 +1283,12 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         Expanded(
           child: Container(
             decoration: BoxDecoration(
-              color: MinimalColors.backgroundCard,
+              color: MinimalColors.backgroundCard(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.red.withOpacity(0.3)),
+              border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withValues(alpha: 0.3),
                   blurRadius: 8,
                   offset: const Offset(0, 4),
                 ),
@@ -1042,7 +1296,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             ),
             child: TextField(
               controller: _negativeTagsController,
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(color: MinimalColors.textPrimary(context)),
               decoration: const InputDecoration(
                 labelText: '❌ Aspectos a mejorar',
                 labelStyle: TextStyle(color: Colors.red),
@@ -1099,7 +1353,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             borderRadius: BorderRadius.circular(60),
             boxShadow: [
               BoxShadow(
-                color: _getMoodColor(_moodScore).withOpacity(0.3),
+                color: _getMoodColor(_moodScore).withValues(alpha: 0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -1108,7 +1362,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           child: Center(
             child: Text(
               moodEmojis[(_moodScore - 1).clamp(0, 9)],
-              style: const TextStyle(fontSize: 60),
+              style: TextStyle(fontSize: 60),
             ),
           ),
         ),
@@ -1118,8 +1372,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         // Label del estado
         Text(
           moodLabels[(_moodScore - 1).clamp(0, 9)],
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: MinimalColors.textPrimary(context),
             fontSize: 20,
             fontWeight: FontWeight.w600,
           ),
@@ -1133,7 +1387,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             activeTrackColor: _getMoodColor(_moodScore),
             inactiveTrackColor: Colors.white24,
             thumbColor: _getMoodColor(_moodScore),
-            overlayColor: _getMoodColor(_moodScore).withOpacity(0.2),
+            overlayColor: _getMoodColor(_moodScore).withValues(alpha: 0.2),
             trackHeight: 6,
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 12),
           ),
@@ -1211,9 +1465,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: MinimalColors.backgroundCard,
+        color: MinimalColors.backgroundCard(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: insightColor.withOpacity(0.3)),
+        border: Border.all(color: insightColor.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -1253,7 +1507,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   title: 'Nivel de Energía',
                   value: _energyLevel,
                   emoji: '⚡',
-                  gradientColors: MinimalColors.positiveGradient,
+                  gradientColors: MinimalColors.positiveGradient(context),
                   onChanged: (value) => setState(() => _energyLevel = value),
                 ),
 
@@ -1263,7 +1517,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   title: 'Nivel de Estrés',
                   value: _stressLevel,
                   emoji: '😰',
-                  gradientColors: MinimalColors.negativeGradient,
+                  gradientColors: MinimalColors.negativeGradient(context),
                   onChanged: (value) => setState(() => _stressLevel = value),
                   isReversed: true, // Mayor valor = peor
                 ),
@@ -1287,31 +1541,31 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     required Function(int) onChanged,
     bool isReversed = false,
   }) {
-    final effectiveValue = isReversed ? (11 - value) : value;
+    // final effectiveValue = isReversed ? (11 - value) : value;
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            gradientColors[0].withOpacity(0.1),
-            gradientColors[1].withOpacity(0.1),
+            gradientColors[0].withValues(alpha: 0.1),
+            gradientColors[1].withValues(alpha: 0.1),
           ],
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: gradientColors[0].withOpacity(0.3)),
+        border: Border.all(color: gradientColors[0].withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              Text(emoji, style: const TextStyle(fontSize: 24)),
+              Text(emoji, style: TextStyle(fontSize: 24)),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: MinimalColors.textPrimary(context),
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1325,8 +1579,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                 ),
                 child: Text(
                   '$value/10',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: MinimalColors.textPrimary(context),
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -1341,7 +1595,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               activeTrackColor: gradientColors[0],
               inactiveTrackColor: Colors.white24,
               thumbColor: gradientColors[1],
-              overlayColor: gradientColors[0].withOpacity(0.2),
+              overlayColor: gradientColors[0].withValues(alpha: 0.2),
               trackHeight: 8,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 14),
             ),
@@ -1394,9 +1648,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: MinimalColors.backgroundCard,
+        color: MinimalColors.backgroundCard(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: balanceColor.withOpacity(0.3)),
+        border: Border.all(color: balanceColor.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -1418,8 +1672,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           const SizedBox(height: 8),
           Text(
             _getBalanceMessage(balance),
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: MinimalColors.textSecondary(context),
               fontSize: 12,
             ),
             textAlign: TextAlign.center,
@@ -1498,19 +1752,19 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: MinimalColors.backgroundCard,
+        color: MinimalColors.backgroundCard(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 28)),
+          Text(emoji, style: TextStyle(fontSize: 28)),
           const SizedBox(height: 8),
           Text(
             title,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: MinimalColors.textPrimary(context),
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -1531,8 +1785,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           const SizedBox(height: 8),
           Text(
             '$value/10',
-            style: const TextStyle(
-              color: Colors.white70,
+            style: TextStyle(
+              color: MinimalColors.textSecondary(context),
               fontSize: 10,
             ),
           ),
@@ -1542,13 +1796,13 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: MinimalColors.accentGradient),
+                gradient: LinearGradient(colors: MinimalColors.accentGradient(context)),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text(
+              child: Text(
                 'Ajustar',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: MinimalColors.textPrimary(context),
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
                 ),
@@ -1610,21 +1864,21 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: MinimalColors.backgroundCard,
+        color: MinimalColors.backgroundCard(context),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [
           Row(
             children: [
-              Text(emoji, style: const TextStyle(fontSize: 20)),
+              Text(emoji, style: TextStyle(fontSize: 20)),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: MinimalColors.textPrimary(context),
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -1633,15 +1887,15 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: MinimalColors.lightGradient),
+                  gradient: LinearGradient(colors: MinimalColors.lightGradient(context)),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   isInteger
                       ? '${value.round()} $unit'
                       : '${value.toStringAsFixed(1)} $unit',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: MinimalColors.textPrimary(context),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1652,10 +1906,10 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           const SizedBox(height: 12),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: MinimalColors.lightGradient[0],
+              activeTrackColor: MinimalColors.lightGradient(context)[0],
               inactiveTrackColor: Colors.white24,
-              thumbColor: MinimalColors.lightGradient[1],
-              overlayColor: MinimalColors.lightGradient[0].withOpacity(0.2),
+              thumbColor: MinimalColors.lightGradient(context)[1],
+              overlayColor: MinimalColors.lightGradient(context)[0].withValues(alpha: 0.2),
               trackHeight: 4,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
             ),
@@ -1706,10 +1960,10 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
   Widget _buildWorthItQuestion() {
     return Column(
       children: [
-        const Text(
+        Text(
           '¿Ha valido la pena este día?',
           style: TextStyle(
-            color: Colors.white,
+            color: MinimalColors.textPrimary(context),
             fontSize: 18,
             fontWeight: FontWeight.w600,
           ),
@@ -1729,14 +1983,14 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: _worthIt == true
-                        ? LinearGradient(colors: MinimalColors.positiveGradient)
+                        ? LinearGradient(colors: MinimalColors.positiveGradient(context))
                         : null,
-                    color: _worthIt == true ? null : MinimalColors.backgroundCard,
+                    color: _worthIt == true ? null : MinimalColors.backgroundCard(context),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _worthIt == true
                           ? Colors.green
-                          : Colors.white.withOpacity(0.3),
+                          : Colors.white.withValues(alpha: 0.3),
                       width: _worthIt == true ? 2 : 1,
                     ),
                   ),
@@ -1773,14 +2027,14 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     gradient: _worthIt == false
-                        ? LinearGradient(colors: MinimalColors.negativeGradient)
+                        ? LinearGradient(colors: MinimalColors.negativeGradient(context))
                         : null,
-                    color: _worthIt == false ? null : MinimalColors.backgroundCard,
+                    color: _worthIt == false ? null : MinimalColors.backgroundCard(context),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: _worthIt == false
                           ? Colors.red
-                          : Colors.white.withOpacity(0.3),
+                          : Colors.white.withValues(alpha: 0.3),
                       width: _worthIt == false ? 2 : 1,
                     ),
                   ),
@@ -1821,7 +2075,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: _getMoodColor(overallScore.round()).withOpacity(0.3),
+            color: _getMoodColor(overallScore.round()).withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -1829,10 +2083,10 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       ),
       child: Column(
         children: [
-          const Text(
+          Text(
             'Puntuación del Día',
             style: TextStyle(
-              color: Colors.white,
+              color: MinimalColors.textPrimary(context),
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -1840,8 +2094,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           const SizedBox(height: 12),
           Text(
             '${overallScore.toStringAsFixed(1)}/10',
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: MinimalColors.textPrimary(context),
               fontSize: 32,
               fontWeight: FontWeight.bold,
             ),
@@ -1849,8 +2103,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           const SizedBox(height: 8),
           Text(
             _getDayMessage(overallScore),
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: MinimalColors.textPrimary(context),
               fontSize: 14,
             ),
             textAlign: TextAlign.center,
@@ -1897,7 +2151,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           subtitle: 'Explorar patrones en tus datos',
           onTap: () {
             _saveReflection().then((success) {
-              if (success) {
+              if (success && mounted) {
                 Navigator.pushReplacementNamed(context, '/analytics');
               }
             });
@@ -1918,16 +2172,16 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: MinimalColors.backgroundCard,
+          color: MinimalColors.backgroundCard(context),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.1)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: MinimalColors.accentGradient),
+                gradient: LinearGradient(colors: MinimalColors.accentGradient(context)),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: Colors.white, size: 20),
@@ -1939,25 +2193,25 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: MinimalColors.textPrimary(context),
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   Text(
                     subtitle,
-                    style: const TextStyle(
-                      color: Colors.white60,
+                    style: TextStyle(
+                      color: MinimalColors.textMuted(context),
                       fontSize: 12,
                     ),
                   ),
                 ],
               ),
             ),
-            const Icon(
+            Icon(
               Icons.arrow_forward_ios,
-              color: Colors.white60,
+              color: MinimalColors.textMuted(context),
               size: 16,
             ),
           ],
@@ -1976,60 +2230,135 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     required String subtitle,
     required Widget child,
   }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: MinimalColors.backgroundCard,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: MinimalColors.primaryGradient[1].withOpacity(0.2),
-            blurRadius: 25,
-            offset: const Offset(0, 12),
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, 0.1),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(parent: _cardController, curve: Curves.easeOutBack)),
+      child: Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              MinimalColors.backgroundCard(context),
+              MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.08),
+              MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.05),
+            ],
           ),
-          BoxShadow(
-            color: Colors.black.withOpacity(0.4),
-            blurRadius: 15,
-            offset: const Offset(0, 6),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
+            width: 1.5,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+          boxShadow: [
+            BoxShadow(
+              color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.4),
+              blurRadius: 30,
+              offset: const Offset(0, 15),
+              spreadRadius: 2,
+            ),
+            BoxShadow(
+              color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.15),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(icon, style: const TextStyle(fontSize: 32)),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: MinimalColors.primaryGradient(context).map(
+                      (c) => c.withValues(alpha: 0.15)
+                    ).toList(),
+                  ),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: MinimalColors.primaryGradient(context),
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        icon,
+                        style: const TextStyle(fontSize: 28),
                       ),
                     ),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: TextStyle(
+                              color: MinimalColors.textPrimary(context),
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              color: MinimalColors.textSecondary(context),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.auto_awesome,
+                        color: MinimalColors.primaryGradient(context)[0],
+                        size: 20,
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(height: 24),
+              child,
             ],
           ),
-          const SizedBox(height: 24),
-          child,
-        ],
+        ),
       ),
     );
   }
@@ -2042,61 +2371,149 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: MinimalColors.backgroundSecondary,
-        border: Border(
-          top: BorderSide(color: Colors.white.withOpacity(0.1)),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            MinimalColors.backgroundSecondary(context).withValues(alpha: 0.8),
+            MinimalColors.backgroundSecondary(context),
+          ],
         ),
+        border: Border(
+          top: BorderSide(
+            color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
+            width: 1,
+          ),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 15,
+            offset: const Offset(0, -5),
+          ),
+        ],
       ),
       child: Row(
         children: [
           if (_currentStep > 0)
             Expanded(
-              child: OutlinedButton(
-                onPressed: _previousStep,
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.white,
-                  side: const BorderSide(color: Colors.white54),
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.5),
+                    width: 2,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: OutlinedButton(
+                  onPressed: _previousStep,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: MinimalColors.textPrimary(context),
+                    side: BorderSide.none,
+                    backgroundColor: MinimalColors.backgroundCard(context).withValues(alpha: 0.8),
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.arrow_back_ios,
+                        size: 16,
+                        color: MinimalColors.textPrimary(context),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Anterior',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: MinimalColors.textPrimary(context),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: const Text('Anterior'),
               ),
             ),
 
-          if (_currentStep > 0) const SizedBox(width: 12),
+          if (_currentStep > 0) const SizedBox(width: 16),
 
           Expanded(
             flex: _currentStep == 0 ? 1 : 2,
-            child: ElevatedButton(
-              onPressed: _canContinue()
-                  ? (_currentStep == _totalSteps - 1 ? _saveReflection : _nextStep)
-                  : null,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.transparent,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ).copyWith(
-                backgroundColor: MaterialStateProperty.all(Colors.transparent),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: _canContinue()
+                    ? LinearGradient(colors: MinimalColors.accentGradient(context))
+                    : null,
+                color: !_canContinue() 
+                    ? MinimalColors.textMuted(context).withValues(alpha: 0.3)
+                    : null,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: _canContinue()
+                    ? [
+                        BoxShadow(
+                          color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.4),
+                          blurRadius: 15,
+                          offset: const Offset(0, 6),
+                          spreadRadius: 1,
+                        ),
+                        BoxShadow(
+                          color: MinimalColors.accentGradient(context)[1].withValues(alpha: 0.3),
+                          blurRadius: 25,
+                          offset: const Offset(0, 10),
+                        ),
+                      ]
+                    : null,
               ),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(colors: MinimalColors.accentGradient),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Center(
-                  child: Text(
-                    _currentStep == _totalSteps - 1 ? 'Guardar Reflexión' : 'Continuar',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
+              child: ElevatedButton(
+                onPressed: _canContinue()
+                    ? (_currentStep == _totalSteps - 1 ? _saveReflection : _nextStep)
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  foregroundColor: Colors.white,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
                   ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_currentStep == _totalSteps - 1)
+                      const Icon(
+                        Icons.save_rounded,
+                        size: 20,
+                        color: Colors.white,
+                      )
+                    else
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _currentStep == _totalSteps - 1 ? 'Guardar Reflexión' : 'Continuar',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -2149,9 +2566,10 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         emotionalStability: _emotionalStability,
         focusLevel: _focusLevel,
         lifeSatisfaction: _lifeSatisfaction,
+        voiceRecordingPath: _voiceRecordingPath,
       );
 
-      Navigator.pop(context); // Cerrar loading
+      if (mounted) Navigator.pop(context); // Cerrar loading
 
       if (success) {
         _showSuccessSnackBar('¡Reflexión guardada exitosamente!');
@@ -2161,7 +2579,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         return false;
       }
     } catch (e) {
-      Navigator.pop(context); // Cerrar loading
+      if (mounted) Navigator.pop(context); // Cerrar loading
       _showErrorSnackBar('Error inesperado al guardar');
       return false;
     }
@@ -2182,9 +2600,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: 300,
-        decoration: const BoxDecoration(
-          color: MinimalColors.backgroundPrimary,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        decoration: BoxDecoration(
+          color: MinimalColors.backgroundPrimary(context),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         ),
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -2200,8 +2618,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             const SizedBox(height: 20),
             Text(
               title,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: MinimalColors.textPrimary(context),
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -2214,8 +2632,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   children: [
                     Text(
                       '$tempValue/10',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: MinimalColors.textPrimary(context),
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
@@ -2223,10 +2641,10 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                     const SizedBox(height: 20),
                     SliderTheme(
                       data: SliderTheme.of(context).copyWith(
-                        activeTrackColor: MinimalColors.accentGradient[0],
+                        activeTrackColor: MinimalColors.accentGradient(context)[0],
                         inactiveTrackColor: Colors.white24,
-                        thumbColor: MinimalColors.accentGradient[1],
-                        overlayColor: MinimalColors.accentGradient[0].withOpacity(0.2),
+                        thumbColor: MinimalColors.accentGradient(context)[1],
+                        overlayColor: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.2),
                         trackHeight: 8,
                         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 14),
                       ),
@@ -2265,18 +2683,18 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ).copyWith(
-                        backgroundColor: MaterialStateProperty.all(Colors.transparent),
+                        backgroundColor: WidgetStateProperty.all(Colors.transparent),
                       ),
                       child: Container(
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(colors: MinimalColors.accentGradient),
+                          gradient: LinearGradient(colors: MinimalColors.accentGradient(context)),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                        child: const Text(
+                        child: Text(
                           'Confirmar',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: MinimalColors.textPrimary(context),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -2303,9 +2721,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
   }
 
   List<Color> _getMoodGradient(int score) {
-    if (score <= 3) return MinimalColors.negativeGradient;
-    if (score <= 6) return MinimalColors.neutralGradient;
-    return MinimalColors.positiveGradient;
+    if (score <= 3) return MinimalColors.negativeGradient(context);
+    if (score <= 6) return MinimalColors.neutralGradient(context);
+    return MinimalColors.positiveGradient(context);
   }
 
   void _showLoadingDialog() {

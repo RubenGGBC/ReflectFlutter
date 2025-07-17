@@ -46,6 +46,7 @@ class DailyEntryModel {
   final int? emotionalStability;
   final int? focusLevel;
   final int? lifeSatisfaction;
+  final String? voiceRecordingPath;
 
   const DailyEntryModel({
     this.id,
@@ -82,6 +83,7 @@ class DailyEntryModel {
     this.emotionalStability,
     this.focusLevel,
     this.lifeSatisfaction,
+    this.voiceRecordingPath,
   });
 
   factory DailyEntryModel.create({
@@ -110,7 +112,9 @@ class DailyEntryModel {
     int? creativeEnergy,
     int? emotionalStability,
     int? focusLevel,
-    int? lifeSatisfaction, DateTime? entryDate,
+    int? lifeSatisfaction,
+    String? voiceRecordingPath,
+    DateTime? entryDate,
   }) {
     final now = DateTime.now();
     final wordCount = freeReflection.split(' ').where((s) => s.isNotEmpty).length;
@@ -163,6 +167,7 @@ class DailyEntryModel {
       emotionalStability: emotionalStability,
       focusLevel: focusLevel,
       lifeSatisfaction: lifeSatisfaction,
+      voiceRecordingPath: voiceRecordingPath,
     );
   }
 
@@ -216,6 +221,7 @@ class DailyEntryModel {
       emotionalStability: map['emotional_stability'] as int?,
       focusLevel: map['focus_level'] as int?,
       lifeSatisfaction: map['life_satisfaction'] as int?,
+      voiceRecordingPath: map['voice_recording_path'] as String?,
     );
   }
 
@@ -255,6 +261,7 @@ class DailyEntryModel {
       'emotional_stability': emotionalStability,
       'focus_level': focusLevel,
       'life_satisfaction': lifeSatisfaction,
+      'voice_recording_path': voiceRecordingPath,
     };
   }
 
@@ -293,6 +300,7 @@ class DailyEntryModel {
     int? emotionalStability,
     int? focusLevel,
     int? lifeSatisfaction,
+    String? voiceRecordingPath,
   }) {
     return DailyEntryModel(
       id: id ?? this.id,
@@ -329,6 +337,7 @@ class DailyEntryModel {
       emotionalStability: emotionalStability ?? this.emotionalStability,
       focusLevel: focusLevel ?? this.focusLevel,
       lifeSatisfaction: lifeSatisfaction ?? this.lifeSatisfaction,
+      voiceRecordingPath: voiceRecordingPath ?? this.voiceRecordingPath,
     );
   }
 }

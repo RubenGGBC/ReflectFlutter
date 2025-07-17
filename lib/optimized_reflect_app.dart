@@ -25,6 +25,7 @@ import 'presentation/providers/streak_provider.dart'; // ✅ HIGH PRIORITY ENHAN
 // Screens
 import 'presentation/screens/v2/login_screen_v2.dart';
 import 'presentation/screens/v2/main_navigation_screen_v2.dart';
+import 'presentation/screens/v2/welcome_onboarding_screen.dart';
 
 // Components
 import 'presentation/screens/components/modern_design_system.dart';
@@ -177,6 +178,7 @@ class OptimizedReflectApp extends StatelessWidget {
             initialRoute: '/',
             routes: {
               '/': (context) => const AuthWrapper(),
+              '/onboarding': (context) => const WelcomeOnboardingScreen(),
               '/login': (context) => const LoginScreenV2(),
               '/main': (context) => const MainNavigationScreenV2(),
             },
@@ -188,17 +190,50 @@ class OptimizedReflectApp extends StatelessWidget {
 }
 
 // Wrapper para decidir la pantalla inicial
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
+
+  @override
+  State<AuthWrapper> createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  @override
+  void initState() {
+    super.initState();
+    _checkFirstTimeUser();
+  }
+
+  Future<void> _checkFirstTimeUser() async {
+    final authProvider = context.read<OptimizedAuthProvider>();
+    await authProvider.checkFirstTimeUser();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Consumer<OptimizedAuthProvider>(
       builder: (context, auth, child) {
+        // Loading state
+        if (auth.isLoading) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        
+        // Check for first time user
+        if (auth.isFirstTimeUser) {
+          return const WelcomeOnboardingScreen();
+        }
+        
+        // Single profile per device - skip login screen
         if (auth.isLoggedIn) {
           return const MainNavigationScreenV2();
         } else {
-          return const LoginScreenV2();
+          // This shouldn't happen with single profile per device
+          // but fallback to onboarding if no user found
+          return const WelcomeOnboardingScreen();
         }
       },
     );

@@ -171,6 +171,7 @@ final int? creativeEnergy;
 final int? emotionalStability;
 final int? focusLevel;
 final int? lifeSatisfaction;
+final String? voiceRecordingPath;
 
 final DateTime createdAt;
 final DateTime updatedAt;
@@ -207,6 +208,7 @@ this.creativeEnergy,
 this.emotionalStability,
 this.focusLevel,
 this.lifeSatisfaction,
+this.voiceRecordingPath,
 required this.createdAt,
 required this.updatedAt,
 });
@@ -239,6 +241,7 @@ int? creativeEnergy,
 int? emotionalStability,
 int? focusLevel,
 int? lifeSatisfaction,
+String? voiceRecordingPath,
 }) {
 final now = DateTime.now();
 final entry = entryDate ?? DateTime(now.year, now.month, now.day);
@@ -272,6 +275,7 @@ creativeEnergy: creativeEnergy,
 emotionalStability: emotionalStability,
 focusLevel: focusLevel,
 lifeSatisfaction: lifeSatisfaction,
+voiceRecordingPath: voiceRecordingPath,
 createdAt: now,
 updatedAt: now,
 );
@@ -310,6 +314,7 @@ creativeEnergy: map['creative_energy'] as int?,
 emotionalStability: map['emotional_stability'] as int?,
 focusLevel: map['focus_level'] as int?,
 lifeSatisfaction: map['life_satisfaction'] as int?,
+voiceRecordingPath: map['voice_recording_path'] as String?,
 createdAt: DateTime.fromMillisecondsSinceEpoch((map['created_at'] as int) * 1000),
 updatedAt: DateTime.fromMillisecondsSinceEpoch((map['updated_at'] as int) * 1000),
 );
@@ -347,6 +352,7 @@ return {
 'emotional_stability': emotionalStability,
 'focus_level': focusLevel,
 'life_satisfaction': lifeSatisfaction,
+'voice_recording_path': voiceRecordingPath,
 'created_at': createdAt.millisecondsSinceEpoch ~/ 1000,
 'updated_at': updatedAt.millisecondsSinceEpoch ~/ 1000,
 };
@@ -385,6 +391,7 @@ int? creativeEnergy,
 int? emotionalStability,
 int? focusLevel,
 int? lifeSatisfaction,
+String? voiceRecordingPath,
 DateTime? createdAt,
 DateTime? updatedAt,
 }) {
@@ -420,6 +427,7 @@ creativeEnergy: creativeEnergy ?? this.creativeEnergy,
 emotionalStability: emotionalStability ?? this.emotionalStability,
 focusLevel: focusLevel ?? this.focusLevel,
 lifeSatisfaction: lifeSatisfaction ?? this.lifeSatisfaction,
+voiceRecordingPath: voiceRecordingPath ?? this.voiceRecordingPath,
 createdAt: createdAt ?? this.createdAt,
 updatedAt: updatedAt ?? this.updatedAt,
 );
