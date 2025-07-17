@@ -7,7 +7,6 @@ import 'package:logger/logger.dart';
 // Imports corregidos
 import 'optimized_reflect_app.dart';
 import 'injection_container_clean.dart' as clean_di;
-import 'services/notification_service.dart';
 import 'package:timezone/data/latest.dart' as tz;
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,11 +36,9 @@ void main() async {
     
     // Inicializar dependencias
     await clean_di.initCleanDependencies();
-
-    // Initialize notification service
-    final notificationService = NotificationService();
-    await notificationService.init();
-    await notificationService.setupDefaultReminders();
+    
+    // Initialize critical services (including notifications)
+    await clean_di.initCriticalServices();
 
     // Verificar que todo esté listo
     if (!clean_di.areCleanServicesRegistered()) {
@@ -56,7 +53,7 @@ void main() async {
 
   } catch (e) {
     // Fallback si hay problemas
-    print('❌ Error inicializando app: $e');
+    debugPrint('❌ Error inicializando app: $e');
     runApp(const ErrorApp());
   }
 }

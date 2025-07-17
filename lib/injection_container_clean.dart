@@ -2,6 +2,7 @@
 // injection_container_clean.dart - DEPENDENCY INJECTION OPTIMIZADO + NOTIFICATIONS
 // ============================================================================
 
+import 'package:flutter/foundation.dart';
 import 'package:get_it/get_it.dart';
 import 'package:logger/logger.dart';
 
@@ -31,23 +32,29 @@ final sl = GetIt.instance;
 
 /// Inicializar todas las dependencias de la app limpia
 Future<void> initCleanDependencies() async {
-  final logger = Logger();
-  logger.i('🧹 Inicializando dependencias limpias...');
-
+  Logger? logger;
+  
   try {
     // ============================================================================
     // CORE SERVICES (Singletons - solo una instancia)
     // ============================================================================
-    sl.registerLazySingleton<Logger>(() => Logger(
-      printer: PrettyPrinter(
-        methodCount: 2,
-        errorMethodCount: 8,
-        lineLength: 120,
-        colors: true,
-        printEmojis: true,
-        printTime: false,
-      ),
-    ));
+    
+    // Solo registrar Logger si no está ya registrado
+    if (!sl.isRegistered<Logger>()) {
+      sl.registerLazySingleton<Logger>(() => Logger(
+        printer: PrettyPrinter(
+          methodCount: 2,
+          errorMethodCount: 8,
+          lineLength: 120,
+          colors: true,
+          printEmojis: true,
+          dateTimeFormat: DateTimeFormat.none,
+        ),
+      ));
+    }
+    
+    logger = sl<Logger>();
+    logger.i('🧹 Inicializando dependencias limpias...');
 
     sl.registerLazySingleton<OptimizedDatabaseService>(
           () => OptimizedDatabaseService(),
@@ -158,7 +165,9 @@ Future<void> initCleanDependencies() async {
     logger.i('✅ Dependencias limpias inicializadas correctamente');
 
   } catch (e) {
-    logger.e('❌ Error inicializando dependencias limpias: $e');
+    logger?.e('❌ Error inicializando dependencias limpias: $e');
+    // Use debugPrint instead of print for better performance
+    debugPrint('❌ Error inicializando dependencias limpias: $e');
     rethrow;
   }
 }
@@ -172,6 +181,7 @@ Future<void> initCriticalServices() async {
     // Inicializar servicio de notificaciones
     final notificationService = sl<NotificationService>();
     await notificationService.init();
+    await notificationService.setupDefaultReminders();
     logger.i('✅ Servicio de notificaciones inicializado');
 
     // Inicializar otros servicios críticos aquí si es necesario
@@ -365,13 +375,13 @@ class DIMigrationHelper {
   }
 
   static Map<String, dynamic> checkMigrationStatus() {
-    final isLegacyPresent = false;
+    final isLegacyPresent = false; // Legacy system completely removed
     final isOptimizedPresent = sl.isRegisteredClean<OptimizedAuthProvider>();
     return {
       'legacy_present': isLegacyPresent,
       'optimized_present': isOptimizedPresent,
-      'migration_complete': !isLegacyPresent && isOptimizedPresent,
-      'conflicts': isLegacyPresent && isOptimizedPresent,
+      'migration_complete': isOptimizedPresent, // Simplified since legacy is always false
+      'conflicts': false, // No conflicts since legacy is removed
     };
   }
 }
@@ -390,7 +400,7 @@ class OptimizedLoggingConfig {
         lineLength: 80,
         colors: false,
         printEmojis: false,
-        printTime: true,
+        dateTimeFormat: DateTimeFormat.onlyTimeAndSinceStart,
       ),
     );
   }
@@ -404,7 +414,7 @@ class OptimizedLoggingConfig {
         lineLength: 120,
         colors: true,
         printEmojis: true,
-        printTime: false,
+        dateTimeFormat: DateTimeFormat.none,
       ),
     );
   }
@@ -422,12 +432,16 @@ class OptimizedLoggingConfig {
 // ============================================================================
 
 Future<void> initForProduction() async {
+  // Reset container to avoid conflicts
+  await resetCleanContainer();
   sl.registerLazySingleton<Logger>(() => OptimizedLoggingConfig.createProductionLogger());
   await initCleanDependencies();
   await initCriticalServices(); // ✅ NUEVO
 }
 
 Future<void> initForDevelopment() async {
+  // Reset container to avoid conflicts
+  await resetCleanContainer();
   sl.registerLazySingleton<Logger>(() => OptimizedLoggingConfig.createDevelopmentLogger());
   await initCleanDependencies();
   await initCriticalServices(); // ✅ NUEVO
