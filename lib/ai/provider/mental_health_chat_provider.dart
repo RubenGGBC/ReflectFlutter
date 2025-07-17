@@ -80,7 +80,7 @@ class MentalHealthChatProvider extends ChangeNotifier {
     }
   }
 
-  /// 🧠 Check AI model readiness
+  /// 🧠 Check AI model readiness - ENSURE MODEL IS DOWNLOADED
   Future<void> _checkAIReadiness() async {
     try {
       final phiService = PhiModelServiceGenAI.instance;
@@ -88,22 +88,40 @@ class MentalHealthChatProvider extends ChangeNotifier {
       if (phiService.isInitialized) {
         _isAIReady = true;
         _setAIStatus('Terapeuta IA listo');
+        return;
+      }
+
+      _isAIReady = false;
+      _setAIStatus('Verificando modelo IA...');
+
+      // Initialize with proper progress tracking
+      final initSuccess = await phiService.initialize(
+        onStatusUpdate: (status) {
+          _setAIStatus(status);
+          _logger.i('📊 AI Status: $status');
+        },
+        onProgress: (progress) {
+          final progressPercent = (progress * 100).toInt();
+          _setAIStatus('Descargando modelo: $progressPercent%');
+          _logger.i('📈 Download Progress: $progressPercent%');
+        },
+      );
+
+      if (initSuccess && phiService.isInitialized) {
+        _isAIReady = true;
+        _setAIStatus('Terapeuta IA listo');
+        _logger.i('✅ AI Model successfully initialized');
       } else {
         _isAIReady = false;
-        _setAIStatus('Inicializando terapeuta IA...');
-
-        await phiService.initialize(
-          onStatusUpdate: (status) => _setAIStatus(status),
-          onProgress: (progress) => {},
-        );
-
-        _isAIReady = phiService.isInitialized;
-        _setAIStatus(_isAIReady ? 'Terapeuta IA listo' : 'Modo terapéutico básico');
+        _setAIStatus('Error inicializando IA');
+        _logger.e('❌ AI Model initialization failed');
+        throw Exception('Failed to initialize AI model');
       }
     } catch (e) {
       _isAIReady = false;
-      _setAIStatus('Modo conversacional disponible');
-      _logger.w('AI not available, using basic mode: $e');
+      _setAIStatus('IA no disponible');
+      _logger.e('❌ AI initialization error: $e');
+      // Don't throw here - let the UI handle the error state
     }
   }
 
@@ -518,6 +536,16 @@ ${conversationHistory.isNotEmpty ? 'Contexto de conversación previa:\n$conversa
   void _clearError() {
     _errorMessage = null;
     notifyListeners();
+  }
+  
+  /// 🔄 Public method to clear error and retry initialization
+  void clearError() {
+    _clearError();
+  }
+  
+  /// 🔄 Public method to trigger re-initialization
+  Future<void> initializeChat() async {
+    await _initializeChat();
   }
 
   void _addMessageToCurrentConversation(ChatMessage message) {

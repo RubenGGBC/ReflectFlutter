@@ -272,43 +272,85 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
   Widget _buildAIStatusIndicator(MentalHealthChatProvider provider) {
     final isReady = provider.isAIReady;
     final status = provider.aiStatus;
+    final isDownloading = status.contains('Descargando modelo:');
+    final isInitializing = status.contains('Verificando') || status.contains('Inicializando');
+    
+    // Determine color based on status
+    Color statusColor;
+    Color backgroundColor;
+    Widget statusWidget;
+    
+    if (isReady) {
+      statusColor = Colors.green;
+      backgroundColor = Colors.green.withOpacity(0.1);
+      statusWidget = Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: statusColor,
+          borderRadius: BorderRadius.circular(4),
+        ),
+      );
+    } else if (isDownloading) {
+      statusColor = Colors.blue;
+      backgroundColor = Colors.blue.withOpacity(0.1);
+      statusWidget = SizedBox(
+        width: 12,
+        height: 12,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+        ),
+      );
+    } else if (isInitializing) {
+      statusColor = Colors.orange;
+      backgroundColor = Colors.orange.withOpacity(0.1);
+      statusWidget = SizedBox(
+        width: 12,
+        height: 12,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+        ),
+      );
+    } else {
+      statusColor = Colors.red;
+      backgroundColor = Colors.red.withOpacity(0.1);
+      statusWidget = Icon(
+        Icons.error_outline,
+        color: statusColor,
+        size: 12,
+      );
+    }
     
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: isReady 
-          ? Colors.green.withOpacity(0.1) 
-          : Colors.orange.withOpacity(0.1),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isReady 
-            ? Colors.green.withOpacity(0.3)
-            : Colors.orange.withOpacity(0.3),
+          color: statusColor.withOpacity(0.3),
           width: 1,
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Status dot
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: isReady ? Colors.green : Colors.orange,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
+          // Status widget (dot, spinner, or error icon)
+          statusWidget,
           
           const SizedBox(width: 8),
           
           // Status text
-          Text(
-            status,
-            style: TextStyle(
-              color: isReady ? Colors.green : Colors.orange,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+          Flexible(
+            child: Text(
+              status,
+              style: TextStyle(
+                color: statusColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -641,6 +683,26 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
               fontSize: 14,
             ),
             textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          // Retry button
+          ElevatedButton.icon(
+            onPressed: () {
+              final provider = context.read<MentalHealthChatProvider>();
+              provider.clearError();
+              // Trigger re-initialization
+              provider.initializeChat();
+            },
+            icon: const Icon(Icons.refresh_rounded),
+            label: const Text('Reintentar'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: MinimalColors.backgroundSecondary(context),
+              foregroundColor: MinimalColors.textPrimary(context),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
           ),
         ],
       ),
