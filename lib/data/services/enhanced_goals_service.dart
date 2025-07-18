@@ -36,7 +36,6 @@ class EnhancedGoalsService {
         await _addColumnIfNotExists(txn, 'user_goals', 'milestones', 'TEXT DEFAULT "[]"');
         await _addColumnIfNotExists(txn, 'user_goals', 'metrics', 'TEXT DEFAULT "{}"');
         
-        // Crear tabla para progress entries
         await txn.execute('''
           CREATE TABLE IF NOT EXISTS progress_entries (
             id TEXT PRIMARY KEY,
