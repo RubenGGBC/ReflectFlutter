@@ -76,7 +76,7 @@ class EnhancedGoalsService {
   }
 
   // ============================================================================
-  // ENHANCED GOAL MANAGEMENT
+  // ENHANCED GOAL
   // ============================================================================
 
   /// Crea un objetivo con configuración completa de Phase 1
