@@ -237,17 +237,197 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
         child: Column(
           children: [
             _buildScoreCard(entry),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             _buildReflectionCard(entry),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             _buildMetricsSection(entry),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
             _buildInsightsSection(entry),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            _buildInnerReflectionCard(entry),
+            const SizedBox(height: 16),
+            _buildActivitiesSection(entry),
+            const SizedBox(height: 16),
+            _buildGoalsSection(entry),
+            const SizedBox(height: 16),
+            _buildDailyPhotosSection(),
+            const SizedBox(height: 16),
             _buildActionsSection(),
             const SizedBox(height: 100), // Espacio para FAB
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInnerReflectionCard(dynamic entry) {
+    if (entry.innerReflection == null || entry.innerReflection.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: MinimalColors.backgroundCard(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.1)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: MinimalColors.accentGradient(context)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.self_improvement, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Reflexión Interior',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            entry.innerReflection,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 16,
+              height: 1.5,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivitiesSection(dynamic entry) {
+    if (entry.completedActivitiesToday == null || entry.completedActivitiesToday.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: MinimalColors.backgroundCard(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: MinimalColors.primaryGradient(context)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Actividades Completadas',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...entry.completedActivitiesToday.map<Widget>((activity) => Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              children: [
+                const Icon(Icons.done, color: Colors.green, size: 18),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    activity,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGoalsSection(dynamic entry) {
+    if (entry.goalsSummary == null || entry.goalsSummary.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: MinimalColors.backgroundCard(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: MinimalColors.accentGradient(context)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.flag_outlined, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Resumen de Metas',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...entry.goalsSummary.map<Widget>((goal) => Padding(
+            padding: const EdgeInsets.only(bottom: 8.0),
+            child: Row(
+              children: [
+                const Icon(Icons.star_border, color: Colors.amber, size: 18),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    goal,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )).toList(),
+        ],
       ),
     );
   }
@@ -294,7 +474,6 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                     ),
                     Text(
                       _getScoreMessage(overallScore),
-                      // FIX: Replaced Colors.white90 with a valid color
                       style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.9),
                         fontSize: 14,
@@ -468,47 +647,6 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
     );
   }
 
-  Widget _buildTagsSection(dynamic entry) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (entry.positiveTags.isNotEmpty) ...[
-          const Text(
-            '✅ Aspectos Positivos',
-            style: TextStyle(
-              color: const Color(0xFF3b82f6),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: entry.positiveTags.map<Widget>((tag) => _buildTag(tag, const Color(0xFF3b82f6))).toList(),
-          ),
-          const SizedBox(height: 12),
-        ],
-
-        if (entry.negativeTags.isNotEmpty) ...[
-          const Text(
-            '❌ Aspectos a Mejorar',
-            style: TextStyle(
-              color: const Color(0xFFef4444),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: entry.negativeTags.map<Widget>((tag) => _buildTag(tag, const Color(0xFFef4444))).toList(),
-          ),
-        ],
-      ],
-    );
-  }
 
   Widget _buildTag(String tag, Color color) {
     return Container(
@@ -526,6 +664,48 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
           fontWeight: FontWeight.w500,
         ),
       ),
+    );
+  }
+
+  Widget _buildTagsSection(dynamic entry) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (entry.positiveTags.isNotEmpty) ...[
+          Text(
+            '✅ Aspectos Positivos',
+            style: TextStyle(
+              color: const Color(0xFF3b82f6),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: entry.positiveTags.map<Widget>((tag) => _buildTag(tag, const Color(0xFF3b82f6))).toList(),
+          ),
+          const SizedBox(height: 12),
+        ],
+
+        if (entry.negativeTags.isNotEmpty) ...[
+          Text(
+            '❌ Aspectos a Mejorar',
+            style: TextStyle(
+              color: const Color(0xFFef4444),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: entry.negativeTags.map<Widget>((tag) => _buildTag(tag, const Color(0xFFef4444))).toList(),
+          ),
+        ],
+      ],
     );
   }
 
@@ -1162,4 +1342,141 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
     if (value <= 7) return const Color(0xFF3b82f6);
     return const Color(0xFF10b981);
   }
+
+  Widget _buildDailyPhotosSection() {
+    return Consumer<OptimizedMomentsProvider>(
+      builder: (context, momentsProvider, child) {
+        
+        // For now, create a mock photos section since the moments don't have image support
+        // In a real implementation, you'd need to add image support to the moments model
+        final mockPhotos = [
+          {'time': '09:30', 'title': 'Momento matutino'},
+          {'time': '14:15', 'title': 'Almuerzo'},
+          {'time': '18:45', 'title': 'Atardecer'},
+        ];
+
+        if (mockPhotos.isEmpty) {
+          return const SizedBox.shrink();
+        }
+
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: MinimalColors.backgroundCard(context),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: MinimalColors.accentGradient(context)),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.photo_camera_rounded, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Fotos del Día',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      '${mockPhotos.length}',
+                      style: TextStyle(
+                        color: MinimalColors.accentGradient(context)[0],
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                height: 120,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: mockPhotos.length,
+                  itemBuilder: (context, index) {
+                    final photo = mockPhotos[index];
+                    return _buildPhotoPlaceholder(photo);
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPhotoPlaceholder(Map<String, String> photo) {
+    return Container(
+      width: 100,
+      height: 100,
+      margin: const EdgeInsets.only(right: 12),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.3),
+        ),
+        gradient: LinearGradient(
+          colors: MinimalColors.accentGradient(context).map((c) => c.withValues(alpha: 0.1)).toList(),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Stack(
+          children: [
+            Container(
+              color: MinimalColors.backgroundCard(context),
+              child: Center(
+                child: Icon(
+                  Icons.photo_rounded,
+                  color: Colors.white54,
+                  size: 32,
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 4,
+              right: 4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.6),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  photo['time'] ?? '00:00',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
 }

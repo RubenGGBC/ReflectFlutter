@@ -12,9 +12,10 @@ import 'dart:math' as math;
 // Providers optimizados
 import '../../providers/optimized_providers.dart';
 import '../../providers/image_moments_provider.dart';
-import '../../providers/challenges_provider.dart';
+// import '../../providers/challenges_provider.dart'; // Removed
 import '../../providers/streak_provider.dart';
 import '../../providers/theme_provider.dart';
+import '../../providers/recommended_activities_provider.dart';
 
 // Modelos
 import '../../../data/models/optimized_models.dart';
@@ -24,6 +25,7 @@ import '../../widgets/home_enhancement_widgets.dart';
 
 // Componentes
 import 'components/minimal_colors.dart';
+import 'recommended_activities_screen.dart';
 
 class HomeScreenV2 extends StatefulWidget {
   const HomeScreenV2({super.key});
@@ -137,7 +139,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
         await Provider.of<OptimizedAnalyticsProvider>(context, listen: false).loadCompleteAnalytics(user.id);
         if (!mounted) return;
 
-        await Provider.of<ChallengesProvider>(context, listen: false).loadChallenges(user.id);
+        // await Provider.of<ChallengesProvider>(context, listen: false).loadChallenges(user.id); // Removed
         if (!mounted) return;
 
         await Provider.of<StreakProvider>(context, listen: false).loadStreakData(user.id);
@@ -184,11 +186,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           child: Consumer<StreakProvider>(
             builder: (context, streakProvider, _) {
               return Consumer6<OptimizedAuthProvider, OptimizedMomentsProvider,
-                  OptimizedAnalyticsProvider, GoalsProvider, ImageMomentsProvider,
-                  ChallengesProvider>(
+                  OptimizedAnalyticsProvider, GoalsProvider, ImageMomentsProvider, RecommendedActivitiesProvider>(
                 builder: (context, authProvider, momentsProvider,
-                    analyticsProvider, goalsProvider, imageProvider,
-                    challengesProvider, child) {
+                    analyticsProvider, goalsProvider, imageProvider, activitiesProvider, child) {
 
             final user = authProvider.currentUser;
             if (user == null) {
@@ -244,15 +244,15 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     const SizedBox(height: 24),
                     // 2. FACE CARD CON MOMENTOS DEL DÍA
                     _buildMomentsFaceCard(momentsProvider),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     // 🆕 PHOTO GALLERY WIDGET
                     _buildWeeklyPhotosWidget(momentsProvider, imageProvider),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
                     // 3. ✅ GRÁFICO SEMANAL MEJORADO CON DÍAS REALES
                     _buildRealWeeklyChart(analyticsProvider),
                     const SizedBox(height: 24),
                     // 5. 🎯 PERSONALIZED CHALLENGES
-                    PersonalizedChallengesWidget(animationController: _fadeController),
+                    // PersonalizedChallengesWidget removed
                     const SizedBox(height: 24),
                     // 6. 📊 MOOD CALENDAR HEATMAP
                     MoodCalendarHeatmapWidget(animationController: _slideController),
@@ -264,7 +264,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     _buildGoalsWithCompletedState(goalsProvider),
                     const SizedBox(height: 24),
                     // 10. RECOMENDACIONES CONTEXTUALES MEJORADAS
-                    _buildContextualRecommendations(user, analyticsProvider),
+                    _buildContextualRecommendations(user, analyticsProvider, activitiesProvider),
                     const SizedBox(height: 32),
                       ],
                     ),
@@ -1145,10 +1145,10 @@ class _HomeScreenV2State extends State<HomeScreenV2>
         return Transform.scale(
           scale: _fadeAnimation.value,
           child: Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: MinimalColors.backgroundCard(context),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(
                 color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                 width: 1,
@@ -1284,10 +1284,10 @@ class _HomeScreenV2State extends State<HomeScreenV2>
           child: Opacity(
             opacity: _fadeAnimation.value,
             child: Container(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: MinimalColors.backgroundCard(context),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                   width: 1,
@@ -1644,135 +1644,181 @@ class _HomeScreenV2State extends State<HomeScreenV2>
 // ============================================================================
 // RECOMENDACIONES CONTEXTUALES MEJORADAS
 // ============================================================================
-  Widget _buildContextualRecommendations(OptimizedUserModel user, OptimizedAnalyticsProvider analyticsProvider) {
-    final recommendations = analyticsProvider.getTopRecommendations();
+  Widget _buildContextualRecommendations(OptimizedUserModel user, OptimizedAnalyticsProvider analyticsProvider, RecommendedActivitiesProvider activitiesProvider) {
+    final dailyActivities = activitiesProvider.dailyRecommendations;
 
-    if (recommendations.isEmpty) {
+    if (dailyActivities.isEmpty) {
       return Container();
     }
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: MinimalColors.backgroundCard(context),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
-          width: 1,
-        ),
-        // 🎨 SOMBRA DEGRADADA AÑADIDA
-        boxShadow: [
-          BoxShadow(
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const RecommendedActivitiesScreen(),
+          ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: MinimalColors.backgroundCard(context),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
             color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(-5, 5),
+            width: 1,
           ),
-          BoxShadow(
-            color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(5, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: MinimalColors.accentGradient(context),
-                  ),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.lightbulb,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Recomendaciones',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: MinimalColors.textPrimary(context),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...recommendations.take(2).map((rec) => AnimatedBuilder( // ✅ ANIMACIÓN INDIVIDUAL
-            animation: _floatingAnimation,
-            builder: (context, child) {
-              return Transform.scale(
-                scale: 1.0 + (math.sin(_floatingAnimation.value * math.pi * 2) * 0.02), // Escala sutil
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
+          // 🎨 SOMBRA DEGRADADA AÑADIDA
+          boxShadow: [
+            BoxShadow(
+              color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(-5, 5),
+            ),
+            BoxShadow(
+              color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(5, 5),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: MinimalColors.backgroundSecondary(context),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
-                      width: 1,
+                    gradient: LinearGradient(
+                      colors: MinimalColors.accentGradient(context),
                     ),
-                    // ✅ SOMBRAS MEJORADAS
-                    boxShadow: [
-                      BoxShadow(
-                        color: MinimalColors.backgroundSecondary(context).withValues(alpha: 0.3),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                        spreadRadius: 1,
-                      ),
-                      BoxShadow(
-                        color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.15),
-                        blurRadius: 15,
-                        offset: const Offset(0, 8),
-                        spreadRadius: 2,
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Row(
+                  child: const Icon(
+                    Icons.star,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        rec['emoji'] ?? '💡',
-                        style: TextStyle(fontSize: 24),
+                        'Recomendaciones',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: MinimalColors.textPrimary(context),
+                        ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              rec['title'] ?? '',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: MinimalColors.textPrimary(context),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              rec['description'] ?? '',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: MinimalColors.textSecondary(context),
-                              ),
-                            ),
-                          ],
+                      Text(
+                        '${dailyActivities.length} actividades para hoy',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: MinimalColors.textSecondary(context),
                         ),
                       ),
                     ],
                   ),
                 ),
-              );
-            },
-          )).toList(),
-        ],
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    Icons.arrow_forward_ios,
+                    color: MinimalColors.primaryGradient(context)[0],
+                    size: 16,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            ...dailyActivities.take(2).map((activity) => AnimatedBuilder( // ✅ ANIMACIÓN INDIVIDUAL
+              animation: _floatingAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: 1.0 + (math.sin(_floatingAnimation.value * math.pi * 2) * 0.02), // Escala sutil
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: MinimalColors.backgroundSecondary(context),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
+                        width: 1,
+                      ),
+                      // ✅ SOMBRAS MEJORADAS
+                      boxShadow: [
+                        BoxShadow(
+                          color: MinimalColors.backgroundSecondary(context).withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 5),
+                          spreadRadius: 1,
+                        ),
+                        BoxShadow(
+                          color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.15),
+                          blurRadius: 15,
+                          offset: const Offset(0, 8),
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: activity.gradientColors,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            activity.iconData,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                activity.title,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: MinimalColors.textPrimary(context),
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                activity.formattedDuration,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: MinimalColors.textSecondary(context),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            )).toList(),
+          ],
+        ),
       ),
     );
   }

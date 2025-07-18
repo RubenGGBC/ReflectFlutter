@@ -2598,6 +2598,26 @@ class GoalsProvider with ChangeNotifier {
       _goals.where((goal) => goal.status == GoalStatus.archived).toList();
 
   // Métricas agregadas
+
+  List<String> get dailyGoalsSummary {
+    final summary = <String>[];
+    final today = DateTime.now();
+
+    for (final goal in _goals) {
+      // Check if the goal is active and has progress
+      if (goal.isActive && goal.currentValue > 0) {
+        summary.add(
+            '${goal.title}: ${goal.progressPercentage.toStringAsFixed(0)}% completado');
+      } else if (goal.isCompleted && goal.completedAt != null &&
+          goal.completedAt!.year == today.year &&
+          goal.completedAt!.month == today.month &&
+          goal.completedAt!.day == today.day) {
+        summary.add('${goal.title}: ¡Completado hoy!');
+      }
+    }
+    return summary;
+  }
+
   double get averageProgress {
     if (activeGoals.isEmpty) return 0.0;
     final totalProgress = activeGoals.fold<double>(

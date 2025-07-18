@@ -19,7 +19,7 @@ import '../models/optimized_models.dart';
 
 class OptimizedDatabaseService {
   static const String _databaseName = 'reflect_optimized_v2.db';
-  static const int _databaseVersion = 6;
+  static const int _databaseVersion = 8;
 
   static Database? _database;
   static final OptimizedDatabaseService _instance = OptimizedDatabaseService
@@ -266,6 +266,7 @@ class OptimizedDatabaseService {
           user_id INTEGER NOT NULL,
           entry_date TEXT NOT NULL,
           free_reflection TEXT NOT NULL,
+          inner_reflection TEXT,
 
           -- Métricas básicas
           mood_score INTEGER DEFAULT 5 CHECK (mood_score >= 1 AND mood_score <= 10),
@@ -305,6 +306,8 @@ class OptimizedDatabaseService {
           gratitude_items TEXT,
           positive_tags TEXT DEFAULT '[]',
           negative_tags TEXT DEFAULT '[]',
+          completed_activities_today TEXT DEFAULT '[]',
+          goals_summary TEXT DEFAULT '[]',
           voice_recording_path TEXT,
 
           -- Timestamps
@@ -490,6 +493,12 @@ class OptimizedDatabaseService {
       if (oldVersion < 6) {
         await _migrateToV6(db);
       }
+      if (oldVersion < 7) {
+        await _migrateToV7(db);
+      }
+      if (oldVersion < 8) {
+        await _migrateToV8(db);
+      }
     } catch (e) {
       _logger.e('❌ Error en migración: $e');
       // En APK, mejor recrear la BD si hay errores críticos
@@ -568,7 +577,10 @@ class OptimizedDatabaseService {
       'gratitude_items TEXT',
       'positive_tags TEXT DEFAULT \'[]\'',
       'negative_tags TEXT DEFAULT \'[]\'',
+      'completed_activities_today TEXT DEFAULT \'[]\'',
+      'goals_summary TEXT DEFAULT \'[]\'',
       'voice_recording_path TEXT',
+      'inner_reflection TEXT',
       'updated_at INTEGER NOT NULL DEFAULT (strftime(\'%s\', \'now\'))',
     ];
 
@@ -633,6 +645,39 @@ class OptimizedDatabaseService {
     } catch (e) {
       _logger.e('❌ Error en migración v6: $e');
       rethrow;
+    }
+  }
+
+  Future<void> _migrateToV7(Database db) async {
+    try {
+      // Add inner_reflection column to daily_entries table
+      await db.execute('ALTER TABLE daily_entries ADD COLUMN inner_reflection TEXT;');
+      _logger.i('✅ Migración v7 completada - Agregada columna inner_reflection a daily_entries');
+    } catch (e) {
+      // If column already exists, ignore the error
+      if (e.toString().contains('duplicate column name')) {
+        _logger.i('ℹ️ Columna inner_reflection ya existe en daily_entries');
+      } else {
+        _logger.e('❌ Error en migración v7: $e');
+        rethrow;
+      }
+    }
+  }
+
+  Future<void> _migrateToV8(Database db) async {
+    try {
+      // Add completed_activities_today and goals_summary columns to daily_entries table
+      await db.execute('ALTER TABLE daily_entries ADD COLUMN completed_activities_today TEXT DEFAULT \'[]\';');
+      await db.execute('ALTER TABLE daily_entries ADD COLUMN goals_summary TEXT DEFAULT \'[]\';');
+      _logger.i('✅ Migración v8 completada - Agregadas columnas completed_activities_today y goals_summary a daily_entries');
+    } catch (e) {
+      // If columns already exist, ignore the error
+      if (e.toString().contains('duplicate column name')) {
+        _logger.i('ℹ️ Columnas completed_activities_today y goals_summary ya existen en daily_entries');
+      } else {
+        _logger.e('❌ Error en migración v8: $e');
+        rethrow;
+      }
     }
   }
 

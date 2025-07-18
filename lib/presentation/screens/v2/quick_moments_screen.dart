@@ -315,8 +315,6 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: MinimalColors.backgroundPrimary(context),
-      extendBodyBehindAppBar: true,
-      appBar: _buildModernAppBar(),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -336,7 +334,6 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
             child: Column(
               children: [
                 _buildHeader(),
-                _buildProgressIndicator(),
                 Expanded(
                   child: PageView(
                     controller: _pageController,
@@ -361,345 +358,82 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
   // APP BAR MODERNO
   // ============================================================================
 
-  PreferredSizeWidget _buildModernAppBar() {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      leading: IconButton(
-        onPressed: () => Navigator.pop(context),
-        icon: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: MinimalColors.backgroundCard(context).withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: MinimalColors.textSecondary(context).withValues(alpha: 0.2),
-              width: 1,
-            ),
-          ),
-          child: Icon(
-            Icons.arrow_back_ios_new,
-            color: MinimalColors.textPrimary(context),
-            size: 18,
-          ),
-        ),
-      ),
-      title: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: MinimalColors.primaryGradient(context),
-          ),
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Text(
-          'Nuevo Momento',
-          style: TextStyle(
-            color: MinimalColors.textPrimary(context),
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      centerTitle: true,
-    );
-  }
 
   // ============================================================================
   // HEADER CON PASO ACTUAL
   // ============================================================================
 
   Widget _buildHeader() {
-    final stepTitles = [
-      'Captura tu momento',
-      'Describe tu experiencia',
-      'Revisa y confirma'
-    ];
-
     return SlideTransition(
       position: _slideAnimation,
       child: Container(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: MinimalColors.primaryGradient(context),
-                    ),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Icon(
-                    Icons.camera_alt,
-                    color: Colors.white,
-                    size: 28,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Nuevo Momento',
-                        style: TextStyle(
-                          color: MinimalColors.textPrimary(context),
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      Text(
-                        stepTitles[_currentStep],
-                        style: TextStyle(
-                          color: MinimalColors.textSecondary(context),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            _buildQuickStepIndicator(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickStepIndicator() {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.2),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.timeline,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Paso ${_currentStep + 1}: ${_getStepDescription()}',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: MinimalColors.accentGradient(context),
-            ),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Text(
-            '${_currentStep + 1}/$_totalSteps',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  String _getStepDescription() {
-    switch (_currentStep) {
-      case 0: return 'Elige emoji y tipo';
-      case 1: return 'Añade descripción';
-      case 2: return 'Confirma momento';
-      default: return '';
-    }
-  }
-
-  // ============================================================================
-  // INDICADOR DE PROGRESO MEJORADO
-  // ============================================================================
-
-  Widget _buildProgressIndicator() {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
+            colors: MinimalColors.primaryGradient(context),
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              MinimalColors.backgroundCard(context),
-              MinimalColors.backgroundSecondary(context).withValues(alpha: 0.8),
-              MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.08),
-            ],
           ),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
-            width: 1,
+          borderRadius: const BorderRadius.only(
+            bottomLeft: Radius.circular(24),
+            bottomRight: Radius.circular(24),
           ),
-          boxShadow: [
-            BoxShadow(
-              color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 4),
-            ),
-          ],
         ),
-        child: Column(
+        child: Row(
           children: [
-            Row(
-              children: List.generate(_totalSteps, (index) {
-                final isCompleted = index <= _currentStep;
-                final isActive = index == _currentStep;
-
-                return Expanded(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 400),
-                    height: isActive ? 8 : 6,
-                    margin: EdgeInsets.only(right: index < _totalSteps - 1 ? 12 : 0),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(4),
-                      gradient: isCompleted
-                          ? LinearGradient(
-                              colors: isActive 
-                                  ? MinimalColors.primaryGradient(context)
-                                  : MinimalColors.accentGradient(context),
-                            )
-                          : null,
-                      color: isCompleted
-                          ? null
-                          : MinimalColors.textMuted(context).withValues(alpha: 0.3),
-                      boxShadow: isActive
-                          ? [
-                              BoxShadow(
-                                color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.4),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : null,
-                    ),
-                  ),
-                );
-              }),
+            IconButton(
+              onPressed: () => Navigator.pop(context),
+              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: MinimalColors.primaryGradient(context).map(
-                    (c) => c.withValues(alpha: 0.1)
-                  ).toList(),
-                ),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: MinimalColors.primaryGradient(context),
-                          ),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: 14,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Paso ${_currentStep + 1} de $_totalSteps',
-                        style: TextStyle(
-                          color: MinimalColors.textPrimary(context),
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: MinimalColors.accentGradient(context),
-                      ),
-                      borderRadius: BorderRadius.circular(8),
+                  const Text(
+                    'Nuevo Momento',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
                     ),
-                    child: Text(
-                      '${((_currentStep + 1) / _totalSteps * 100).round()}%',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  ),
+                  Text(
+                    DateTime.now().toString().split(' ')[0],
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
             ),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(
+                Icons.camera_alt,
+                color: Colors.white,
+                size: 28,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+
+
+
+  // ============================================================================
+  // INDICADOR DE PROGRESO MEJORADO
+  // ============================================================================
+
 
   // ============================================================================
   // PASO 1: CAPTURA DEL MOMENTO MEJORADO
@@ -714,9 +448,9 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           children: [
             const SizedBox(height: 20),
             _buildEnhancedPhotoSection(),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
             _buildEnhancedEmojiSelector(),
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
             _buildEnhancedTypeSelector(),
           ],
         ),
@@ -726,7 +460,7 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
 
   Widget _buildEnhancedPhotoSection() {
     return Container(
-      height: 220,
+      height: 160,
       width: double.infinity,
       decoration: BoxDecoration(
         gradient: LinearGradient(

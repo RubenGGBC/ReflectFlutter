@@ -21,6 +21,8 @@ import 'presentation/providers/analytics_provider.dart'; // ✅ PROVIDER AÑADID
 import 'presentation/providers/advanced_emotion_analysis_provider.dart'; // ✅ NUEVO PROVIDER AVANZADO
 import 'presentation/providers/challenges_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
 import 'presentation/providers/streak_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
+import 'presentation/providers/recommended_activities_provider.dart'; // ✅ NUEVO: Recommended Activities
+import 'presentation/providers/daily_activities_provider.dart'; // ✅ NUEVO: Daily Activities
 import 'ai/provider/ai_provider.dart';
 import 'ai/provider/predective_analysis_provider.dart'; // ✅ NUEVO: Análisis Predictivo
 import 'ai/provider/chat_provider.dart'; // ✅ NUEVO: Chat con IA
@@ -160,6 +162,16 @@ Future<void> initCleanDependencies() async {
     // ✅ NUEVO: AdvancedEmotionAnalysisProvider
     sl.registerFactory<AdvancedEmotionAnalysisProvider>(
           () => AdvancedEmotionAnalysisProvider(sl<OptimizedDatabaseService>()),
+    );
+
+    // ✅ NUEVO: RecommendedActivitiesProvider
+    sl.registerFactory<RecommendedActivitiesProvider>(
+          () => RecommendedActivitiesProvider(),
+    );
+
+    // ✅ NUEVO: DailyActivitiesProvider
+    sl.registerFactory<DailyActivitiesProvider>(
+          () => DailyActivitiesProvider(),
     );
 
     logger.i('✅ Dependencias limpias inicializadas correctamente');

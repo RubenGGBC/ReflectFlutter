@@ -186,7 +186,7 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: MinimalColors.shadow(context).withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -248,13 +248,13 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
                   child: Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
+                      color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      border: Border.all(color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3)),
                     ),
                     child: Icon(
                       Icons.download_rounded,
-                      color: Colors.blue,
+                      color: MinimalColors.primaryGradient(context)[0],
                       size: 16,
                     ),
                   ),
@@ -302,8 +302,8 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
     Widget statusWidget;
     
     if (isReady) {
-      statusColor = Colors.green;
-      backgroundColor = Colors.green.withOpacity(0.1);
+      statusColor = MinimalColors.positiveGradient(context)[0];
+      backgroundColor = MinimalColors.positiveGradient(context)[0].withValues(alpha: 0.1);
       statusWidget = Container(
         width: 8,
         height: 8,
@@ -313,8 +313,8 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
         ),
       );
     } else if (isDownloading) {
-      statusColor = Colors.blue;
-      backgroundColor = Colors.blue.withOpacity(0.1);
+      statusColor = MinimalColors.primaryGradient(context)[0];
+      backgroundColor = MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.1);
       statusWidget = SizedBox(
         width: 12,
         height: 12,
@@ -324,8 +324,8 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
         ),
       );
     } else if (isInitializing) {
-      statusColor = Colors.orange;
-      backgroundColor = Colors.orange.withOpacity(0.1);
+      statusColor = MinimalColors.neutralGradient(context)[0];
+      backgroundColor = MinimalColors.neutralGradient(context)[0].withValues(alpha: 0.1);
       statusWidget = SizedBox(
         width: 12,
         height: 12,
@@ -335,8 +335,8 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
         ),
       );
     } else {
-      statusColor = Colors.red;
-      backgroundColor = Colors.red.withOpacity(0.1);
+      statusColor = MinimalColors.negativeGradient(context)[0];
+      backgroundColor = MinimalColors.negativeGradient(context)[0].withValues(alpha: 0.1);
       statusWidget = Icon(
         Icons.error_outline,
         color: statusColor,
@@ -472,7 +472,7 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: MinimalColors.shadow(context).withValues(alpha: 0.1),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -568,7 +568,7 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: MinimalColors.shadow(context).withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, -4),
           ),
@@ -684,7 +684,7 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
         children: [
           Icon(
             Icons.error_outline_rounded,
-            color: Colors.orange,
+            color: MinimalColors.neutralGradient(context)[0],
             size: 48,
           ),
           const SizedBox(height: 16),

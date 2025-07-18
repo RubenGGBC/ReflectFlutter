@@ -1,4 +1,4 @@
-// lib/presentation/screens/v2/profile_screen_v2.dart
+/// lib/presentation/screens/v2/profile_screen_v2.dart
 // ============================================================================
 // PROFILE SCREEN V2 - ESTILO MINIMALISTA NEGRO CON GRADIENTES AZUL-MORADO
 // ============================================================================
@@ -13,9 +13,9 @@ import 'package:untitled3/presentation/screens/v2/notification_settings_screen.d
 // Providers optimizados
 import '../../providers/optimized_providers.dart';
 
-// Componentes modernos
-import '../components/modern_design_system.dart';
+// Componentes
 import 'components/minimal_colors.dart';
+import 'components/modern_design_system.dart';
 
 // Modelos
 
@@ -134,7 +134,11 @@ class _ProfileScreenV2State extends State<ProfileScreenV2>
         body: Center(
           child: Text(
             'Error: Usuario no encontrado.',
-            style: ModernTypography.bodyLarge.copyWith(color: MinimalColors.textPrimary(context)),
+            style: TextStyle(
+              color: MinimalColors.textPrimary(context),
+              fontSize: 16,
+              fontWeight: FontWeight.w400,
+            ),
           ),
         ),
       );

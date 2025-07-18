@@ -11,12 +11,23 @@ DailyEntryModel _$DailyEntryModelFromJson(Map<String, dynamic> json) =>
       id: (json['id'] as num?)?.toInt(),
       userId: (json['userId'] as num).toInt(),
       freeReflection: json['freeReflection'] as String,
+      innerReflection: json['innerReflection'] as String?,
+      gratitudeItems: json['gratitudeItems'] as String?,
       positiveTags: (json['positiveTags'] as List<dynamic>?)
-              ?.map((e) => TagModel.fromJson(e as Map<String, dynamic>))
+              ?.map((e) => e as String)
               .toList() ??
           const [],
       negativeTags: (json['negativeTags'] as List<dynamic>?)
-              ?.map((e) => TagModel.fromJson(e as Map<String, dynamic>))
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      completedActivitiesToday:
+          (json['completedActivitiesToday'] as List<dynamic>?)
+                  ?.map((e) => e as String)
+                  .toList() ??
+              const [],
+      goalsSummary: (json['goalsSummary'] as List<dynamic>?)
+              ?.map((e) => e as String)
               .toList() ??
           const [],
       worthIt: json['worthIt'] as bool?,
@@ -40,7 +51,6 @@ DailyEntryModel _$DailyEntryModelFromJson(Map<String, dynamic> json) =>
       meditationMinutes: (json['meditationMinutes'] as num?)?.toInt(),
       exerciseMinutes: (json['exerciseMinutes'] as num?)?.toInt(),
       screenTimeHours: (json['screenTimeHours'] as num?)?.toDouble(),
-      gratitudeItems: json['gratitudeItems'] as String?,
       weatherMoodImpact: (json['weatherMoodImpact'] as num?)?.toInt(),
       socialBattery: (json['socialBattery'] as num?)?.toInt(),
       creativeEnergy: (json['creativeEnergy'] as num?)?.toInt(),
@@ -55,8 +65,12 @@ Map<String, dynamic> _$DailyEntryModelToJson(DailyEntryModel instance) =>
       'id': instance.id,
       'userId': instance.userId,
       'freeReflection': instance.freeReflection,
+      'innerReflection': instance.innerReflection,
+      'gratitudeItems': instance.gratitudeItems,
       'positiveTags': instance.positiveTags,
       'negativeTags': instance.negativeTags,
+      'completedActivitiesToday': instance.completedActivitiesToday,
+      'goalsSummary': instance.goalsSummary,
       'worthIt': instance.worthIt,
       'overallSentiment': instance.overallSentiment,
       'moodScore': instance.moodScore,
@@ -78,7 +92,6 @@ Map<String, dynamic> _$DailyEntryModelToJson(DailyEntryModel instance) =>
       'meditationMinutes': instance.meditationMinutes,
       'exerciseMinutes': instance.exerciseMinutes,
       'screenTimeHours': instance.screenTimeHours,
-      'gratitudeItems': instance.gratitudeItems,
       'weatherMoodImpact': instance.weatherMoodImpact,
       'socialBattery': instance.socialBattery,
       'creativeEnergy': instance.creativeEnergy,

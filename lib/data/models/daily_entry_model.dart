@@ -5,7 +5,6 @@
 
 import 'dart:convert';
 import 'package:json_annotation/json_annotation.dart';
-import 'tag_model.dart';
 
 part 'daily_entry_model.g.dart';
 
@@ -14,8 +13,12 @@ class DailyEntryModel {
   final int? id;
   final int userId;
   final String freeReflection;
-  final List<TagModel> positiveTags;
-  final List<TagModel> negativeTags;
+  final String? innerReflection;
+  final String? gratitudeItems;
+  final List<String> positiveTags;
+  final List<String> negativeTags;
+  final List<String> completedActivitiesToday;
+  final List<String> goalsSummary;
   final bool? worthIt;
   final String? overallSentiment;
   final int? moodScore;
@@ -39,7 +42,6 @@ class DailyEntryModel {
   final int? meditationMinutes;
   final int? exerciseMinutes;
   final double? screenTimeHours;
-  final String? gratitudeItems;
   final int? weatherMoodImpact;
   final int? socialBattery;
   final int? creativeEnergy;
@@ -52,8 +54,12 @@ class DailyEntryModel {
     this.id,
     required this.userId,
     required this.freeReflection,
+    this.innerReflection,
+    this.gratitudeItems,
     this.positiveTags = const [],
     this.negativeTags = const [],
+    this.completedActivitiesToday = const [],
+    this.goalsSummary = const [],
     this.worthIt,
     this.overallSentiment,
     this.moodScore,
@@ -76,7 +82,6 @@ class DailyEntryModel {
     this.meditationMinutes,
     this.exerciseMinutes,
     this.screenTimeHours,
-    this.gratitudeItems,
     this.weatherMoodImpact,
     this.socialBattery,
     this.creativeEnergy,
@@ -89,8 +94,12 @@ class DailyEntryModel {
   factory DailyEntryModel.create({
     required int userId,
     required String freeReflection,
-    List<TagModel> positiveTags = const [],
-    List<TagModel> negativeTags = const [],
+    String? innerReflection,
+    String? gratitudeItems,
+    List<String> positiveTags = const [],
+    List<String> negativeTags = const [],
+    List<String> completedActivitiesToday = const [],
+    List<String> goalsSummary = const [],
     bool? worthIt,
     // ✅ PARÁMETROS OPCIONALES DE ANALYTICS
     int? energyLevel,
@@ -106,7 +115,6 @@ class DailyEntryModel {
     int? meditationMinutes,
     int? exerciseMinutes,
     double? screenTimeHours,
-    String? gratitudeItems,
     int? weatherMoodImpact,
     int? socialBattery,
     int? creativeEnergy,
@@ -137,8 +145,12 @@ class DailyEntryModel {
     return DailyEntryModel(
       userId: userId,
       freeReflection: freeReflection,
+      innerReflection: innerReflection,
+      gratitudeItems: gratitudeItems,
       positiveTags: positiveTags,
       negativeTags: negativeTags,
+      completedActivitiesToday: completedActivitiesToday,
+      goalsSummary: goalsSummary,
       worthIt: worthIt,
       overallSentiment: sentiment,
       moodScore: moodScore,
@@ -160,7 +172,6 @@ class DailyEntryModel {
       meditationMinutes: meditationMinutes,
       exerciseMinutes: exerciseMinutes,
       screenTimeHours: screenTimeHours,
-      gratitudeItems: gratitudeItems,
       weatherMoodImpact: weatherMoodImpact,
       socialBattery: socialBattery,
       creativeEnergy: creativeEnergy,
@@ -176,11 +187,11 @@ class DailyEntryModel {
 
   // Para base de datos
   factory DailyEntryModel.fromDatabase(Map<String, dynamic> map) {
-    List<TagModel> parseTagsJson(String? jsonStr) {
+    List<String> parseTagsJson(String? jsonStr) {
       if (jsonStr == null || jsonStr.isEmpty) return [];
       try {
         final List<dynamic> tagsList = json.decode(jsonStr);
-        return tagsList.map((tagJson) => TagModel.fromJson(tagJson as Map<String, dynamic>)).toList();
+        return tagsList.map((tag) => tag.toString()).toList();
       } catch (e) {
         return [];
       }
@@ -190,8 +201,12 @@ class DailyEntryModel {
       id: map['id'] as int?,
       userId: (map['user_id'] as int?) ?? 0,
       freeReflection: (map['free_reflection'] as String?) ?? '',
+      innerReflection: (map['inner_reflection'] as String?),
+      gratitudeItems: (map['gratitude_items'] as String?),
       positiveTags: parseTagsJson(map['positive_tags'] as String?),
       negativeTags: parseTagsJson(map['negative_tags'] as String?),
+      completedActivitiesToday: (json.decode(map['completed_activities_today'] as String) as List<dynamic>).map((e) => e as String).toList(),
+      goalsSummary: (json.decode(map['goals_summary'] as String) as List<dynamic>).map((e) => e as String).toList(),
       worthIt: map['worth_it'] != null ? (map['worth_it'] as int) == 1 : null,
       overallSentiment: map['overall_sentiment'] as String?,
       moodScore: map['mood_score'] as int?,
@@ -214,7 +229,6 @@ class DailyEntryModel {
       meditationMinutes: map['meditation_minutes'] as int?,
       exerciseMinutes: map['exercise_minutes'] as int?,
       screenTimeHours: (map['screen_time_hours'] as num?)?.toDouble(),
-      gratitudeItems: map['gratitude_items'] as String?,
       weatherMoodImpact: map['weather_mood_impact'] as int?,
       socialBattery: map['social_battery'] as int?,
       creativeEnergy: map['creative_energy'] as int?,
@@ -230,8 +244,12 @@ class DailyEntryModel {
       if (id != null) 'id': id,
       'user_id': userId,
       'free_reflection': freeReflection,
-      'positive_tags': json.encode(positiveTags.map((tag) => tag.toJson()).toList()),
-      'negative_tags': json.encode(negativeTags.map((tag) => tag.toJson()).toList()),
+      'inner_reflection': innerReflection,
+      'gratitude_items': gratitudeItems,
+      'positive_tags': json.encode(positiveTags),
+      'negative_tags': json.encode(negativeTags),
+      'completed_activities_today': json.encode(completedActivitiesToday),
+      'goals_summary': json.encode(goalsSummary),
       'worth_it': worthIt == null ? null : (worthIt! ? 1 : 0),
       'overall_sentiment': overallSentiment,
       'mood_score': moodScore,
@@ -254,7 +272,6 @@ class DailyEntryModel {
       'meditation_minutes': meditationMinutes,
       'exercise_minutes': exerciseMinutes,
       'screen_time_hours': screenTimeHours,
-      'gratitude_items': gratitudeItems,
       'weather_mood_impact': weatherMoodImpact,
       'social_battery': socialBattery,
       'creative_energy': creativeEnergy,
@@ -269,8 +286,12 @@ class DailyEntryModel {
     int? id,
     int? userId,
     String? freeReflection,
-    List<TagModel>? positiveTags,
-    List<TagModel>? negativeTags,
+    String? innerReflection,
+    String? gratitudeItems,
+    List<String>? positiveTags,
+    List<String>? negativeTags,
+    List<String>? completedActivitiesToday,
+    List<String>? goalsSummary,
     bool? worthIt,
     String? overallSentiment,
     int? moodScore,
@@ -293,7 +314,6 @@ class DailyEntryModel {
     int? meditationMinutes,
     int? exerciseMinutes,
     double? screenTimeHours,
-    String? gratitudeItems,
     int? weatherMoodImpact,
     int? socialBattery,
     int? creativeEnergy,
@@ -306,8 +326,12 @@ class DailyEntryModel {
       id: id ?? this.id,
       userId: userId ?? this.userId,
       freeReflection: freeReflection ?? this.freeReflection,
+      innerReflection: innerReflection ?? this.innerReflection,
+      gratitudeItems: gratitudeItems ?? this.gratitudeItems,
       positiveTags: positiveTags ?? this.positiveTags,
       negativeTags: negativeTags ?? this.negativeTags,
+      completedActivitiesToday: completedActivitiesToday ?? this.completedActivitiesToday,
+      goalsSummary: goalsSummary ?? this.goalsSummary,
       worthIt: worthIt ?? this.worthIt,
       overallSentiment: overallSentiment ?? this.overallSentiment,
       moodScore: moodScore ?? this.moodScore,
@@ -330,7 +354,6 @@ class DailyEntryModel {
       meditationMinutes: meditationMinutes ?? this.meditationMinutes,
       exerciseMinutes: exerciseMinutes ?? this.exerciseMinutes,
       screenTimeHours: screenTimeHours ?? this.screenTimeHours,
-      gratitudeItems: gratitudeItems ?? this.gratitudeItems,
       weatherMoodImpact: weatherMoodImpact ?? this.weatherMoodImpact,
       socialBattery: socialBattery ?? this.socialBattery,
       creativeEnergy: creativeEnergy ?? this.creativeEnergy,

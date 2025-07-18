@@ -9,7 +9,6 @@ import '../../data/models/analytics_models.dart';
 import '../../data/models/daily_entry_model.dart';
 import '../../data/models/interactive_moment_model.dart';
 import '../../data/models/goal_model.dart';
-import '../../data/models/tag_model.dart';
 import '../../data/services/optimized_database_service.dart';
 
 class AnalyticsProviderOptimized extends ChangeNotifier {
@@ -457,18 +456,8 @@ class AnalyticsProviderOptimized extends ChangeNotifier {
       id: e.id,
       userId: e.userId,
       freeReflection: e.freeReflection,
-      positiveTags: e.positiveTags.map((tag) => TagModel(
-        name: tag,
-        context: '',
-        emoji: '',
-        type: 'positive',
-      )).toList(),
-      negativeTags: e.negativeTags.map((tag) => TagModel(
-        name: tag,
-        context: '',
-        emoji: '',
-        type: 'negative',
-      )).toList(),
+      positiveTags: e.positiveTags,
+      negativeTags: e.negativeTags,
       worthIt: e.worthIt,
       overallSentiment: e.overallSentiment,
       moodScore: e.moodScore,

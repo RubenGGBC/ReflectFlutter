@@ -21,6 +21,8 @@ import 'ai/provider/chat_provider.dart'; // ✅ NUEVO: Chat con IA
 import 'ai/provider/mental_health_chat_provider.dart'; // ✅ NUEVO: Mental Health Chat
 import 'presentation/providers/challenges_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
 import 'presentation/providers/streak_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
+import 'presentation/providers/recommended_activities_provider.dart'; // ✅ NUEVO: Recommended Activities
+import 'presentation/providers/daily_activities_provider.dart'; // ✅ NUEVO: Daily Activities
 
 // Screens
 import 'presentation/screens/v2/login_screen_v2.dart';
@@ -165,6 +167,16 @@ class OptimizedReflectApp extends StatelessWidget {
             // pero no carga datos automáticamente (solo cuando se llama explícitamente)
             return previous!;
           },
+        ),
+
+        // ✅ NUEVO: RecommendedActivitiesProvider
+        ChangeNotifierProvider<RecommendedActivitiesProvider>(
+          create: (_) => clean_di.sl<RecommendedActivitiesProvider>(),
+        ),
+
+        // ✅ NUEVO: DailyActivitiesProvider
+        ChangeNotifierProvider<DailyActivitiesProvider>(
+          create: (_) => clean_di.sl<DailyActivitiesProvider>(),
         ),
       ],
       child: Consumer<ThemeProvider>(

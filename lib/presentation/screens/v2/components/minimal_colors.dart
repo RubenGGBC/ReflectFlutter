@@ -34,6 +34,12 @@ class MinimalColors {
   static Color textMuted(BuildContext context) => 
     Provider.of<ThemeProvider>(context, listen: false).textHint;
 
+  // Sombras
+  static Color shadow(BuildContext context) => 
+    Provider.of<ThemeProvider>(context, listen: false).isDarkMode
+        ? Colors.black.withValues(alpha: 0.3)
+        : Colors.grey.withValues(alpha: 0.2);
+
   // Gradientes
   static List<Color> primaryGradient(BuildContext context) => 
     Provider.of<ThemeProvider>(context, listen: false).gradientHeader;
@@ -72,6 +78,8 @@ class MinimalColors {
   static const Color textSecondaryStatic = Color(0xFFB3B8C8);
   static const Color textTertiaryStatic = Color(0xFFB3B8C8);
   static const Color textMutedStatic = Color(0xFF8691A8);
+  
+  static const Color shadowStatic = Color(0x4D000000);
   
   static const List<Color> primaryGradientStatic = [
     Color(0xFF1E3A8A), 
