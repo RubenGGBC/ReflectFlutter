@@ -67,7 +67,6 @@ class AdvancedEmotionAnalysisProvider with ChangeNotifier {
         clusterResult['centroids']
       );
 
-      // Behavioral patterns
       final behavioralPatterns = _detectBehavioralPatterns(entryModels, clusterResult['assignments']);
 
       final result = {
