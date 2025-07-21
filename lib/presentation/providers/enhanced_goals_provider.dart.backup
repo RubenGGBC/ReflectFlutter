@@ -1,0 +1,413 @@
+// lib/presentation/providers/enhanced_goals_provider.dart
+// ============================================================================
+// ENHANCED GOALS PROVIDER WITH ADVANCED CUSTOMIZATION FEATURES
+// ============================================================================
+
+import 'package:flutter/foundation.dart';
+import 'package:logger/logger.dart';
+
+import '../../data/models/goal_model.dart';
+import '../../data/services/enhanced_goals_service.dart';
+import '../../data/services/optimized_database_service.dart';
+
+/// Provider mejorado para gestión de objetivos con funcionalidades avanzadas
+class EnhancedGoalsProvider extends ChangeNotifier {
+  final EnhancedGoalsService _goalsService = EnhancedGoalsService();
+  final Logger _logger = Logger();
+
+  EnhancedGoalsProvider(OptimizedDatabaseService databaseService) {
+    _goalsService.initialize(databaseService);
+  }
+
+  // ============================================================================
+  // STATE MANAGEMENT
+  // ============================================================================
+
+  List<GoalModel> _goals = [];
+  Map<String, StreakData> _streakData = {};
+  bool _isLoading = false;
+  String? _error;
+  GoalCategory? _selectedCategory;
+  // REMOVED: Priority and difficulty filters - simplified model
+  String _searchQuery = '';
+  GoalSortOption _sortOption = GoalSortOption.createdAt;
+
+  // ============================================================================
+  // GETTERS
+  // ============================================================================
+
+  List<GoalModel> get goals => List.unmodifiable(_goals);
+  Map<String, StreakData> get streakData => Map.unmodifiable(_streakData);
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  GoalCategory? get selectedCategory => _selectedCategory;
+  // REMOVED: Priority and difficulty getters - simplified model
+  String get searchQuery => _searchQuery;
+  GoalSortOption get sortOption => _sortOption;
+
+  /// Objetivos filtrados según criterios actuales
+  List<GoalModel> get filteredGoals {
+    var filtered = _goals.where((goal) {
+      // Filtro por categoría
+      if (_selectedCategory != null && goal.category != _selectedCategory) {
+        return false;
+      }
+      
+      // REMOVED: Priority and difficulty filters - simplified model
+      
+      // Filtro por búsqueda
+      if (_searchQuery.isNotEmpty) {
+        final query = _searchQuery.toLowerCase();
+        return goal.title.toLowerCase().contains(query) ||
+               goal.description.toLowerCase().contains(query) ||
+               goal.tags.any((tag) => tag.toLowerCase().contains(query));
+      }
+      
+      return true;
+    }).toList();
+
+    // Aplicar ordenamiento
+    filtered.sort((a, b) {
+      switch (_sortOption) {
+        case GoalSortOption.title:
+          return a.title.compareTo(b.title);
+        case GoalSortOption.progress:
+          return b.progress.compareTo(a.progress);
+        case GoalSortOption.priority:
+          return b.priority.index.compareTo(a.priority.index);
+        case GoalSortOption.difficulty:
+          return b.difficulty.index.compareTo(a.difficulty.index);
+        case GoalSortOption.dueDate:
+          if (a.endDate == null && b.endDate == null) return 0;
+          if (a.endDate == null) return 1;
+          if (b.endDate == null) return -1;
+          return a.endDate!.compareTo(b.endDate!);
+        case GoalSortOption.createdAt:
+        default:
+          return b.createdAt.compareTo(a.createdAt);
+      }
+    });
+
+    return filtered;
+  }
+
+  List<GoalModel> get activeGoals => 
+      goals.where((goal) => goal.status == GoalStatus.active).toList();
+
+  List<GoalModel> get completedGoals => 
+      goals.where((goal) => goal.status == GoalStatus.completed).toList();
+
+  List<GoalModel> get archivedGoals => 
+      goals.where((goal) => goal.status == GoalStatus.archived).toList();
+
+  List<GoalModel> get highPriorityGoals => 
+      goals.where((goal) => goal.priority == GoalPriority.high || goal.priority == GoalPriority.urgent).toList();
+
+  List<GoalModel> get goalsWithReminders => 
+      goals.where((goal) => goal.hasReminders).toList();
+
+  /// Estadísticas de objetivos
+  Map<String, dynamic> get goalStatistics {
+    final total = _goals.length;
+    final active = activeGoals.length;
+    final completed = completedGoals.length;
+    final averageProgress = _goals.isNotEmpty 
+        ? _goals.map((g) => g.progress).reduce((a, b) => a + b) / _goals.length
+        : 0.0;
+
+    final categoryCounts = <GoalCategory, int>{};
+    final priorityCounts = <GoalPriority, int>{};
+    final difficultyCounts = <GoalDifficulty, int>{};
+
+    for (final goal in _goals) {
+      categoryCounts[goal.category] = (categoryCounts[goal.category] ?? 0) + 1;
+      priorityCounts[goal.priority] = (priorityCounts[goal.priority] ?? 0) + 1;
+      difficultyCounts[goal.difficulty] = (difficultyCounts[goal.difficulty] ?? 0) + 1;
+    }
+
+    return {
+      'total': total,
+      'active': active,
+      'completed': completed,
+      'archived': archivedGoals.length,
+      'averageProgress': averageProgress,
+      'categoryCounts': categoryCounts,
+      'priorityCounts': priorityCounts,
+      'difficultyCounts': difficultyCounts,
+      'completionRate': total > 0 ? completed / total : 0.0,
+    };
+  }
+
+  // ============================================================================
+  // FILTERING AND SORTING
+  // ============================================================================
+
+  void setCategory(GoalCategory? category) {
+    if (_selectedCategory != category) {
+      _selectedCategory = category;
+      notifyListeners();
+    }
+  }
+
+  void setPriority(GoalPriority? priority) {
+    if (_selectedPriority != priority) {
+      _selectedPriority = priority;
+      notifyListeners();
+    }
+  }
+
+  void setDifficulty(GoalDifficulty? difficulty) {
+    if (_selectedDifficulty != difficulty) {
+      _selectedDifficulty = difficulty;
+      notifyListeners();
+    }
+  }
+
+  void setSearchQuery(String query) {
+    if (_searchQuery != query) {
+      _searchQuery = query;
+      notifyListeners();
+    }
+  }
+
+  void setSortOption(GoalSortOption option) {
+    if (_sortOption != option) {
+      _sortOption = option;
+      notifyListeners();
+    }
+  }
+
+  void clearFilters() {
+    _selectedCategory = null;
+    _selectedPriority = null;
+    _selectedDifficulty = null;
+    _searchQuery = '';
+    notifyListeners();
+  }
+
+  // ============================================================================
+  // DATA LOADING
+  // ============================================================================
+
+  Future<void> loadGoals(int userId) async {
+    try {
+      _setLoading(true);
+      _error = null;
+
+      // Migrar esquema si es necesario
+      await _goalsService.migrateToPhase1Schema();
+
+      // Cargar objetivos
+      final goals = await _goalsService.getUserGoalsEnhanced(userId);
+      
+      // Cargar datos de rachas para cada objetivo
+      final streakData = <String, StreakData>{};
+      for (final goal in goals) {
+        if (goal.id != null) {
+          final streak = await _goalsService.calculateStreakData(goal.id.toString());
+          streakData[goal.id.toString()] = streak;
+        }
+      }
+
+      _goals = goals;
+      _streakData = streakData;
+      _logger.i('✅ Cargados ${goals.length} objetivos enhanced');
+    } catch (e) {
+      _error = 'Error cargando objetivos: $e';
+      _logger.e('❌ Error cargando objetivos: $e');
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  // ============================================================================
+  // GOAL MANAGEMENT
+  // ============================================================================
+
+  Future<void> createGoal(GoalModel goal) async {
+    try {
+      _setLoading(true);
+      _logger.i('🚀 Iniciando creación de objetivo: ${goal.title}');
+      
+      final goalId = await _goalsService.createEnhancedGoalFromModel(goal);
+      final savedGoal = goal.copyWith(id: goalId);
+      
+      _goals.insert(0, savedGoal);
+      _logger.i('📝 Objetivo agregado a la lista. Total: ${_goals.length}');
+      
+      // Generar datos de racha inicial
+      final streak = await _goalsService.calculateStreakData(goalId.toString());
+      _streakData[goalId.toString()] = streak;
+      
+      _logger.i('✅ Objetivo creado exitosamente: ${goal.title} (ID: $goalId)');
+      notifyListeners();
+    } catch (e) {
+      _error = 'Error creando objetivo: $e';
+      _logger.e('❌ Error creando objetivo: $e');
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
+
+  Future<void> updateGoal(GoalModel updatedGoal) async {
+    try {
+      final index = _goals.indexWhere((g) => g.id == updatedGoal.id);
+      if (index == -1) throw Exception('Goal not found');
+
+      // Update in service
+      final savedGoal = await _goalsService.updateGoal(updatedGoal);
+      
+      _goals[index] = savedGoal;
+      _logger.i('✅ Objetivo actualizado: ${savedGoal.title}');
+      notifyListeners();
+    } catch (e) {
+      _error = 'Error actualizando objetivo: $e';
+      _logger.e('❌ Error actualizando objetivo: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> updateGoalProgress(int goalId, int newValue, {
+    String? notes,
+    Map<String, dynamic>? metrics,
+  }) async {
+    try {
+      await _goalsService.updateGoalProgressWithMilestones(
+        goalId, 
+        newValue, 
+        notes: notes, 
+        metrics: metrics,
+      );
+
+      // Actualizar en memoria
+      final index = _goals.indexWhere((g) => g.id == goalId);
+      if (index != -1) {
+        final updatedGoal = _goals[index].updateProgressWithMilestones(newValue, notes: notes);
+        if (metrics != null) {
+          _goals[index] = updatedGoal.updateMetrics(metrics);
+        } else {
+          _goals[index] = updatedGoal;
+        }
+
+        // Actualizar datos de racha
+        final streak = await _goalsService.calculateStreakData(goalId.toString());
+        _streakData[goalId.toString()] = streak;
+      }
+
+      _logger.i('✅ Progreso actualizado para objetivo $goalId: $newValue');
+      notifyListeners();
+    } catch (e) {
+      _error = 'Error actualizando progreso: $e';
+      _logger.e('❌ Error actualizando progreso: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> addProgressEntry(ProgressEntry entry) async {
+    try {
+      await _goalsService.addProgressEntry(entry);
+      
+      // Actualizar datos de racha
+      final streak = await _goalsService.calculateStreakData(entry.goalId);
+      _streakData[entry.goalId] = streak;
+
+      _logger.i('✅ Entrada de progreso agregada para objetivo ${entry.goalId}');
+      notifyListeners();
+    } catch (e) {
+      _error = 'Error agregando entrada de progreso: $e';
+      _logger.e('❌ Error agregando entrada de progreso: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> deleteGoal(int goalId) async {
+    try {
+      // Delete from service
+      await _goalsService.deleteGoal(goalId);
+      
+      _goals.removeWhere((g) => g.id == goalId);
+      _streakData.remove(goalId.toString());
+      
+      _logger.i('✅ Objetivo eliminado: $goalId');
+      notifyListeners();
+    } catch (e) {
+      _error = 'Error eliminando objetivo: $e';
+      _logger.e('❌ Error eliminando objetivo: $e');
+      rethrow;
+    }
+  }
+
+  // ============================================================================
+  // UTILITY METHODS
+  // ============================================================================
+
+  GoalModel? getGoalById(int goalId) {
+    try {
+      return _goals.firstWhere((g) => g.id == goalId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  StreakData? getStreakDataForGoal(int goalId) {
+    return _streakData[goalId.toString()];
+  }
+
+  List<GoalModel> getGoalsByCategory(GoalCategory category) {
+    return _goals.where((g) => g.category == category).toList();
+  }
+
+  List<GoalModel> getGoalsByPriority(GoalPriority priority) {
+    return _goals.where((g) => g.priority == priority).toList();
+  }
+
+  List<GoalModel> getGoalsDueSoon(int days) {
+    final cutoff = DateTime.now().add(Duration(days: days));
+    return _goals.where((g) => 
+      g.endDate != null && 
+      g.endDate!.isBefore(cutoff) && 
+      g.status == GoalStatus.active
+    ).toList();
+  }
+
+  void _setLoading(bool loading) {
+    if (_isLoading != loading) {
+      _isLoading = loading;
+      notifyListeners();
+    }
+  }
+
+  void clearError() {
+    if (_error != null) {
+      _error = null;
+      notifyListeners();
+    }
+  }
+}
+
+// ============================================================================
+// ENUMS AND MODELS
+// ============================================================================
+
+enum GoalSortOption {
+  createdAt,
+  title,
+  progress,
+  priority,
+  difficulty,
+  dueDate,
+}
+
+extension GoalSortOptionExtension on GoalSortOption {
+  String get displayName {
+    switch (this) {
+      case GoalSortOption.createdAt: return 'Fecha de creación';
+      case GoalSortOption.title: return 'Título';
+      case GoalSortOption.progress: return 'Progreso';
+      case GoalSortOption.priority: return 'Prioridad';
+      case GoalSortOption.difficulty: return 'Dificultad';
+      case GoalSortOption.dueDate: return 'Fecha límite';
+    }
+  }
+}

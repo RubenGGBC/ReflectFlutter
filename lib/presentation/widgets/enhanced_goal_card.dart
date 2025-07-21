@@ -196,7 +196,7 @@ class _EnhancedGoalCardState extends State<EnhancedGoalCard>
           ),
           child: Icon(
             _getCategoryIconData(widget.goal.categoryIcon),
-            color: Colors.white,
+            color: MinimalColors.textPrimaryStatic,
             size: 24,
           ),
         ),
@@ -348,7 +348,7 @@ class _EnhancedGoalCardState extends State<EnhancedGoalCard>
               '${widget.streakData!.currentStreak}',
               Icons.local_fire_department,
               widget.streakData!.isStreakActive 
-                  ? [const Color(0xFFFF6B35), const Color(0xFFFF8E53)]
+                  ? [MinimalColors.error, MinimalColors.warning]
                   : MinimalColors.textMuted(context).withValues(alpha: 0.3),
             ),
           ),
@@ -492,7 +492,7 @@ class _EnhancedGoalCardState extends State<EnhancedGoalCard>
               Icon(
                 icon,
                 size: 16,
-                color: Colors.white,
+                color: MinimalColors.textPrimaryStatic,
               ),
               const SizedBox(width: 6),
               Text(
@@ -500,7 +500,7 @@ class _EnhancedGoalCardState extends State<EnhancedGoalCard>
                 style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: MinimalColors.textPrimaryStatic,
                 ),
               ),
             ],
@@ -613,14 +613,14 @@ class _EnhancedGoalCardState extends State<EnhancedGoalCard>
             padding: const EdgeInsets.all(4),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [const Color(0xFFFFD700), const Color(0xFFFF8C00)],
+                colors: [MinimalColors.warning, const Color(0xFFFF8C00)],
               ),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.celebration,
               size: 16,
-              color: Colors.white,
+              color: MinimalColors.textPrimaryStatic,
             ),
           ),
         );
@@ -631,14 +631,14 @@ class _EnhancedGoalCardState extends State<EnhancedGoalCard>
   // Helper methods
   Color _getBorderColor(BuildContext context) {
     if (widget.goal.shouldCelebrateMilestone) {
-      return const Color(0xFFFFD700);
+      return MinimalColors.warning;
     }
     return MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3);
   }
 
   Color _getShadowColor(BuildContext context) {
     if (widget.goal.shouldCelebrateMilestone) {
-      return const Color(0xFFFFD700).withValues(alpha: 0.4);
+      return MinimalColors.warning.withValues(alpha: 0.4);
     }
     return MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2);
   }
@@ -654,14 +654,16 @@ class _EnhancedGoalCardState extends State<EnhancedGoalCard>
 
   Color _getDifficultyColor(BuildContext context) {
     switch (widget.goal.difficulty) {
-      case GoalDifficulty.easy:
-        return const Color(0xFF10B981);
-      case GoalDifficulty.medium:
-        return const Color(0xFFF59E0B);
-      case GoalDifficulty.hard:
-        return const Color(0xFFEF4444);
-      case GoalDifficulty.expert:
-        return const Color(0xFF8B5CF6);
+      case 'easy':
+        return MinimalColors.success;
+      case 'medium':
+        return MinimalColors.warning;
+      case 'hard':
+        return MinimalColors.error;
+      case 'expert':
+        return MinimalColors.accent;
+      default:
+        return MinimalColors.warning;
     }
   }
 

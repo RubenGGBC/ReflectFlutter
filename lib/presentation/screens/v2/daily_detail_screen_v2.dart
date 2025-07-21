@@ -8,6 +8,8 @@ import 'package:provider/provider.dart';
 
 // Providers optimizados
 import '../../providers/optimized_providers.dart';
+import '../../providers/enhanced_goals_provider.dart';
+import '../../providers/daily_roadmap_provider.dart';
 
 // Pantallas relacionadas
 import 'daily_review_screen_v2.dart';
@@ -111,10 +113,10 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: MinimalColors.backgroundPrimary(context),
+      backgroundColor: Colors.white,
       body: SafeArea(
-        child: Consumer2<OptimizedDailyEntriesProvider, OptimizedAnalyticsProvider>(
-          builder: (context, entriesProvider, analyticsProvider, child) {
+        child: Consumer5<OptimizedDailyEntriesProvider, OptimizedAnalyticsProvider, EnhancedGoalsProvider, DailyRoadmapProvider, OptimizedMomentsProvider>(
+          builder: (context, entriesProvider, analyticsProvider, goalsProvider, roadmapProvider, momentsProvider, child) {
             final entry = _getEntryForDate(widget.date, entriesProvider.entries);
 
             return Column(
@@ -122,7 +124,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                 _buildHeader(),
                 Expanded(
                   child: entry != null
-                      ? _buildDetailContent(entry)
+                      ? _buildDetailContent(entry, goalsProvider, roadmapProvider, momentsProvider)
                       : _buildEmptyState(),
                 ),
               ],
@@ -160,25 +162,30 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
               children: [
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                  icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '📖 Detalle del Día',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: MinimalColors.accentGradient(context),
+                        ).createShader(bounds),
+                        child: const Text(
+                          'Detalle del Día',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       Text(
                         _formatDate(widget.date),
                         style: const TextStyle(
-                          color: Colors.white70,
+                          color: Colors.black54,
                           fontSize: 16,
                         ),
                       ),
@@ -192,7 +199,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                       scale: 1.0 + (_pulseController.value * 0.1),
                       child: IconButton(
                         onPressed: _navigateToCalendar,
-                        icon: const Icon(Icons.calendar_month, color: Colors.white),
+                        icon: const Icon(Icons.calendar_month, color: Colors.black),
                         tooltip: 'Ver calendario',
                       ),
                     );
@@ -213,7 +220,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
               child: Text(
                 _getRelativeDayText(widget.date),
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: Colors.black,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -229,7 +236,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
   // CONTENIDO PRINCIPAL
   // ============================================================================
 
-  Widget _buildDetailContent(dynamic entry) {
+  Widget _buildDetailContent(dynamic entry, EnhancedGoalsProvider goalsProvider, DailyRoadmapProvider roadmapProvider, OptimizedMomentsProvider momentsProvider) {
     return FadeTransition(
       opacity: _contentController,
       child: SingleChildScrollView(
@@ -248,9 +255,15 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
             const SizedBox(height: 16),
             _buildActivitiesSection(entry),
             const SizedBox(height: 16),
-            _buildGoalsSection(entry),
+            _buildGoalsSection(entry, goalsProvider),
+            const SizedBox(height: 16),
+            _buildDailyRoadmapSection(roadmapProvider),
+            const SizedBox(height: 16),
+            _buildMomentsGallerySection(momentsProvider),
             const SizedBox(height: 16),
             _buildDailyPhotosSection(),
+            const SizedBox(height: 16),
+            _buildProgressSummarySection(entry, goalsProvider),
             const SizedBox(height: 16),
             _buildActionsSection(),
             const SizedBox(height: 100), // Espacio para FAB
@@ -295,7 +308,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
               const Text(
                 'Reflexión Interior',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Colors.black,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -343,7 +356,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
               const Text(
                 'Actividades Completadas',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Colors.black,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -361,7 +374,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                   child: Text(
                     activity,
                     style: const TextStyle(
-                      color: Colors.white70,
+                      color: Colors.black54,
                       fontSize: 16,
                     ),
                   ),
@@ -374,8 +387,13 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
     );
   }
 
-  Widget _buildGoalsSection(dynamic entry) {
-    if (entry.goalsSummary == null || entry.goalsSummary.isEmpty) return const SizedBox.shrink();
+  Widget _buildGoalsSection(dynamic entry, EnhancedGoalsProvider goalsProvider) {
+    final goals = goalsProvider.goals;
+    final activeGoals = goals.where((g) => g.isActive).toList();
+    
+    if (activeGoals.isEmpty && (entry.goalsSummary == null || entry.goalsSummary.isEmpty)) {
+      return const SizedBox.shrink();
+    }
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -398,35 +416,82 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                 child: const Icon(Icons.flag_outlined, color: Colors.white, size: 20),
               ),
               const SizedBox(width: 12),
-              const Text(
-                'Resumen de Metas',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: Text(
+                  'Metas del Día',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${activeGoals.length}',
+                  style: TextStyle(
+                    color: MinimalColors.accentGradient(context)[0],
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          ...entry.goalsSummary.map<Widget>((goal) => Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Row(
-              children: [
-                const Icon(Icons.star_border, color: Colors.amber, size: 18),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    goal,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
+          
+          // Enhanced Goals Display
+          if (activeGoals.isNotEmpty) ...[
+            ...activeGoals.take(3).map<Widget>((goal) => _buildGoalProgressCard(goal)),
+            if (activeGoals.length > 3) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Y ${activeGoals.length - 3} metas más...',
+                style: TextStyle(
+                  color: Colors.white54,
+                  fontSize: 14,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ],
+          
+          // Legacy Goals Summary
+          if (entry.goalsSummary != null && entry.goalsSummary.isNotEmpty) ...[
+            if (activeGoals.isNotEmpty) const SizedBox(height: 12),
+            const Text(
+              'Notas adicionales:',
+              style: TextStyle(
+                color: Colors.black54,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...entry.goalsSummary.map<Widget>((goal) => Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.star_border, color: Colors.amber, size: 18),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      goal,
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-          )).toList(),
+                ],
+              ),
+            )).toList(),
+          ],
         ],
       ),
     );
@@ -467,7 +532,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                     const Text(
                       'Puntuación General',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
                       ),
@@ -484,7 +549,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                 Text(
                   '${overallScore.toStringAsFixed(1)}/10',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
                   ),
@@ -582,7 +647,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                 const Text(
                   'Reflexión del Día',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -597,7 +662,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                   ? entry.freeReflection
                   : 'Sin reflexión registrada para este día.',
               style: const TextStyle(
-                color: Colors.white70,
+                color: Colors.black54,
                 fontSize: 16,
                 height: 1.5,
               ),
@@ -618,7 +683,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                     const Text(
                       '🙏 Gratitud',
                       style: TextStyle(
-                        color: const Color(0xFF3b82f6),
+                        color: Color(0xFF3b82f6),
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -627,7 +692,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                     Text(
                       entry.gratitudeItems,
                       style: const TextStyle(
-                        color: Colors.white70,
+                        color: Colors.black54,
                         fontSize: 14,
                       ),
                     ),
@@ -742,7 +807,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                     const Text(
                       'Métricas de Bienestar',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -766,7 +831,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                     child: Text(
                       _showAllMetrics ? 'Menos' : 'Más',
                       style: const TextStyle(
-                        color: Colors.white70,
+                        color: Colors.black54,
                         fontSize: 12,
                       ),
                     ),
@@ -863,7 +928,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
           Text(
             title,
             style: const TextStyle(
-              color: Colors.white,
+              color: Colors.black,
               fontSize: 12,
               fontWeight: FontWeight.w500,
             ),
@@ -899,7 +964,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
               const Text(
                 'Insights del Día',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Colors.black,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
@@ -943,7 +1008,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                 Text(
                   insight['description'],
                   style: const TextStyle(
-                    color: Colors.white70,
+                    color: Colors.black54,
                     fontSize: 12,
                   ),
                 ),
@@ -969,7 +1034,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
           const Text(
             'Acciones',
             style: TextStyle(
-              color: Colors.white,
+              color: Colors.black,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -1022,7 +1087,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
             Text(
               label,
               style: const TextStyle(
-                color: Colors.white,
+                color: Colors.black,
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
@@ -1066,7 +1131,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
               const Text(
                 'Sin reflexión registrada',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: Colors.black,
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
@@ -1078,7 +1143,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
               Text(
                 'No hay una reflexión registrada para ${_formatDate(widget.date)}',
                 style: const TextStyle(
-                  color: Colors.white70,
+                  color: Colors.black54,
                   fontSize: 16,
                 ),
                 textAlign: TextAlign.center,
@@ -1145,13 +1210,13 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
               children: [
                 Icon(
                   entry != null ? Icons.edit : Icons.add,
-                  color: Colors.white,
+                  color: Colors.black,
                 ),
                 const SizedBox(width: 8),
                 Text(
                   entry != null ? 'Editar' : 'Crear',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1344,85 +1409,79 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
   }
 
   Widget _buildDailyPhotosSection() {
-    return Consumer<OptimizedMomentsProvider>(
-      builder: (context, momentsProvider, child) {
-        
-        // For now, create a mock photos section since the moments don't have image support
-        // In a real implementation, you'd need to add image support to the moments model
-        final mockPhotos = [
-          {'time': '09:30', 'title': 'Momento matutino'},
-          {'time': '14:15', 'title': 'Almuerzo'},
-          {'time': '18:45', 'title': 'Atardecer'},
-        ];
+    // Mock photos for future image integration
+    final mockPhotos = [
+      {'time': '09:30', 'title': 'Momento matutino'},
+      {'time': '14:15', 'title': 'Almuerzo'},
+      {'time': '18:45', 'title': 'Atardecer'},
+    ];
 
-        if (mockPhotos.isEmpty) {
-          return const SizedBox.shrink();
-        }
+    if (mockPhotos.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
-        return Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: MinimalColors.backgroundCard(context),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: MinimalColors.backgroundCard(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: MinimalColors.accentGradient(context)),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.photo_camera_rounded, color: Colors.white, size: 20),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Fotos del Día',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      '${mockPhotos.length}',
-                      style: TextStyle(
-                        color: MinimalColors.accentGradient(context)[0],
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: MinimalColors.accentGradient(context)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.photo_camera_rounded, color: Colors.white, size: 20),
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 120,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: mockPhotos.length,
-                  itemBuilder: (context, index) {
-                    final photo = mockPhotos[index];
-                    return _buildPhotoPlaceholder(photo);
-                  },
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Fotos del Día',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${mockPhotos.length}',
+                  style: TextStyle(
+                    color: MinimalColors.accentGradient(context)[0],
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 120,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: mockPhotos.length,
+              itemBuilder: (context, index) {
+                final photo = mockPhotos[index];
+                return _buildPhotoPlaceholder(photo);
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1466,7 +1525,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                 child: Text(
                   photo['time'] ?? '00:00',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
                   ),
@@ -1479,4 +1538,542 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
     );
   }
 
+  // ============================================================================
+  // NEW ENHANCED SECTIONS
+  // ============================================================================
+
+  Widget _buildGoalProgressCard(dynamic goal) {
+    final progress = goal.progress;
+    final progressPercentage = (progress * 100).round();
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: _getProgressColor(progress),
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  goal.title,
+                  style: const TextStyle(
+                    color: Colors.black,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Text(
+                '$progressPercentage%',
+                style: TextStyle(
+                  color: _getProgressColor(progress),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  child: FractionallySizedBox(
+                    alignment: Alignment.centerLeft,
+                    widthFactor: progress,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: _getProgressColor(progress),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${goal.currentValue}/${goal.targetValue}',
+                style: const TextStyle(
+                  color: Colors.white54,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDailyRoadmapSection(DailyRoadmapProvider roadmapProvider) {
+    // For now, create empty roadmap section since provider structure needs verification
+    final roadmaps = <dynamic>[]; // TODO: Replace with actual roadmap data from provider
+    final roadmap = roadmaps.where((r) => _isSameDay(r.targetDate, widget.date)).firstOrNull;
+    
+    if (roadmap == null || roadmap.activities.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final completedActivities = roadmap.activities.where((a) => a.isCompleted).length;
+    final totalActivities = roadmap.activities.length;
+    final completionPercentage = totalActivities > 0 ? (completedActivities / totalActivities * 100).round() : 0;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: MinimalColors.backgroundCard(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: MinimalColors.primaryGradient(context)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.schedule, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Roadmap del Día',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      '$completedActivities de $totalActivities actividades',
+                      style: TextStyle(
+                        color: Colors.black54,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: _getCompletionColor(completionPercentage).withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '$completionPercentage%',
+                  style: TextStyle(
+                    color: _getCompletionColor(completionPercentage),
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          // Timeline View
+          SizedBox(
+            height: 200,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: roadmap.activities.length,
+              itemBuilder: (context, index) {
+                final activity = roadmap.activities[index];
+                return _buildTimelineActivityCard(activity, index == roadmap.activities.length - 1);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineActivityCard(dynamic activity, bool isLast) {
+    return Row(
+      children: [
+        Column(
+          children: [
+            Container(
+              width: 140,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: activity.isCompleted 
+                    ? const Color(0xFF10B981).withValues(alpha: 0.1)
+                    : Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: activity.isCompleted 
+                      ? const Color(0xFF10B981)
+                      : Colors.white.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        activity.isCompleted ? Icons.check_circle : Icons.schedule,
+                        color: activity.isCompleted 
+                            ? const Color(0xFF10B981)
+                            : Colors.white54,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${activity.hour.toString().padLeft(2, '0')}:${activity.minute.toString().padLeft(2, '0')}',
+                        style: TextStyle(
+                          color: activity.isCompleted 
+                              ? const Color(0xFF10B981)
+                              : Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    activity.title,
+                    style: TextStyle(
+                      color: activity.isCompleted ? Colors.white : Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (activity.description != null && activity.description.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      activity.description,
+                      style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 11,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+        if (!isLast) ...[
+          const SizedBox(width: 8),
+          Container(
+            width: 2,
+            height: 40,
+            color: Colors.white.withValues(alpha: 0.2),
+          ),
+          const SizedBox(width: 8),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildMomentsGallerySection(OptimizedMomentsProvider momentsProvider) {
+    final todayMoments = momentsProvider.moments
+        .where((m) => _isSameDay(m.entryDate, widget.date))
+        .toList();
+    
+    if (todayMoments.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: MinimalColors.backgroundCard(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: MinimalColors.lightGradient(context)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.sentiment_satisfied, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Momentos del Día',
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: MinimalColors.lightGradient(context)[0].withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  '${todayMoments.length}',
+                  style: TextStyle(
+                    color: MinimalColors.lightGradient(context)[0],
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          SizedBox(
+            height: 100,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: todayMoments.length,
+              itemBuilder: (context, index) {
+                final moment = todayMoments[index];
+                return _buildMomentCard(moment);
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMomentCard(dynamic moment) {
+    final color = moment.type == 'positive' 
+        ? const Color(0xFF10B981) 
+        : const Color(0xFFEF4444);
+        
+    return Container(
+      width: 120,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                moment.emoji,
+                style: const TextStyle(fontSize: 20),
+              ),
+              const Spacer(),
+              Text(
+                moment.timeStr,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Expanded(
+            child: Text(
+              moment.text,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Container(
+                width: 4,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 4),
+              Text(
+                '${moment.intensity}/10',
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressSummarySection(dynamic entry, EnhancedGoalsProvider goalsProvider) {
+    final goals = goalsProvider.goals;
+    final totalGoals = goals.length;
+    final completedGoals = goals.where((g) => g.isCompleted).length;
+    final activeGoals = goals.where((g) => g.isActive).length;
+    
+    if (totalGoals == 0) return const SizedBox.shrink();
+
+    final overallProgress = totalGoals > 0 
+        ? goals.fold<double>(0.0, (sum, goal) => sum + goal.progress) / totalGoals
+        : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: MinimalColors.backgroundCard(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: MinimalColors.accentGradient(context)),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.insights, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'Resumen de Progreso',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          
+          Row(
+            children: [
+              Expanded(
+                child: _buildProgressStat('Metas Activas', '$activeGoals', const Color(0xFF3B82F6)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildProgressStat('Completadas', '$completedGoals', const Color(0xFF10B981)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildProgressStat('Progreso Gral.', '${(overallProgress * 100).round()}%', const Color(0xFFF59E0B)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProgressStat(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: TextStyle(
+              color: color,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 11,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================================================
+  // HELPER METHODS
+  // ============================================================================
+
+  Color _getProgressColor(double progress) {
+    if (progress >= 0.8) return const Color(0xFF10B981);
+    if (progress >= 0.5) return const Color(0xFF3B82F6);
+    if (progress >= 0.2) return const Color(0xFFF59E0B);
+    return const Color(0xFFEF4444);
+  }
+
+  Color _getCompletionColor(int percentage) {
+    if (percentage >= 80) return const Color(0xFF10B981);
+    if (percentage >= 50) return const Color(0xFF3B82F6);
+    if (percentage >= 20) return const Color(0xFFF59E0B);
+    return const Color(0xFFEF4444);
+  }
+
+}
+
+// ============================================================================
+// EXTENSION FOR NULL SAFETY
+// ============================================================================
+
+extension IterableExtension<T> on Iterable<T> {
+  T? get firstOrNull {
+    return isEmpty ? null : first;
+  }
 }

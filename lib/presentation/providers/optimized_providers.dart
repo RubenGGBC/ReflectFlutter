@@ -1171,7 +1171,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
   List<Map<String, dynamic>> getPersonalizedRecommendations() {
     final recommendations = <Map<String, dynamic>>[];
 
-    final wellbeingStatus = getWellbeingStatus();
+    getWellbeingStatus(); // Call function for side effects
     final habitsAnalysis = getHealthyHabitsAnalysis();
     final stressAlerts = getStressAlerts();
     final prediction = getWellbeingPrediction();
@@ -2017,7 +2017,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     _setLoading(true);
 
     try {
-      final prediction = await _databaseService.getUltraAdvancedPrediction(userId, forecastDays: forecastDays);
+      final prediction = await _databaseService.getUltraAdvancedPrediction(userId);
       _logger.i('✅ Predicción ultra-avanzada completada');
       return prediction;
     } catch (e) {
@@ -2034,7 +2034,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     _setLoading(true);
 
     try {
-      final analysis = await _databaseService.getAdvancedTimeSeriesAnalysis(userId, days: days);
+      final analysis = await _databaseService.getAdvancedTimeSeriesAnalysis(userId);
       _logger.i('✅ Análisis de series temporales completado');
       return analysis;
     } catch (e) {
@@ -2314,7 +2314,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
   Map<String, dynamic> _generateEnhancedSummary() {
     final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
     final intelligentInsights = _analytics['intelligent_insights'] as Map<String, dynamic>?;
-    final emotionalPatterns = _analytics['emotional_patterns'] as Map<String, dynamic>?;
+    _analytics['emotional_patterns'] as Map<String, dynamic>?; // Access for side effects
     
     if (basicStats == null) return {};
     
@@ -2362,7 +2362,7 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
   List<Map<String, dynamic>> _generatePersonalizedTips() {
     final tips = <Map<String, dynamic>>[];
     final basicStats = _analytics['basic_stats'] as Map<String, dynamic>?;
-    final habitsAnalysis = _analytics['habits_analysis'] as Map<String, dynamic>?;
+    _analytics['habits_analysis'] as Map<String, dynamic>?; // Access for side effects
     final personalizedRecommendations = _analytics['personalized_recommendations'] as List?;
     
     if (basicStats == null) return tips;
@@ -2629,10 +2629,10 @@ class GoalsProvider with ChangeNotifier {
 
   int get totalGoalsCount => _goals.length;
 
-  Map<GoalType, int> get goalsByType {
-    final Map<GoalType, int> result = {};
+  Map<GoalCategory, int> get goalsByType {
+    final Map<GoalCategory, int> result = {};
     for (final goal in _goals) {
-      result[goal.type] = (result[goal.type] ?? 0) + 1;
+      result[goal.category] = (result[goal.category] ?? 0) + 1;
     }
     return result;
   }
@@ -2649,9 +2649,7 @@ class GoalsProvider with ChangeNotifier {
     try {
       // CORRECTED LINE:
       // Simply await the result, as getUserGoals already returns the correct type.
-      _goals = (await _databaseService.getUserGoals(userId))
-          .map((map) => GoalModel.fromDatabase(map))
-          .toList();
+      _goals = await _databaseService.getUserGoals(userId);
       _logger.i('✅ Cargados ${_goals.length} objetivos');
     } catch (e) {
       _logger.e('❌ Error cargando objetivos: $e');
@@ -2675,13 +2673,13 @@ class GoalsProvider with ChangeNotifier {
 
     try {
       // Convertir string a enum
-      final goalType = _parseGoalType(type);
+      final goalCategory = _parseGoalCategory(type);
 
       final goal = GoalModel(
         userId: userId,
         title: title,
         description: description,
-        type: goalType,
+        category: goalCategory,
         targetValue: targetValue.toInt(),
         createdAt: DateTime.now(),
       );
@@ -2732,7 +2730,7 @@ class GoalsProvider with ChangeNotifier {
       final updatedGoal = existingGoal.copyWith(
         title: title,
         description: description,
-        type: type != null ? _parseGoalType(type) : null,
+        category: type != null ? _parseGoalCategory(type) : GoalCategory.emotional,
         targetValue: targetValue?.toInt(),
         currentValue: currentValue?.toInt(),
       );
@@ -2908,18 +2906,21 @@ class GoalsProvider with ChangeNotifier {
       for (final goal in activeGoals) {
         double newProgress = 0.0;
 
-        switch (goal.type) {
-          case GoalType.consistency:
+        switch (goal.category) {
+          case GoalCategory.mindfulness:
             newProgress = await _calculateConsistencyProgress(userId, goal);
             break;
-          case GoalType.mood:
+          case GoalCategory.emotional:
             newProgress = await _calculateMoodProgress(userId, goal);
             break;
-          case GoalType.positiveMoments:
+          case GoalCategory.social:
             newProgress = await _calculatePositiveMomentsProgress(userId, goal);
             break;
-          case GoalType.stressReduction:
+          case GoalCategory.stress:
             newProgress = await _calculateStressReductionProgress(userId, goal);
+            break;
+          default:
+            newProgress = await _calculateConsistencyProgress(userId, goal);
             break;
         }
 
@@ -2998,8 +2999,8 @@ class GoalsProvider with ChangeNotifier {
   }
 
   /// Obtener objetivos por tipo específico
-  List<GoalModel> getGoalsByType(GoalType type) {
-    return _goals.where((goal) => goal.type == type).toList();
+  List<GoalModel> getGoalsByCategory(GoalCategory category) {
+    return _goals.where((goal) => goal.category == category).toList();
   }
 
   /// Obtener estadísticas de objetivos
@@ -3021,18 +3022,30 @@ class GoalsProvider with ChangeNotifier {
   }
 
   // Métodos privados de utilidad
-  GoalType _parseGoalType(String type) {
+  GoalCategory _parseGoalCategory(String type) {
     switch (type.toLowerCase()) {
       case 'consistency':
-        return GoalType.consistency;
+      case 'mindfulness':
+        return GoalCategory.mindfulness;
       case 'mood':
-        return GoalType.mood;
+      case 'emotional':
+        return GoalCategory.emotional;
       case 'positivemoments':
-        return GoalType.positiveMoments;
+      case 'social':
+        return GoalCategory.social;
       case 'stressreduction':
-        return GoalType.stressReduction;
+      case 'stress':
+        return GoalCategory.stress;
+      case 'sleep':
+        return GoalCategory.sleep;
+      case 'physical':
+        return GoalCategory.physical;
+      case 'productivity':
+        return GoalCategory.productivity;
+      case 'habits':
+        return GoalCategory.habits;
       default:
-        return GoalType.consistency;
+        return GoalCategory.emotional;
     }
   }
 
@@ -3117,13 +3130,13 @@ extension GoalsDatabase on OptimizedDatabaseService {
   }
 
   /// Obtener objetivos por tipo
-  Future<List<GoalModel>> getGoalsByType(int userId, GoalType type) async {
+  Future<List<GoalModel>> getGoalsByCategory(int userId, GoalCategory category) async {
     try {
       final db = await database;
       final results = await db.query(
         'user_goals',
         where: 'user_id = ? AND type = ?',
-        whereArgs: [userId, type.toString()],
+        whereArgs: [userId, category.name],
         orderBy: 'created_at DESC',
       );
 

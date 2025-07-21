@@ -14,15 +14,15 @@ import 'presentation/providers/extended_daily_entries_provider.dart';
 import 'presentation/providers/theme_provider.dart';
 import 'presentation/providers/image_moments_provider.dart'; // ✅ NUEVO
 import 'presentation/providers/analytics_provider.dart'; // ✅ PROVIDER AÑADIDO
+import 'presentation/providers/analytics_v3_provider.dart'; // ✅ NUEVO: Analytics V3 Provider
 import 'presentation/providers/advanced_emotion_analysis_provider.dart'; // ✅ NUEVO PROVIDER AVANZADO
-import 'ai/provider/ai_provider.dart';
-import 'ai/provider/predective_analysis_provider.dart'; // ✅ NUEVO: Análisis Predictivo
-import 'ai/provider/chat_provider.dart'; // ✅ NUEVO: Chat con IA
-import 'ai/provider/mental_health_chat_provider.dart'; // ✅ NUEVO: Mental Health Chat
+// AI providers removed
 import 'presentation/providers/challenges_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
 import 'presentation/providers/streak_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
 import 'presentation/providers/recommended_activities_provider.dart'; // ✅ NUEVO: Recommended Activities
 import 'presentation/providers/daily_activities_provider.dart'; // ✅ NUEVO: Daily Activities
+import 'presentation/providers/daily_roadmap_provider.dart'; // ✅ NUEVO: Daily Roadmap
+import 'presentation/providers/enhanced_goals_provider.dart'; // ✅ NUEVO: Enhanced Goals
 
 // Screens
 import 'presentation/screens/v2/login_screen_v2.dart';
@@ -48,11 +48,20 @@ class OptimizedReflectApp extends StatelessWidget {
         ChangeNotifierProvider<ThemeProvider>(
           create: (_) => clean_di.sl<ThemeProvider>(),
         ),
-        ChangeNotifierProvider<AIProvider>(
-          create: (_) => clean_di.sl<AIProvider>(),
-        ),
+        // AI provider removed
         ChangeNotifierProvider<GoalsProvider>(
           create: (_) => clean_di.sl<GoalsProvider>(),
+        ),
+
+        // ✅ NUEVO: EnhancedGoalsProvider (proxy provider para auto-carga)
+        ChangeNotifierProxyProvider<OptimizedAuthProvider, EnhancedGoalsProvider>(
+          create: (_) => clean_di.sl<EnhancedGoalsProvider>(),
+          update: (context, auth, previous) {
+            if (auth.isLoggedIn && auth.currentUser != null) {
+              previous?.loadGoals(auth.currentUser!.id);
+            }
+            return previous!;
+          },
         ),
 
         // ✅ NUEVO: ImageMomentsProvider
@@ -125,30 +134,20 @@ class OptimizedReflectApp extends StatelessWidget {
           },
         ),
 
-        // ✅ NUEVO: PredictiveAnalysisProvider
-        ChangeNotifierProxyProvider<OptimizedAuthProvider, PredictiveAnalysisProvider>(
-          create: (_) => clean_di.sl<PredictiveAnalysisProvider>(),
+        // ✅ NUEVO: Analytics V3 Provider
+        ChangeNotifierProxyProvider<OptimizedAuthProvider, AnalyticsV3Provider>(
+          create: (_) => clean_di.sl<AnalyticsV3Provider>(),
           update: (context, auth, previous) {
-            // Este provider se activa cuando hay usuario autenticado
-            // pero no carga datos automáticamente (solo cuando se llama explícitamente)
+            if (auth.isLoggedIn && auth.currentUser != null) {
+              previous?.loadAnalytics(auth.currentUser!.id);
+            }
             return previous!;
           },
         ),
 
-        // ✅ NUEVO: ChatProvider - Depende del AIProvider
-        ChangeNotifierProxyProvider<AIProvider, ChatProvider>(
-          create: (_) => clean_di.sl<ChatProvider>(),
-          update: (context, ai, previous) {
-            // El ChatProvider se inicializa automáticamente cuando AIProvider está disponible
-            // El database service se obtiene a través del injection container
-            return previous!;
-          },
-        ),
+        // Predictive analysis provider removed
 
-        // ✅ NUEVO: MentalHealthChatProvider - Independent mental health chat
-        ChangeNotifierProvider<MentalHealthChatProvider>(
-          create: (_) => clean_di.sl<MentalHealthChatProvider>(),
-        ),
+        // Chat providers removed
 
         // ✅ HIGH PRIORITY ENHANCEMENTS: New providers
         ChangeNotifierProvider<ChallengesProvider>(
@@ -160,13 +159,8 @@ class OptimizedReflectApp extends StatelessWidget {
         ),
 
         // ✅ NUEVO: AdvancedEmotionAnalysisProvider
-        ChangeNotifierProxyProvider<OptimizedAuthProvider, AdvancedEmotionAnalysisProvider>(
+        ChangeNotifierProvider<AdvancedEmotionAnalysisProvider>(
           create: (_) => clean_di.sl<AdvancedEmotionAnalysisProvider>(),
-          update: (context, auth, previous) {
-            // Este provider se activa cuando hay usuario autenticado
-            // pero no carga datos automáticamente (solo cuando se llama explícitamente)
-            return previous!;
-          },
         ),
 
         // ✅ NUEVO: RecommendedActivitiesProvider
@@ -177,6 +171,11 @@ class OptimizedReflectApp extends StatelessWidget {
         // ✅ NUEVO: DailyActivitiesProvider
         ChangeNotifierProvider<DailyActivitiesProvider>(
           create: (_) => clean_di.sl<DailyActivitiesProvider>(),
+        ),
+
+        // ✅ NUEVO: DailyRoadmapProvider
+        ChangeNotifierProvider<DailyRoadmapProvider>(
+          create: (_) => clean_di.sl<DailyRoadmapProvider>(),
         ),
       ],
       child: Consumer<ThemeProvider>(
@@ -213,7 +212,9 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    _checkFirstTimeUser();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkFirstTimeUser();
+    });
   }
 
   Future<void> _checkFirstTimeUser() async {

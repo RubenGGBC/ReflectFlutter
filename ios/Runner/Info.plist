@@ -56,5 +56,9 @@
 		<string>background-processing</string>
 		<string>remote-notification</string>
 	</array>
+	
+	<!-- ✅ MICROPHONE PERMISSIONS -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Esta aplicación necesita acceso al micrófono para grabar notas de voz en tu diario de reflexión diaria.</string>
 </dict>
 </plist>

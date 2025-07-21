@@ -3,18 +3,15 @@
 // VERSIÓN COMPLETA Y CORREGIDA - CON TODOS LOS MÉTODOS ORIGINALES
 // ============================================================================
 
+import 'dart:convert';
+
 enum GoalStatus {
   active,
   completed,
   archived
 }
 
-enum GoalType {
-  consistency,      // Consistencia en hábitos diarios
-  mood,            // Mejora de estado de ánimo
-  positiveMoments, // Incrementar momentos positivos
-  stressReduction  // Reducción de estrés
-}
+// REMOVED: GoalType enum - replaced by GoalCategory for better organization
 
 // ============================================================================
 // NUEVOS ENUMS Y CLASES PARA PHASE 1 ENHANCEMENT
@@ -31,12 +28,18 @@ enum GoalCategory {
   habits          // Formación de hábitos
 }
 
-enum GoalDifficulty {
-  easy,     // Fácil - 1-2 semanas
-  medium,   // Medio - 3-4 semanas
-  hard,     // Difícil - 1-2 meses
-  expert    // Experto - 3+ meses
+// REMOVED: GoalDifficulty enum - users will set duration directly
+
+// REMOVED: GoalPriority enum - simplified to focus on the goal itself
+
+enum FrequencyType {
+  daily,    // Diario
+  weekly,   // Semanal
+  monthly,  // Mensual
+  custom    // Personalizado
 }
+
+// REMOVED: GoalVisibility enum - all goals are private by default
 
 // ============================================================================
 // MODELO DE MILESTONE
@@ -267,7 +270,6 @@ class GoalModel {
   final int userId;
   final String title;
   final String description;
-  final GoalType type;
   final GoalStatus status;
   final int targetValue;
   final int currentValue;
@@ -277,20 +279,34 @@ class GoalModel {
   final DateTime? lastUpdated;
   
   // ============================================================================
-  // NUEVOS CAMPOS PARA PHASE 1 ENHANCEMENT
+  // SIMPLIFIED ENHANCED FIELDS
   // ============================================================================
   final GoalCategory category;
-  final GoalDifficulty difficulty;
-  final int estimatedDays;
+  final int durationDays;
   final List<Milestone> milestones;
   final Map<String, dynamic> metrics;
+  
+  // ============================================================================
+  // ESSENTIAL TRACKING FIELDS
+  // ============================================================================
+  final FrequencyType frequency;
+  final String? customUnit;
+  final String? iconCode;
+  final String? colorHex;
+  final List<String> tags;
+  final Map<String, dynamic> customSettings;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final List<String> motivationalQuotes;
+  final Map<String, dynamic> reminderSettings;
+  final bool isTemplate;
+  final String? templateId;
 
   const GoalModel({
     this.id,
     required this.userId,
     required this.title,
     required this.description,
-    required this.type,
     this.status = GoalStatus.active,
     required this.targetValue,
     this.currentValue = 0,
@@ -298,12 +314,24 @@ class GoalModel {
     required this.createdAt,
     this.completedAt,
     this.lastUpdated,
-    // Nuevos campos con valores por defecto
+    // Simplified enhanced fields
     this.category = GoalCategory.habits,
-    this.difficulty = GoalDifficulty.medium,
-    this.estimatedDays = 30,
+    this.durationDays = 30,
     this.milestones = const [],
     this.metrics = const {},
+    // Essential tracking fields
+    this.frequency = FrequencyType.daily,
+    this.customUnit,
+    this.iconCode,
+    this.colorHex,
+    this.tags = const [],
+    this.customSettings = const {},
+    this.startDate,
+    this.endDate,
+    this.motivationalQuotes = const [],
+    this.reminderSettings = const {},
+    this.isTemplate = false,
+    this.templateId,
   });
 
   // ============================================================================
@@ -392,14 +420,14 @@ class GoalModel {
     }
   }
   
-  /// Descripción de la dificultad
-  String get difficultyDisplayName {
-    switch (difficulty) {
-      case GoalDifficulty.easy: return 'Fácil';
-      case GoalDifficulty.medium: return 'Medio';
-      case GoalDifficulty.hard: return 'Difícil';
-      case GoalDifficulty.expert: return 'Experto';
-    }
+  /// Duration in weeks for display
+  String get durationDisplayName {
+    if (durationDays <= 7) return '1 semana';
+    if (durationDays <= 14) return '2 semanas';
+    if (durationDays <= 30) return '1 mes';
+    if (durationDays <= 60) return '2 meses';
+    if (durationDays <= 90) return '3 meses';
+    return '${(durationDays / 30).ceil()} meses';
   }
   
   /// Color asociado a la categoría
@@ -435,17 +463,80 @@ class GoalModel {
     if (isCompleted) return 0;
     
     final progressRate = progress;
-    if (progressRate == 0) return estimatedDays;
+    if (progressRate == 0) return durationDays;
     
     final daysElapsed = daysSinceCreated;
     final estimatedTotal = (daysElapsed / progressRate).round();
-    return (estimatedTotal - daysElapsed).clamp(0, estimatedDays * 2);
+    return (estimatedTotal - daysElapsed).clamp(0, durationDays * 2);
   }
   
   /// Si debe mostrar celebración
   bool get shouldCelebrateMilestone {
     final next = nextMilestone;
     return next != null && currentValue >= next.targetValue && !next.isCompleted;
+  }
+
+  // ============================================================================
+  // NUEVOS GETTERS PARA CAMPOS PERSONALIZABLES AVANZADOS
+  // ============================================================================
+
+  // REMOVED: Priority display methods - simplified interface
+
+  /// Descripción de la frecuencia
+  String get frequencyDisplayName {
+    switch (frequency) {
+      case FrequencyType.daily: return 'Diario';
+      case FrequencyType.weekly: return 'Semanal';
+      case FrequencyType.monthly: return 'Mensual';
+      case FrequencyType.custom: return 'Personalizado';
+    }
+  }
+
+  // REMOVED: Visibility display methods - all goals are private
+
+  /// Unidad efectiva (personalizada o sugerida)
+  String get effectiveUnit => customUnit ?? suggestedUnit;
+
+  /// Color efectivo (personalizado o de categoría)
+  String get effectiveColorHex => colorHex ?? categoryColorHex;
+
+  /// Icono efectivo (personalizado o de categoría)
+  String get effectiveIconCode => iconCode ?? categoryIcon;
+
+  /// Si tiene fecha de finalización
+  bool get hasEndDate => endDate != null;
+
+  /// Si está dentro del rango de fechas
+  bool get isWithinDateRange {
+    final now = DateTime.now();
+    if (startDate != null && now.isBefore(startDate!)) return false;
+    if (endDate != null && now.isAfter(endDate!)) return false;
+    return true;
+  }
+
+  /// Días restantes basado en fecha final
+  int? get daysRemainingByDate {
+    if (endDate == null) return null;
+    final remaining = endDate!.difference(DateTime.now()).inDays;
+    return remaining >= 0 ? remaining : 0;
+  }
+
+  /// Frase motivacional aleatoria
+  String? get randomMotivationalQuote {
+    if (motivationalQuotes.isEmpty) return null;
+    final index = DateTime.now().day % motivationalQuotes.length;
+    return motivationalQuotes[index];
+  }
+
+  /// Si es un template
+  bool get isGoalTemplate => isTemplate;
+
+  /// Si tiene recordatorios configurados
+  bool get hasReminders => reminderSettings.isNotEmpty;
+
+  /// Configuración de recordatorio específica
+  Map<String, dynamic>? getReminderSetting(String key) {
+    return reminderSettings[key] as Map<String, dynamic>?;
   }
 
   String get progressDescription {
@@ -456,39 +547,36 @@ class GoalModel {
     return 'Just beginning 🚀';
   }
 
-  String get typeColorHex {
-    switch (type) {
-      case GoalType.consistency: return '4ECDC4';
-      case GoalType.mood: return 'FFD700';
-      case GoalType.positiveMoments: return '45B7D1';
-      case GoalType.stressReduction: return '96CEB4';
+  /// Get difficulty level based on duration and target value
+  String get difficulty {
+    if (durationDays <= 7) return 'easy';
+    if (durationDays <= 30) return 'medium';
+    if (durationDays <= 90) return 'hard';
+    return 'expert';
+  }
+
+  /// Get difficulty display name
+  String get difficultyDisplayName {
+    switch (difficulty) {
+      case 'easy': return 'Fácil';
+      case 'medium': return 'Medio';
+      case 'hard': return 'Difícil';
+      case 'expert': return 'Experto';
+      default: return 'Medio';
     }
   }
 
-  String get typeIcon {
-    switch (type) {
-      case GoalType.consistency: return 'timeline';
-      case GoalType.mood: return 'sentiment_satisfied';
-      case GoalType.positiveMoments: return 'star';
-      case GoalType.stressReduction: return 'spa';
-    }
-  }
-
-  String get typeDisplayName {
-    switch (type) {
-      case GoalType.consistency: return 'Consistency';
-      case GoalType.mood: return 'Mood Improvement';
-      case GoalType.positiveMoments: return 'Positive Moments';
-      case GoalType.stressReduction: return 'Stress Reduction';
-    }
-  }
-
+  /// Suggested unit based on category
   String get suggestedUnit {
-    switch (type) {
-      case GoalType.consistency: return 'days';
-      case GoalType.mood: return 'times';
-      case GoalType.positiveMoments: return 'moments';
-      case GoalType.stressReduction: return 'times';
+    switch (category) {
+      case GoalCategory.mindfulness: return 'sesiones';
+      case GoalCategory.stress: return 'veces';
+      case GoalCategory.sleep: return 'horas';
+      case GoalCategory.social: return 'actividades';
+      case GoalCategory.physical: return 'ejercicios';
+      case GoalCategory.emotional: return 'momentos';
+      case GoalCategory.productivity: return 'tareas';
+      case GoalCategory.habits: return 'días';
     }
   }
 
@@ -499,11 +587,7 @@ class GoalModel {
   /// ✅ **CORREGIDO: Crea un GoalModel desde un mapa de la BD, manejando cualquier tipo de dato.**
   factory GoalModel.fromDatabase(Map<String, dynamic> map) {
     // Helper para parsear GoalType de forma segura desde un valor dinámico (int o string)
-    GoalType parseGoalType(dynamic value) {
-      if (value is String) return GoalType.values.firstWhere((e) => e.name.toLowerCase() == value.toLowerCase(), orElse: () => GoalType.consistency);
-      if (value is int && value >= 0 && value < GoalType.values.length) return GoalType.values[value];
-      return GoalType.consistency;
-    }
+    // REMOVED: parseGoalType - no longer needed
 
     // Helper para parsear GoalStatus de forma segura desde un valor dinámico (int o string)
     GoalStatus parseGoalStatus(dynamic value) {
@@ -519,11 +603,32 @@ class GoalModel {
       return GoalCategory.habits;
     }
     
-    // Helper para parsear GoalDifficulty de forma segura
-    GoalDifficulty parseGoalDifficulty(dynamic value) {
-      if (value is String) return GoalDifficulty.values.firstWhere((e) => e.name.toLowerCase() == value.toLowerCase(), orElse: () => GoalDifficulty.medium);
-      if (value is int && value >= 0 && value < GoalDifficulty.values.length) return GoalDifficulty.values[value];
-      return GoalDifficulty.medium;
+    // REMOVED: parseGoalDifficulty - replaced with durationDays
+    
+    // REMOVED: parseGoalPriority - simplified interface
+    
+    // Helper para parsear FrequencyType de forma segura
+    FrequencyType parseFrequencyType(dynamic value) {
+      if (value is String) return FrequencyType.values.firstWhere((e) => e.name.toLowerCase() == value.toLowerCase(), orElse: () => FrequencyType.daily);
+      if (value is int && value >= 0 && value < FrequencyType.values.length) return FrequencyType.values[value];
+      return FrequencyType.daily;
+    }
+    
+    // REMOVED: parseGoalVisibility - all goals are private
+    
+    // Helper para parsear listas de strings de JSON
+    List<String> parseStringList(dynamic value) {
+      if (value == null) return [];
+      if (value is String) {
+        try {
+          final List<dynamic> jsonList = jsonDecode(value) as List<dynamic>;
+          return jsonList.map((item) => item.toString()).toList();
+        } catch (e) {
+          return [];
+        }
+      }
+      if (value is List) return value.map((item) => item.toString()).toList();
+      return [];
     }
 
     // Helper para parsear DateTime de forma segura desde un valor dinámico (int o string)
@@ -573,7 +678,6 @@ class GoalModel {
       userId: map['user_id'] as int,
       title: map['title'] as String? ?? 'No Title',
       description: map['description'] as String? ?? '',
-      type: parseGoalType(map['type']),
       status: parseGoalStatus(map['status']),
       targetValue: (map['target_value'] as num? ?? 0).toInt(),
       currentValue: (map['current_value'] as num? ?? 0).toInt(),
@@ -581,12 +685,24 @@ class GoalModel {
       createdAt: parseDateTime(map['created_at']),
       completedAt: parseOptionalDateTime(map['completed_at']),
       lastUpdated: parseOptionalDateTime(map['last_updated']),
-      // Nuevos campos
+      // Simplified enhanced fields
       category: parseGoalCategory(map['category']),
-      difficulty: parseGoalDifficulty(map['difficulty']),
-      estimatedDays: (map['estimated_days'] as num? ?? 30).toInt(),
+      durationDays: (map['duration_days'] as num? ?? map['estimated_days'] as num? ?? 30).toInt(),
       milestones: parseMilestones(map['milestones']),
       metrics: parseMetrics(map['metrics']),
+      // Essential tracking fields
+      frequency: parseFrequencyType(map['frequency']),
+      customUnit: map['custom_unit'] as String?,
+      iconCode: map['icon_code'] as String?,
+      colorHex: map['color_hex'] as String?,
+      tags: parseStringList(map['tags']),
+      customSettings: parseMetrics(map['custom_settings']),
+      startDate: parseOptionalDateTime(map['start_date']),
+      endDate: parseOptionalDateTime(map['end_date']),
+      motivationalQuotes: parseStringList(map['motivational_quotes']),
+      reminderSettings: parseMetrics(map['reminder_settings']),
+      isTemplate: (map['is_template'] as int? ?? 0) == 1,
+      templateId: map['template_id'] as String?,
     );
   }
 
@@ -597,7 +713,6 @@ class GoalModel {
       'user_id': userId,
       'title': title,
       'description': description,
-      'type': type.name,
       'status': status.name,
       'target_value': targetValue,
       'current_value': currentValue,
@@ -609,12 +724,28 @@ class GoalModel {
       'last_updated': lastUpdated?.millisecondsSinceEpoch != null 
           ? lastUpdated!.millisecondsSinceEpoch ~/ 1000 
           : null,
-      // Nuevos campos
+      // Simplified enhanced fields
       'category': category.name,
-      'difficulty': difficulty.name,
-      'estimated_days': estimatedDays,
+      'duration_days': durationDays,
       'milestones': milestones.map((m) => m.toJson()).toList(),
       'metrics': metrics,
+      // Essential tracking fields
+      'frequency': frequency.name,
+      'custom_unit': customUnit,
+      'icon_code': iconCode,
+      'color_hex': colorHex,
+      'tags': tags,
+      'custom_settings': customSettings,
+      'start_date': startDate?.millisecondsSinceEpoch != null 
+          ? startDate!.millisecondsSinceEpoch ~/ 1000 
+          : null,
+      'end_date': endDate?.millisecondsSinceEpoch != null 
+          ? endDate!.millisecondsSinceEpoch ~/ 1000 
+          : null,
+      'motivational_quotes': motivationalQuotes,
+      'reminder_settings': reminderSettings,
+      'is_template': isTemplate ? 1 : 0,
+      'template_id': templateId,
     };
   }
 
@@ -631,7 +762,6 @@ class GoalModel {
     int? userId,
     String? title,
     String? description,
-    GoalType? type,
     GoalStatus? status,
     int? targetValue,
     int? currentValue,
@@ -640,17 +770,27 @@ class GoalModel {
     DateTime? completedAt,
     DateTime? lastUpdated,
     GoalCategory? category,
-    GoalDifficulty? difficulty,
-    int? estimatedDays,
+    int? durationDays,
     List<Milestone>? milestones,
     Map<String, dynamic>? metrics,
+    FrequencyType? frequency,
+    String? customUnit,
+    String? iconCode,
+    String? colorHex,
+    List<String>? tags,
+    Map<String, dynamic>? customSettings,
+    DateTime? startDate,
+    DateTime? endDate,
+    List<String>? motivationalQuotes,
+    Map<String, dynamic>? reminderSettings,
+    bool? isTemplate,
+    String? templateId,
   }) {
     return GoalModel(
       id: id ?? this.id,
       userId: userId ?? this.userId,
       title: title ?? this.title,
       description: description ?? this.description,
-      type: type ?? this.type,
       status: status ?? this.status,
       targetValue: targetValue ?? this.targetValue,
       currentValue: currentValue ?? this.currentValue,
@@ -659,10 +799,21 @@ class GoalModel {
       completedAt: completedAt ?? this.completedAt,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       category: category ?? this.category,
-      difficulty: difficulty ?? this.difficulty,
-      estimatedDays: estimatedDays ?? this.estimatedDays,
+      durationDays: durationDays ?? this.durationDays,
       milestones: milestones ?? this.milestones,
       metrics: metrics ?? this.metrics,
+      frequency: frequency ?? this.frequency,
+      customUnit: customUnit ?? this.customUnit,
+      iconCode: iconCode ?? this.iconCode,
+      colorHex: colorHex ?? this.colorHex,
+      tags: tags ?? this.tags,
+      customSettings: customSettings ?? this.customSettings,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      motivationalQuotes: motivationalQuotes ?? this.motivationalQuotes,
+      reminderSettings: reminderSettings ?? this.reminderSettings,
+      isTemplate: isTemplate ?? this.isTemplate,
+      templateId: templateId ?? this.templateId,
     );
   }
 
@@ -779,49 +930,32 @@ class GoalModel {
     );
   }
   
-  /// Crea objetivo con configuración completa
+  /// Crea objetivo con configuración simplificada
   static GoalModel createEnhanced({
     required int userId,
     required String title,
     required String description,
-    required GoalType type,
     required int targetValue,
     required GoalCategory category,
-    GoalDifficulty difficulty = GoalDifficulty.medium,
-    int? estimatedDays,
+    int durationDays = 30,
+    FrequencyType frequency = FrequencyType.daily,
     List<Milestone>? customMilestones,
     Map<String, dynamic>? initialMetrics,
   }) {
-    final estimatedDaysCalculated = estimatedDays ?? _calculateEstimatedDays(difficulty, targetValue);
     final milestones = customMilestones ?? Milestone.createDefaultMilestones(targetValue);
     
     return GoalModel(
       userId: userId,
       title: title,
       description: description,
-      type: type,
       targetValue: targetValue,
       category: category,
-      difficulty: difficulty,
-      estimatedDays: estimatedDaysCalculated,
+      durationDays: durationDays,
+      frequency: frequency,
       milestones: milestones,
       metrics: initialMetrics ?? {},
       createdAt: DateTime.now(),
     );
-  }
-  
-  /// Calcula días estimados basado en dificultad y valor objetivo
-  static int _calculateEstimatedDays(GoalDifficulty difficulty, int targetValue) {
-    switch (difficulty) {
-      case GoalDifficulty.easy:
-        return (targetValue * 0.5).clamp(7, 14).round(); // 7-14 días
-      case GoalDifficulty.medium:
-        return (targetValue * 1.0).clamp(21, 30).round(); // 21-30 días
-      case GoalDifficulty.hard:
-        return (targetValue * 1.5).clamp(45, 60).round(); // 45-60 días
-      case GoalDifficulty.expert:
-        return (targetValue * 2.0).clamp(90, 120).round(); // 90-120 días
-    }
   }
 
   // ============================================================================
@@ -829,69 +963,7 @@ class GoalModel {
   // Nota: Los métodos _parse ya no son necesarios porque la lógica está en fromDatabase.
   // ============================================================================
 
-  static GoalModel createConsistencyGoal({
-    required int userId,
-    required String title,
-    required String description,
-    required int targetDays,
-  }) {
-    return GoalModel(
-      userId: userId,
-      title: title,
-      description: description,
-      type: GoalType.consistency,
-      targetValue: targetDays,
-      createdAt: DateTime.now(),
-    );
-  }
-
-  static GoalModel createMoodGoal({
-    required int userId,
-    required String title,
-    required String description,
-    required int targetTimes,
-  }) {
-    return GoalModel(
-      userId: userId,
-      title: title,
-      description: description,
-      type: GoalType.mood,
-      targetValue: targetTimes,
-      createdAt: DateTime.now(),
-    );
-  }
-
-  static GoalModel createPositiveMomentsGoal({
-    required int userId,
-    required String title,
-    required String description,
-    required int targetMoments,
-  }) {
-    return GoalModel(
-      userId: userId,
-      title: title,
-      description: description,
-      type: GoalType.positiveMoments,
-      targetValue: targetMoments,
-      createdAt: DateTime.now(),
-    );
-  }
-
-  static GoalModel createStressReductionGoal({
-    required int userId,
-    required String title,
-    required String description,
-    required int targetTimes,
-  }) {
-    return GoalModel(
-      userId: userId,
-      title: title,
-      description: description,
-      type: GoalType.stressReduction,
-      targetValue: targetTimes,
-      createdAt: DateTime.now(),
-    );
-  }
+  // REMOVED: Type-specific factory methods - replaced with single createEnhanced method
 
   // ============================================================================
   // MÉTODOS DE COMPARACIÓN Y ORDENAMIENTO (SIN CAMBIOS)
@@ -909,7 +981,7 @@ class GoalModel {
 
   @override
   String toString() {
-    return 'GoalModel{id: $id, title: "$title", type: ${type.name}, status: ${status.name}, progress: $progressPercentage%}';
+    return 'GoalModel{id: $id, title: "$title", category: ${category.name}, status: ${status.name}, progress: $progressPercentage%}';
   }
 
   static int compareByProgress(GoalModel a, GoalModel b) {
@@ -920,8 +992,8 @@ class GoalModel {
     return b.createdAt.compareTo(a.createdAt);
   }
 
-  static int compareByType(GoalModel a, GoalModel b) {
-    return a.type.toString().compareTo(b.type.toString());
+  static int compareByCategory(GoalModel a, GoalModel b) {
+    return a.category.toString().compareTo(b.category.toString());
   }
 
   /// Genera milestones por defecto basados en el objetivo
@@ -992,7 +1064,7 @@ extension GoalListExtensions on List<GoalModel> {
   List<GoalModel> get activeGoals => where((goal) => goal.isActive).toList();
   List<GoalModel> get completedGoals => where((goal) => goal.isCompleted).toList();
   List<GoalModel> get archivedGoals => where((goal) => goal.isArchived).toList();
-  List<GoalModel> ofType(GoalType type) => where((goal) => goal.type == type).toList();
+  List<GoalModel> ofCategory(GoalCategory category) => where((goal) => goal.category == category).toList();
 
   double get averageProgress {
     if (isEmpty) return 0.0;
@@ -1015,10 +1087,10 @@ extension GoalListExtensions on List<GoalModel> {
     return counts;
   }
 
-  Map<GoalType, int> get countByType {
-    final counts = <GoalType, int>{};
+  Map<GoalCategory, int> get countByCategory {
+    final counts = <GoalCategory, int>{};
     for (final goal in this) {
-      counts[goal.type] = (counts[goal.type] ?? 0) + 1;
+      counts[goal.category] = (counts[goal.category] ?? 0) + 1;
     }
     return counts;
   }

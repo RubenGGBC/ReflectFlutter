@@ -102,7 +102,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: MinimalColors.backgroundPrimary(context),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
@@ -142,19 +142,24 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
               children: [
                 IconButton(
                   onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+                  icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        '📅 Mi Calendario',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: MinimalColors.accentGradient(context),
+                        ).createShader(bounds),
+                        child: const Text(
+                          'Mi Calendario',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       Text(
@@ -162,7 +167,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                             ? 'Año $_selectedYear'
                             : _getMonthYearText(_focusedMonth),
                         style: const TextStyle(
-                          color: Colors.white70,
+                          color: Colors.black54,
                           fontSize: 16,
                         ),
                       ),
@@ -181,7 +186,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
               children: [
                 IconButton(
                   onPressed: _previousPeriod,
-                  icon: const Icon(Icons.chevron_left, color: Colors.white, size: 32),
+                  icon: const Icon(Icons.chevron_left, color: Colors.black, size: 32),
                 ),
 
                 GestureDetector(
@@ -197,7 +202,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                           ? '$_selectedYear'
                           : _getMonthYearText(_focusedMonth),
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: Colors.black,
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
@@ -207,7 +212,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
 
                 IconButton(
                   onPressed: _nextPeriod,
-                  icon: const Icon(Icons.chevron_right, color: Colors.white, size: 32),
+                  icon: const Icon(Icons.chevron_right, color: Colors.black, size: 32),
                 ),
               ],
             ),
@@ -236,14 +241,14 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
           children: [
             Icon(
               _showYearView ? Icons.calendar_month : Icons.calendar_view_month,
-              color: Colors.white,
+              color: Colors.black,
               size: 18,
             ),
             const SizedBox(width: 6),
             Text(
               _showYearView ? 'Mes' : 'Año',
               style: const TextStyle(
-                color: Colors.white,
+                color: Colors.black,
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -317,7 +322,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
             Text(
               'Estadísticas del Mes',
               style: const TextStyle(
-                color: Colors.white,
+                color: Colors.black,
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -355,7 +360,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
           Text(
             value,
             style: const TextStyle(
-              color: Colors.white,
+              color: Colors.black,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -363,7 +368,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
           Text(
             label,
             style: const TextStyle(
-              color: Colors.white70,
+              color: Colors.black54,
               fontSize: 10,
             ),
           ),
@@ -401,7 +406,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                 child: Text(
                   day,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -447,12 +452,12 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
   Widget _buildDayCell(int dayNumber, dynamic entry, bool isSelected, bool isToday, DateTime dayDate) {
     Color backgroundColor = Colors.transparent;
     Color borderColor = Colors.white24;
-    Color textColor = Colors.white70;
+    Color textColor = Colors.black54;
 
     if (isSelected) {
       backgroundColor = MinimalColors.accentGradient(context)[0];
       borderColor = MinimalColors.accentGradient(context)[1];
-      textColor = Colors.white;
+      textColor = Colors.black;
     } else if (isToday) {
       borderColor = MinimalColors.lightGradient(context)[0];
       textColor = MinimalColors.lightGradient(context)[0];
@@ -460,7 +465,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
       final moodScore = entry.moodScore ?? 5;
       backgroundColor = _getMoodColor(moodScore).withValues(alpha: 0.3);
       borderColor = _getMoodColor(moodScore);
-      textColor = Colors.white;
+      textColor = Colors.black;
     }
 
     return GestureDetector(
@@ -551,7 +556,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                   child: Text(
                     _formatSelectedDate(_selectedDate),
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: Colors.black,
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -596,14 +601,14 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                   children: [
                     const Icon(
                       Icons.edit_note,
-                      color: Colors.white54,
+                      color: Colors.black45,
                       size: 32,
                     ),
                     const SizedBox(height: 8),
                     const Text(
                       'Sin reflexión registrada',
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: Colors.black54,
                         fontSize: 14,
                       ),
                     ),
@@ -652,7 +657,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                 child: Text(
                   '${moodScore}/10',
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -677,7 +682,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
             Text(
               entry.freeReflection,
               style: const TextStyle(
-                color: Colors.white70,
+                color: Colors.black54,
                 fontSize: 14,
                 height: 1.4,
               ),
@@ -706,12 +711,12 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 16),
+            Icon(icon, color: Colors.black, size: 16),
             const SizedBox(width: 6),
             Text(
               label,
               style: const TextStyle(
-                color: Colors.white,
+                color: Colors.black,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -770,7 +775,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
           Text(
             'Resumen del Año $_selectedYear',
             style: const TextStyle(
-              color: Colors.white,
+              color: Colors.black,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -848,7 +853,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                 Text(
                   months[index],
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Colors.black,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -869,7 +874,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                   Text(
                     '${monthEntries.length} días',
                     style: const TextStyle(
-                      color: Colors.white70,
+                      color: Colors.black54,
                       fontSize: 10,
                     ),
                   ),
@@ -882,7 +887,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                   const Text(
                     'Sin datos',
                     style: TextStyle(
-                      color: Colors.white54,
+                      color: Colors.black45,
                       fontSize: 10,
                     ),
                   ),
@@ -921,12 +926,12 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.add, color: Colors.white),
+            Icon(Icons.add, color: Colors.black),
             SizedBox(width: 8),
             Text(
               'Nueva Reflexión',
               style: TextStyle(
-                color: Colors.white,
+                color: Colors.black,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -974,7 +979,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
             colorScheme: ColorScheme.dark(
               primary: MinimalColors.accentGradient(context)[0],
               surface: MinimalColors.backgroundCard(context),
-              onSurface: Colors.white,
+              onSurface: Colors.black,
             ),
             dialogBackgroundColor: MinimalColors.backgroundSecondary(context),
           ),

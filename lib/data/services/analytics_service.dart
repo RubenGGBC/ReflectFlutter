@@ -10,22 +10,19 @@ import '../models/optimized_models.dart';
 import '../models/analytics_models.dart';
 import 'optimized_database_service.dart';
 
-// AI Services
-import '../../ai/services/predictive_analysis_service.dart';
+// AI services removed
 
 /// Consolidated Analytics Service - All analytics methods in one place
 /// This service combines the best analytics methods from across the project
 /// for better organization and improved performance
 class AnalyticsService {
   final OptimizedDatabaseService _databaseService;
-  final PredictiveAnalysisService _predictiveService;
+  // Predictive service removed
   final Logger _logger = Logger();
 
   AnalyticsService({
     required OptimizedDatabaseService databaseService,
-    required PredictiveAnalysisService predictiveService,
-  }) : _databaseService = databaseService,
-       _predictiveService = predictiveService;
+  }) : _databaseService = databaseService;
 
   // ============================================================================
   // CORE ANALYTICS METHODS
@@ -41,15 +38,9 @@ class AnalyticsService {
         _databaseService.getUserAnalytics(userId, days: days),
         getAdvancedTimeSeriesAnalysis(userId, days: days),
         getMLPatternAnalysis(userId),
-        _predictiveService.predictMoodTrends(
-          userId: userId,
-          daysAhead: 7,
-          databaseService: _databaseService,
-        ),
-        _predictiveService.detectBurnoutRisk(
-          userId: userId,
-          databaseService: _databaseService,
-        ),
+        // AI predictive service removed
+        Future.value(<String, dynamic>{}),
+        Future.value(false),
       ]);
 
       final basicAnalytics = futures[0] as Map<String, dynamic>;

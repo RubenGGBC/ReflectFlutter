@@ -12,12 +12,17 @@ import '../../../data/services/enhanced_goals_service.dart';
 
 // Providers
 import '../../providers/optimized_providers.dart';
+import '../../providers/enhanced_goals_provider.dart';
 
 // Components
 import 'components/minimal_colors.dart';
 import '../../widgets/enhanced_goal_card.dart';
 import '../../widgets/progress_entry_dialog.dart';
 import '../../widgets/enhanced_create_goal_dialog.dart';
+
+// New Advanced Screens
+import 'advanced_goal_creation_screen.dart';
+import 'advanced_goal_editing_screen.dart';
 
 class GoalsScreenEnhanced extends StatefulWidget {
   const GoalsScreenEnhanced({super.key});
@@ -37,12 +42,7 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fabAnimation;
 
-  final EnhancedGoalsService _goalsService = EnhancedGoalsService();
-  
-  List<GoalModel> _goals = [];
-  Map<String, StreakData> _streakData = {};
-  bool _isLoading = true;
-  GoalCategory? _selectedCategory;
+  bool _isInitialized = false;
   
   final List<GoalCategory> _categories = GoalCategory.values;
 
@@ -97,51 +97,47 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
   }
 
   Future<void> _initializeData() async {
-    try {
-      // Migrate database schema first
-      await _goalsService.migrateToPhase1Schema();
-      
-      // Load goals
-      await _loadGoals();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error inicializando datos: $e')),
-      );
-    }
-  }
-
-  Future<void> _loadGoals() async {
-    setState(() => _isLoading = true);
+    if (_isInitialized) return;
     
     try {
       final authProvider = context.read<OptimizedAuthProvider>();
+      final goalsProvider = context.read<EnhancedGoalsProvider>();
       final user = authProvider.currentUser;
       
       if (user != null) {
-        final goals = await _goalsService.getUserGoalsEnhanced(user.id);
-        final streakData = <String, StreakData>{};
-        
-        // Load streak data for each goal
-        for (final goal in goals) {
-          if (goal.id != null) {
-            final streak = await _goalsService.calculateStreakData(goal.id.toString());
-            streakData[goal.id.toString()] = streak;
-          }
-        }
-        
-        setState(() {
-          _goals = goals;
-          _streakData = streakData;
-          _isLoading = false;
-        });
+        await goalsProvider.loadGoals(user.id);
+        _isInitialized = true;
       }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error cargando objetivos: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error inicializando datos: $e')),
+        );
+      }
     }
   }
+
+  Future<void> _refreshGoals() async {
+    try {
+      final authProvider = context.read<OptimizedAuthProvider>();
+      final goalsProvider = context.read<EnhancedGoalsProvider>();
+      final user = authProvider.currentUser;
+      
+      if (user != null) {
+        print('🔄 Refrescando objetivos para usuario: ${user.id}');
+        await goalsProvider.loadGoals(user.id);
+        print('✅ Objetivos refrescados exitosamente');
+      }
+    } catch (e) {
+      print('❌ Error refrescando objetivos: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error refrescando objetivos: $e')),
+        );
+      }
+    }
+  }
+
 
   @override
   void dispose() {
@@ -153,43 +149,58 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: MinimalColors.backgroundPrimary(context),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              MinimalColors.backgroundPrimary(context),
-              MinimalColors.backgroundSecondary(context).withValues(alpha: 0.8),
-              MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.1),
-            ],
-            stops: const [0.0, 0.7, 1.0],
-          ),
-        ),
-        child: SafeArea(
-          child: FadeTransition(
-            opacity: _fadeAnimation,
-            child: Column(
-              children: [
-                _buildHeader(context),
-                _buildCategoryFilter(context),
-                Expanded(
-                  child: _isLoading 
-                      ? _buildLoadingState(context)
-                      : _buildGoalsList(context),
+    return Consumer<EnhancedGoalsProvider>(
+      builder: (context, goalsProvider, child) {
+        // Initialize data if needed
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _initializeData();
+        });
+
+        return Scaffold(
+          backgroundColor: MinimalColors.backgroundPrimary(context),
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  MinimalColors.backgroundPrimary(context),
+                  MinimalColors.backgroundSecondary(context).withValues(alpha: 0.8),
+                  MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.1),
+                ],
+                stops: const [0.0, 0.7, 1.0],
+              ),
+            ),
+            child: SafeArea(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Column(
+                  children: [
+                    Flexible(
+                      flex: 0,
+                      child: _buildHeader(context, goalsProvider),
+                    ),
+                    Flexible(
+                      flex: 0,
+                      child: _buildCategoryFilter(context, goalsProvider),
+                    ),
+                    Expanded(
+                      child: goalsProvider.isLoading 
+                          ? _buildLoadingState(context)
+                          : _buildGoalsList(context, goalsProvider),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-      floatingActionButton: _buildFloatingActionButton(context),
+          floatingActionButton: _buildFloatingActionButton(context),
+        );
+      },
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, EnhancedGoalsProvider goalsProvider) {
     return SlideTransition(
       position: _slideAnimation,
       child: Container(
@@ -207,9 +218,9 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
                     ),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.emoji_events,
-                    color: Colors.white,
+                    color: MinimalColors.textPrimary(context),
                     size: 28,
                   ),
                 ),
@@ -218,16 +229,21 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Mis Objetivos',
-                        style: TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: MinimalColors.textPrimary(context),
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: MinimalColors.accentGradient(context),
+                        ).createShader(bounds),
+                        child: Text(
+                          'Mis Objetivos',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            color: MinimalColors.textPrimary(context),
+                          ),
                         ),
                       ),
                       Text(
-                        '${_getActiveGoalsCount()} objetivos activos',
+                        '${goalsProvider.activeGoals.length} objetivos activos',
                         style: TextStyle(
                           fontSize: 14,
                           color: MinimalColors.textSecondary(context),
@@ -247,44 +263,47 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
   }
 
   Widget _buildQuickStats(BuildContext context) {
-    final activeGoals = _goals.where((g) => g.isActive).toList();
-    final completedGoals = _goals.where((g) => g.isCompleted).toList();
-    final averageProgress = activeGoals.isNotEmpty 
-        ? activeGoals.map((g) => g.progress).reduce((a, b) => a + b) / activeGoals.length
-        : 0.0;
+    return Consumer<EnhancedGoalsProvider>(
+      builder: (context, goalsProvider, child) {
+        final stats = goalsProvider.goalStatistics;
+        final activeGoals = goalsProvider.activeGoals;
+        final completedGoals = goalsProvider.completedGoals;
+        final averageProgress = stats['completionRate'] as double;
 
-    return Row(
-      children: [
-        Expanded(
-          child: _buildStatCard(
-            context,
-            'Activos',
-            '${activeGoals.length}',
-            Icons.flag,
-            MinimalColors.primaryGradient(context),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            context,
-            'Completados',
-            '${completedGoals.length}',
-            Icons.check_circle,
-            [const Color(0xFF10B981), const Color(0xFF34D399)],
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildStatCard(
-            context,
-            'Progreso',
-            '${(averageProgress * 100).round()}%',
-            Icons.trending_up,
-            MinimalColors.accentGradient(context),
-          ),
-        ),
-      ],
+        return Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                context,
+                'Activos',
+                '${activeGoals.length}',
+                Icons.flag,
+                MinimalColors.primaryGradient(context),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                context,
+                'Completados',
+                '${completedGoals.length}',
+                Icons.check_circle,
+                [MinimalColors.success, MinimalColors.positiveGradient(context)[1]],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildStatCard(
+                context,
+                'Progreso',
+                '${(averageProgress * 100).round()}%',
+                Icons.trending_up,
+                MinimalColors.accentGradient(context),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -322,7 +341,7 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
             ),
             child: Icon(
               icon,
-              color: Colors.white,
+              color: MinimalColors.textPrimary(context),
               size: 20,
             ),
           ),
@@ -347,37 +366,35 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
     );
   }
 
-  Widget _buildCategoryFilter(BuildContext context) {
+  Widget _buildCategoryFilter(BuildContext context, EnhancedGoalsProvider goalsProvider) {
     return Container(
-      height: 80,
+      height: 50,
       padding: const EdgeInsets.symmetric(horizontal: 24),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: _categories.length + 1, // +1 for "All" option
         itemBuilder: (context, index) {
           if (index == 0) {
-            return _buildCategoryChip(context, null, 'Todos');
+            return _buildCategoryChip(context, goalsProvider, null, 'Todos');
           }
           
           final category = _categories[index - 1];
-          return _buildCategoryChip(context, category, _getCategoryDisplayName(category));
+          return _buildCategoryChip(context, goalsProvider, category, _getCategoryDisplayName(category));
         },
       ),
     );
   }
 
-  Widget _buildCategoryChip(BuildContext context, GoalCategory? category, String label) {
-    final isSelected = _selectedCategory == category;
+  Widget _buildCategoryChip(BuildContext context, EnhancedGoalsProvider goalsProvider, GoalCategory? category, String label) {
+    final isSelected = goalsProvider.selectedCategory == category;
     
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _selectedCategory = category;
-        });
+        goalsProvider.setCategory(category);
       },
       child: Container(
         margin: const EdgeInsets.only(right: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
           gradient: isSelected
               ? LinearGradient(colors: MinimalColors.primaryGradient(context))
@@ -400,7 +417,7 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
                 _getCategoryIcon(category),
                 size: 16,
                 color: isSelected 
-                    ? Colors.white 
+                    ? MinimalColors.textPrimary(context) 
                     : MinimalColors.textSecondary(context),
               ),
               const SizedBox(width: 6),
@@ -411,7 +428,7 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: isSelected 
-                    ? Colors.white 
+                    ? MinimalColors.textPrimary(context) 
                     : MinimalColors.textSecondary(context),
               ),
             ),
@@ -421,11 +438,11 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
     );
   }
 
-  Widget _buildGoalsList(BuildContext context) {
-    final filteredGoals = _getFilteredGoals();
+  Widget _buildGoalsList(BuildContext context, EnhancedGoalsProvider goalsProvider) {
+    final filteredGoals = goalsProvider.filteredGoals;
     
     if (filteredGoals.isEmpty) {
-      return _buildEmptyState(context);
+      return _buildEmptyState(context, goalsProvider);
     }
 
     return SlideTransition(
@@ -435,13 +452,13 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
         itemCount: filteredGoals.length,
         itemBuilder: (context, index) {
           final goal = filteredGoals[index];
-          final streakData = _streakData[goal.id.toString()];
+          final streakData = goal.id != null ? goalsProvider.getStreakDataForGoal(goal.id!) : null;
           
           return EnhancedGoalCard(
             goal: goal,
             streakData: streakData,
             onTap: () => _showGoalDetails(goal),
-            onProgressUpdate: () => _showProgressUpdateDialog(goal),
+            onProgressUpdate: () => _showProgressUpdateDialog(goal, goalsProvider),
             onAddNote: () => _showAddNoteDialog(goal),
           );
         },
@@ -449,7 +466,7 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
     );
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, EnhancedGoalsProvider goalsProvider) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -470,7 +487,7 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
           ),
           const SizedBox(height: 24),
           Text(
-            _selectedCategory != null ? 'No tienes objetivos en esta categoría' : 'No tienes objetivos aún',
+            goalsProvider.selectedCategory != null ? 'No tienes objetivos en esta categoría' : 'No tienes objetivos aún',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -502,11 +519,11 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text(
+              icon: Icon(Icons.add, color: MinimalColors.textPrimary(context)),
+              label: Text(
                 'Crear Objetivo',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: MinimalColors.textPrimary(context),
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -555,12 +572,13 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
           ],
         ),
         child: FloatingActionButton(
+          heroTag: "goals_fab",
           onPressed: _showCreateGoalDialog,
           backgroundColor: Colors.transparent,
           elevation: 0,
-          child: const Icon(
+          child:  Icon(
             Icons.add,
-            color: Colors.white,
+            color: MinimalColors.textPrimary(context),
             size: 28,
           ),
         ),
@@ -569,16 +587,6 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
   }
 
   // Helper methods
-  List<GoalModel> _getFilteredGoals() {
-    if (_selectedCategory == null) {
-      return _goals;
-    }
-    return _goals.where((goal) => goal.category == _selectedCategory).toList();
-  }
-
-  int _getActiveGoalsCount() {
-    return _goals.where((goal) => goal.isActive).length;
-  }
 
   String _getCategoryDisplayName(GoalCategory category) {
     switch (category) {
@@ -608,13 +616,18 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
 
   // Action methods
   void _showGoalDetails(GoalModel goal) {
-    // TODO: Navigate to goal details screen
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Detalles de: ${goal.title}')),
-    );
+    // Navigate to the advanced goal editing screen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AdvancedGoalEditingScreen(goal: goal),
+      ),
+    ).then((_) {
+      // Refresh goals when returning from editing screen
+      _refreshGoals();
+    });
   }
 
-  void _showProgressUpdateDialog(GoalModel goal) {
+  void _showProgressUpdateDialog(GoalModel goal, EnhancedGoalsProvider goalsProvider) {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -622,14 +635,13 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
         goal: goal,
         onEntryCreated: (entry) async {
           try {
-            await _goalsService.addProgressEntry(entry);
-            await _goalsService.updateGoalProgressWithMilestones(
+            await goalsProvider.addProgressEntry(entry);
+            await goalsProvider.updateGoalProgress(
               goal.id!,
               entry.primaryValue,
               notes: entry.notes,
               metrics: entry.metrics,
             );
-            _loadGoals(); // Refresh goals
             
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Progreso actualizado exitosamente')),
@@ -686,7 +698,7 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
             style: ElevatedButton.styleFrom(
               backgroundColor: MinimalColors.primaryGradient(context)[0],
             ),
-            child: const Text('Guardar', style: TextStyle(color: Colors.white)),
+            child: Text('Guardar', style: TextStyle(color: MinimalColors.textPrimary(context))),
           ),
         ],
       ),
@@ -694,30 +706,16 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
   }
 
   void _showCreateGoalDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => EnhancedCreateGoalDialog(
-        onGoalCreated: (goal) async {
-          try {
-            // Create the goal using enhanced service
-            await _goalsService.createEnhancedGoalFromModel(goal);
-            await _loadGoals(); // Refresh goals list
-            
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('¡Objetivo creado exitosamente!')),
-              );
-            }
-          } catch (e) {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error creando objetivo: $e')),
-              );
-            }
-          }
-        },
+    // Navigate to the new advanced goal creation screen
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const AdvancedGoalCreationScreen(),
       ),
-    );
+    ).then((result) {
+      // Refresh goals if a goal was successfully created
+      if (result == true) {
+        _refreshGoals();
+      }
+    });
   }
 }

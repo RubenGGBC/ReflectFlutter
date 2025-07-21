@@ -8,30 +8,24 @@ import 'package:logger/logger.dart';
 
 import '../../data/models/optimized_models.dart';
 import '../../data/services/optimized_database_service.dart';
-import '../../ai/services/simple_ai_goals_service.dart';
+// AI services removed
 import 'optimized_providers.dart';
 
 class ExtendedDailyEntriesProvider extends OptimizedDailyEntriesProvider {
-  final SimpleAIGoalsService _aiService = SimpleAIGoalsService.instance;
+  // AI service removed
   final Logger _logger = Logger();
 
   // ✅ SOLUCIÓN: Almacenar referencia local al database service
   final OptimizedDatabaseService _databaseService;
 
-  // Lista de recomendaciones generadas por IA REAL
-  List<SimpleGoalRecommendation> _recommendations = [];
-  bool _hasNewRecommendations = false;
-  bool _isGeneratingRecommendations = false;
+  // AI recommendations removed
 
   // ✅ CONSTRUCTOR CORREGIDO: Almacenar la referencia
   ExtendedDailyEntriesProvider(OptimizedDatabaseService databaseService)
       : _databaseService = databaseService,
         super(databaseService);
 
-  // Getters para las recomendaciones
-  List<SimpleGoalRecommendation> get recommendations => List.unmodifiable(_recommendations);
-  bool get hasNewRecommendations => _hasNewRecommendations;
-  bool get isGeneratingRecommendations => _isGeneratingRecommendations;
+  // AI getters removed
 
   /// ✅ MÉTODO EXTENDIDO: Guardar entrada Y usar IA REAL para generar goals
   @override
@@ -66,7 +60,7 @@ class ExtendedDailyEntriesProvider extends OptimizedDailyEntriesProvider {
 
     // ✅ NUEVOS PARÁMETROS
     String userName = 'Usuario',
-    bool useAI = true,
+    // AI parameter removed
   }) async {
 
     // 1. Primero guardar la entrada normalmente
@@ -100,68 +94,23 @@ class ExtendedDailyEntriesProvider extends OptimizedDailyEntriesProvider {
       voiceRecordingPath: voiceRecordingPath,
     );
 
-    // 2. Si se guardó exitosamente Y se solicita IA, generar recomendaciones
-    if (success && useAI && todayEntry != null) {
-      _generateAIRecommendations(userId, todayEntry!, userName);
-    }
+    // AI recommendations removed
 
     return success;
   }
 
-  /// 🤖 Generar recomendaciones usando IA REAL (en segundo plano)
-  Future<void> _generateAIRecommendations(int userId, OptimizedDailyEntryModel dailyEntry, String userName) async {
-    if (_isGeneratingRecommendations) return; // Evitar llamadas múltiples
+  // AI recommendations method removed
 
-    _isGeneratingRecommendations = true;
-    notifyListeners();
+  // AI recommendation methods removed
 
-    try {
-      _logger.i('🤖 Usando IA REAL para generar recomendaciones...');
-
-      // ✅ USAR LA IA REAL - Ahora _databaseService está disponible
-      final recommendations = await _aiService.analyzeAndRecommend(
-        userId: userId,
-        dailyEntry: dailyEntry,
-        userName: userName,
-        databaseService: _databaseService,
-      );
-
-      _recommendations = recommendations;
-      _hasNewRecommendations = recommendations.isNotEmpty;
-
-      final aiCount = recommendations.where((r) => r.aiGenerated).length;
-      _logger.i('✅ IA generó ${recommendations.length} recomendaciones (${aiCount} con IA real)');
-
-    } catch (e) {
-      _logger.e('❌ Error con IA: $e');
-      _recommendations = [];
-      _hasNewRecommendations = false;
-    } finally {
-      _isGeneratingRecommendations = false;
-      notifyListeners();
-    }
-  }
-
-  /// 📋 Marcar recomendaciones como vistas
-  void markRecommendationsAsSeen() {
-    _hasNewRecommendations = false;
-    notifyListeners();
-  }
-
-  /// 🗑️ Limpiar recomendaciones
-  void clearRecommendations() {
-    _recommendations = [];
-    _hasNewRecommendations = false;
-    notifyListeners();
-  }
-
-  /// 🔄 Regenerar recomendaciones manualmente
+  /// 🔄 Regenerar recomendaciones manualmente (AI removed)
   Future<void> regenerateRecommendations(int userId, String userName) async {
     if (todayEntry == null) {
       _logger.w('❌ No hay entrada de hoy para analizar');
       return;
     }
 
-    await _generateAIRecommendations(userId, todayEntry!, userName);
+    // AI recommendations removed
+    _logger.i('✅ Recommendations generation disabled - AI removed');
   }
 }

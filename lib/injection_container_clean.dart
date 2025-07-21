@@ -9,7 +9,7 @@ import 'package:logger/logger.dart';
 // Services optimizados
 import 'data/services/optimized_database_service.dart';
 import 'data/services/image_picker_service.dart';
-import 'ai/services/predictive_analysis_service.dart';
+// AI services removed
 import 'services/notification_service.dart';
 import 'services/voice_recording_service.dart';
 
@@ -18,15 +18,15 @@ import 'presentation/providers/optimized_providers.dart';
 import 'presentation/providers/extended_daily_entries_provider.dart';
 import 'presentation/providers/image_moments_provider.dart'; // ✅ NUEVO PROVIDER AÑADIDO
 import 'presentation/providers/analytics_provider.dart'; // ✅ PROVIDER AÑADIDO
+import 'presentation/providers/analytics_v3_provider.dart'; // ✅ NUEVO: Analytics V3 Provider
 import 'presentation/providers/advanced_emotion_analysis_provider.dart'; // ✅ NUEVO PROVIDER AVANZADO
 import 'presentation/providers/challenges_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
 import 'presentation/providers/streak_provider.dart'; // ✅ HIGH PRIORITY ENHANCEMENT
 import 'presentation/providers/recommended_activities_provider.dart'; // ✅ NUEVO: Recommended Activities
 import 'presentation/providers/daily_activities_provider.dart'; // ✅ NUEVO: Daily Activities
-import 'ai/provider/ai_provider.dart';
-import 'ai/provider/predective_analysis_provider.dart'; // ✅ NUEVO: Análisis Predictivo
-import 'ai/provider/chat_provider.dart'; // ✅ NUEVO: Chat con IA
-import 'ai/provider/mental_health_chat_provider.dart'; // ✅ NUEVO: Mental Health Chat
+import 'presentation/providers/daily_roadmap_provider.dart'; // ✅ NUEVO: Daily Roadmap
+import 'presentation/providers/enhanced_goals_provider.dart'; // ✅ NUEVO: Enhanced Goals
+// AI providers removed
 // Theme provider (reutilizado del original)
 import 'presentation/providers/theme_provider.dart';
 
@@ -66,9 +66,7 @@ Future<void> initCleanDependencies() async {
           () => ImagePickerService(),
     );
     
-    sl.registerLazySingleton<PredictiveAnalysisService>(
-          () => PredictiveAnalysisService.instance,
-    );
+    // Predictive analysis service removed
     
     sl.registerLazySingleton<NotificationService>(
           () => NotificationService(),
@@ -120,12 +118,20 @@ Future<void> initCleanDependencies() async {
           () => AnalyticsProviderOptimized(sl<OptimizedDatabaseService>()),
     );
 
-    sl.registerFactory<AIProvider>(
-          () => AIProvider(),
+    // ✅ NUEVO: Analytics V3 Provider
+    sl.registerFactory<AnalyticsV3Provider>(
+          () => AnalyticsV3Provider(sl<OptimizedDatabaseService>()),
     );
+
+    // AI provider removed
 
     sl.registerFactory<GoalsProvider>(
           () => GoalsProvider(sl<OptimizedDatabaseService>()),
+    );
+
+    // ✅ NUEVO: EnhancedGoalsProvider
+    sl.registerFactory<EnhancedGoalsProvider>(
+          () => EnhancedGoalsProvider(sl<OptimizedDatabaseService>()),
     );
 
     // ✅ NUEVO: NotificationsProvider
@@ -135,20 +141,7 @@ Future<void> initCleanDependencies() async {
           () => ImageMomentsProvider(),
     );
 
-    // ✅ NUEVO: PredictiveAnalysisProvider
-    sl.registerFactory<PredictiveAnalysisProvider>(
-          () => PredictiveAnalysisProvider(sl<OptimizedDatabaseService>()),
-    );
-
-    // ✅ NUEVO: ChatProvider
-    sl.registerFactory<ChatProvider>(
-          () => ChatProvider(sl<OptimizedDatabaseService>(), sl<AIProvider>()),
-    );
-
-    // ✅ NUEVO: MentalHealthChatProvider
-    sl.registerFactory<MentalHealthChatProvider>(
-          () => MentalHealthChatProvider(sl<OptimizedDatabaseService>()),
-    );
+    // All AI providers removed
 
     // ✅ HIGH PRIORITY ENHANCEMENTS: New providers
     sl.registerFactory<ChallengesProvider>(
@@ -172,6 +165,13 @@ Future<void> initCleanDependencies() async {
     // ✅ NUEVO: DailyActivitiesProvider
     sl.registerFactory<DailyActivitiesProvider>(
           () => DailyActivitiesProvider(),
+    );
+
+    // ✅ NUEVO: DailyRoadmapProvider
+    sl.registerFactory<DailyRoadmapProvider>(
+          () => DailyRoadmapProvider(
+            databaseService: sl<OptimizedDatabaseService>(),
+          ),
     );
 
     logger.i('✅ Dependencias limpias inicializadas correctamente');
@@ -215,7 +215,7 @@ bool areCleanServicesRegistered() {
     sl<Logger>();
     sl<OptimizedDatabaseService>();
     sl<ImagePickerService>();
-    sl<PredictiveAnalysisService>();
+    // AI service removed
     sl<NotificationService>();
 
     // Verificar providers
@@ -227,12 +227,11 @@ bool areCleanServicesRegistered() {
     sl<OptimizedAnalyticsProvider>();
     sl<AnalyticsProvider>();
     sl<AnalyticsProviderOptimized>(); // ✅ NUEVO
-    sl<AIProvider>();
+    // AI provider removed
     sl<GoalsProvider>();
+    sl<EnhancedGoalsProvider>(); // ✅ NUEVO
     sl<ImageMomentsProvider>(); // ✅ NUEVO
-    sl<PredictiveAnalysisProvider>(); // ✅ NUEVO
-    sl<ChatProvider>(); // ✅ NUEVO
-    sl<MentalHealthChatProvider>(); // ✅ NUEVO
+    // AI providers removed
     sl<ChallengesProvider>(); // ✅ HIGH PRIORITY ENHANCEMENT
     sl<StreakProvider>(); // ✅ HIGH PRIORITY ENHANCEMENT
     sl<AdvancedEmotionAnalysisProvider>(); // ✅ NUEVO
@@ -252,7 +251,7 @@ Map<String, dynamic> getCleanContainerInfo() {
       'Logger',
       'OptimizedDatabaseService',
       'ImagePickerService', // ✅ NUEVO
-      'PredictiveAnalysisService', // ✅ NUEVO
+      // AI services removed
       'NotificationService', // ✅ NUEVO
     ],
     'providers': [
@@ -263,13 +262,10 @@ Map<String, dynamic> getCleanContainerInfo() {
       'OptimizedMomentsProvider',
       'OptimizedAnalyticsProvider',
       'AnalyticsProvider',
-      'AIProvider',
       'GoalsProvider',
       'NotificationsProvider', // ✅ NUEVO
       'ImageMomentsProvider', // ✅ NUEVO
-      'PredictiveAnalysisProvider', // ✅ NUEVO
-      'ChatProvider', // ✅ NUEVO
-      'MentalHealthChatProvider', // ✅ NUEVO
+      // AI providers removed
       'ChallengesProvider', // ✅ HIGH PRIORITY ENHANCEMENT
       'StreakProvider', // ✅ HIGH PRIORITY ENHANCEMENT
       'AdvancedEmotionAnalysisProvider', // ✅ NUEVO
@@ -339,7 +335,7 @@ extension CleanGetItExtension on GetIt {
 class CleanDIConstants {
   static const String logger = 'Logger';
   static const String databaseService = 'OptimizedDatabaseService';
-  static const String predictiveAnalysisService = 'PredictiveAnalysisService'; // ✅ NUEVO
+  // AI services removed
   static const String notificationService = 'NotificationService'; // ✅ NUEVO
   static const String authProvider = 'OptimizedAuthProvider';
   static const String themeProvider = 'ThemeProvider';
@@ -347,13 +343,10 @@ class CleanDIConstants {
   static const String extendedDailyEntriesProvider = 'ExtendedDailyEntriesProvider';
   static const String momentsProvider = 'OptimizedMomentsProvider';
   static const String analyticsProvider = 'OptimizedAnalyticsProvider';
-  static const String aiProvider = 'AIProvider';
   static const String goalsProvider = 'GoalsProvider';
   static const String notificationsProvider = 'NotificationsProvider'; // ✅ NUEVO
   static const String imageMomentsProvider = 'ImageMomentsProvider'; // ✅ NUEVO
-  static const String predictiveAnalysisProvider = 'PredictiveAnalysisProvider'; // ✅ NUEVO
-  static const String chatProvider = 'ChatProvider'; // ✅ NUEVO
-  static const String mentalHealthChatProvider = 'MentalHealthChatProvider'; // ✅ NUEVO
+  // AI providers removed
   static const String challengesProvider = 'ChallengesProvider'; // ✅ HIGH PRIORITY ENHANCEMENT
   static const String streakProvider = 'StreakProvider'; // ✅ HIGH PRIORITY ENHANCEMENT
 }

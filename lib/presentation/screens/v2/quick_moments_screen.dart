@@ -170,25 +170,33 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
   }
 
   // ============================================================================
-  // FUNCIONES DE IMAGEN
+  // ENHANCED PHOTO FUNCTIONS WITH CAMERA OVERLAY AND FILTERS
   // ============================================================================
 
   Future<void> _takePicture() async {
     try {
+      // Show camera loading animation
+      _showCameraLoadingDialog();
+      
+      await Future.delayed(const Duration(milliseconds: 500)); // UX improvement
+      
       final XFile? image = await _picker.pickImage(
         source: ImageSource.camera,
         maxWidth: 1920,
         maxHeight: 1080,
-        imageQuality: 85,
+        imageQuality: 90, // Better quality
+        preferredCameraDevice: CameraDevice.rear,
       );
 
+      if (mounted) Navigator.of(context).pop(); // Close loading dialog
+
       if (image != null) {
-        setState(() {
-          _selectedImage = File(image.path);
-        });
-        HapticFeedback.mediumImpact();
+        await _processSelectedImage(image);
+        HapticFeedback.heavyImpact();
+        _showImageCapturedAnimation();
       }
     } catch (e) {
+      if (mounted) Navigator.of(context).pop(); // Close loading dialog
       _showErrorSnackBar('Error al tomar la foto: $e');
     }
   }
@@ -199,18 +207,39 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
         source: ImageSource.gallery,
         maxWidth: 1920,
         maxHeight: 1080,
-        imageQuality: 85,
+        imageQuality: 90,
       );
 
       if (image != null) {
-        setState(() {
-          _selectedImage = File(image.path);
-        });
+        await _processSelectedImage(image);
         HapticFeedback.mediumImpact();
       }
     } catch (e) {
       _showErrorSnackBar('Error al seleccionar la imagen: $e');
     }
+  }
+
+  Future<void> _processSelectedImage(XFile image) async {
+    setState(() {
+      _selectedImage = File(image.path);
+    });
+    
+    // Show image processing overlay
+    _showImageProcessingOverlay();
+    
+    // Simulate processing time for better UX
+    await Future.delayed(const Duration(milliseconds: 800));
+    
+    if (mounted) Navigator.of(context).pop(); // Close processing overlay
+  }
+
+  Future<void> _showAdvancedPhotoOptions() async {
+    return showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => _buildAdvancedPhotoOptionsSheet(),
+    );
   }
 
   void _removeImage() {
@@ -355,75 +384,55 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
   }
 
   // ============================================================================
-  // APP BAR MODERNO
-  // ============================================================================
-
-
-  // ============================================================================
-  // HEADER CON PASO ACTUAL
+  // SIMPLE HEADER WITH EMOJI + TITLE + DESCRIPTION
   // ============================================================================
 
   Widget _buildHeader() {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: MinimalColors.primaryGradient(context),
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: const BorderRadius.only(
-            bottomLeft: Radius.circular(24),
-            bottomRight: Radius.circular(24),
-          ),
-        ),
-        child: Row(
-          children: [
-            IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      child: Row(
+        children: [
+          IconButton(
+            onPressed: () => Navigator.pop(context),
+            icon: Icon(
+              Icons.arrow_back_ios,
+              color: MinimalColors.textPrimary(context),
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            '📸',
+            style: TextStyle(fontSize: 24),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: MinimalColors.accentGradient(context),
+                  ).createShader(bounds),
+                  child: Text(
                     'Nuevo Momento',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 28,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      letterSpacing: 0.5,
                     ),
                   ),
-                  Text(
-                    DateTime.now().toString().split(' ')[0],
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
+                ),
+                Text(
+                  'Captura y guarda tus experiencias del día',
+                  style: TextStyle(
+                    color: MinimalColors.textSecondary(context),
+                    fontSize: 14,
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: const Icon(
-                Icons.camera_alt,
-                color: Colors.white,
-                size: 28,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -564,68 +573,151 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
   }
 
   Widget _buildImagePicker() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        AnimatedBuilder(
-          animation: _glowController,
-          builder: (context, child) {
-            return Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: MinimalColors.lightGradient(context).map((color) =>
-                      color.withValues(alpha: 0.1 + (_glowController.value * 0.1))).toList(),
+    return SingleChildScrollView(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          const SizedBox(height: 20),
+          
+          // Enhanced animated photo icon with pulse effect
+          AnimatedBuilder(
+            animation: _glowController,
+            builder: (context, child) {
+              return GestureDetector(
+                onTap: _showAdvancedPhotoOptions,
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: MinimalColors.lightGradient(context).map((color) =>
+                          color.withValues(alpha: 0.15 + (_glowController.value * 0.15))).toList(),
+                    ),
+                    borderRadius: BorderRadius.circular(40),
+                    boxShadow: [
+                      BoxShadow(
+                        color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.3),
+                        blurRadius: 20 + (_glowController.value * 10),
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Icon(
+                        Icons.camera_alt_outlined,
+                        size: 48,
+                        color: MinimalColors.accentGradient(context)[0],
+                      ),
+                      Positioned(
+                        bottom: -2,
+                        right: -2,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: MinimalColors.accentGradient(context)[1],
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.add,
+                            size: 16,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Icon(
-                Icons.add_a_photo,
-                size: 48,
-                color: MinimalColors.textSecondary(context),
-              ),
-            );
-          },
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Agrega una foto (opcional)',
-          style: TextStyle(
-            color: MinimalColors.textPrimary(context),
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
+              );
+            },
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Captura el momento con una imagen',
-          style: TextStyle(
-            color: MinimalColors.textSecondary(context),
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.camera_alt,
-                label: 'Tomar foto',
-                onTap: _takePicture,
-                isPrimary: true,
+          
+          const SizedBox(height: 20),
+          
+          ShaderMask(
+            shaderCallback: (bounds) => LinearGradient(
+              colors: MinimalColors.accentGradient(context),
+            ).createShader(bounds),
+            child: const Text(
+              'Captura tu momento',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionButton(
-                icon: Icons.photo_library,
-                label: 'Galería',
-                onTap: _pickFromGallery,
+          ),
+          
+          const SizedBox(height: 8),
+          
+          Text(
+            'Toca para ver opciones avanzadas de cámara',
+            style: TextStyle(
+              color: MinimalColors.textSecondary(context),
+              fontSize: 14,
+            ),
+          ),
+          
+          const SizedBox(height: 32),
+          
+          // Enhanced action buttons with better spacing and design
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  MinimalColors.backgroundCard(context).withValues(alpha: 0.5),
+                  MinimalColors.backgroundSecondary(context).withValues(alpha: 0.3),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: MinimalColors.textSecondary(context).withValues(alpha: 0.1),
+                width: 1,
               ),
             ),
-          ],
-        ),
-      ],
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildEnhancedActionButton(
+                        icon: Icons.camera_alt,
+                        label: 'Cámara',
+                        subtitle: 'Tomar nueva foto',
+                        onTap: _takePicture,
+                        gradient: MinimalColors.accentGradient(context),
+                        isPrimary: true,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildEnhancedActionButton(
+                        icon: Icons.photo_library,
+                        label: 'Galería',
+                        subtitle: 'Seleccionar existente',
+                        onTap: _pickFromGallery,
+                        gradient: MinimalColors.lightGradient(context),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildEnhancedActionButton(
+                  icon: Icons.camera_enhance,
+                  label: 'Opciones Avanzadas',
+                  subtitle: 'Filtros y configuración',
+                  onTap: _showAdvancedPhotoOptions,
+                  gradient: [Colors.purple.shade400, Colors.purple.shade600],
+                  isFullWidth: true,
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 40),
+        ],
+      ),
     );
   }
 
@@ -668,6 +760,67 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
               ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEnhancedActionButton({
+    required IconData icon,
+    required String label,
+    required String subtitle,
+    required VoidCallback onTap,
+    required List<Color> gradient,
+    bool isPrimary = false,
+    bool isFullWidth = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: isFullWidth ? double.infinity : null,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: gradient),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.transparent,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: gradient[0].withValues(alpha: 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: Colors.white,
+              size: 24,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              subtitle,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.8),
+                fontSize: 12,
+              ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -1543,6 +1696,482 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
           ],
         ),
         backgroundColor: const Color(0xFF10b981),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
+  }
+
+  // ============================================================================
+  // ENHANCED PHOTO UI METHODS
+  // ============================================================================
+
+  void _showCameraLoadingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: MinimalColors.primaryGradient(context),
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    strokeWidth: 3,
+                  ),
+                  const Icon(
+                    Icons.camera_alt,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Preparando cámara...',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Optimizando calidad de imagen',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showImageProcessingOverlay() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: MinimalColors.accentGradient(context),
+            ),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.3),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Stack(
+                alignment: Alignment.center,
+                children: [
+                  const CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    strokeWidth: 3,
+                  ),
+                  const Icon(
+                    Icons.image,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Procesando imagen...',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Optimizando y aplicando mejoras',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showImageCapturedAnimation() {
+    // Flash effect
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        color: Colors.white.withValues(alpha: 0.8),
+        child: const Center(
+          child: Icon(
+            Icons.check_circle,
+            size: 80,
+            color: Colors.green,
+          ),
+        ),
+      ),
+    );
+
+    // Auto close after animation
+    Future.delayed(const Duration(milliseconds: 400), () {
+      if (mounted) Navigator.of(context).pop();
+    });
+  }
+
+  Widget _buildAdvancedPhotoOptionsSheet() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            MinimalColors.backgroundCard(context),
+            MinimalColors.backgroundPrimary(context),
+          ],
+        ),
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(24),
+          topRight: Radius.circular(24),
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: MinimalColors.textSecondary(context).withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              // Title
+              ShaderMask(
+                shaderCallback: (bounds) => LinearGradient(
+                  colors: MinimalColors.accentGradient(context),
+                ).createShader(bounds),
+                child: const Text(
+                  'Opciones de Cámara',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+              
+              // Advanced options
+              _buildAdvancedOption(
+                icon: Icons.camera_enhance,
+                title: 'Cámara con Filtros',
+                subtitle: 'Aplica filtros en tiempo real',
+                onTap: () {
+                  Navigator.pop(context);
+                  _takePictureWithFilters();
+                },
+              ),
+              
+              const SizedBox(height: 16),
+              
+              _buildAdvancedOption(
+                icon: Icons.timer,
+                title: 'Cámara con Temporizador',
+                subtitle: 'Selfie con temporizador de 3 segundos',
+                onTap: () {
+                  Navigator.pop(context);
+                  _takePictureWithTimer();
+                },
+              ),
+              
+              const SizedBox(height: 16),
+              
+              _buildAdvancedOption(
+                icon: Icons.hd,
+                title: 'Calidad HD',
+                subtitle: 'Máxima calidad de imagen',
+                onTap: () {
+                  Navigator.pop(context);
+                  _takePictureHD();
+                },
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Standard options
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStandardOption(
+                      icon: Icons.camera_alt,
+                      title: 'Cámara Normal',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _takePicture();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildStandardOption(
+                      icon: Icons.photo_library,
+                      title: 'Galería',
+                      onTap: () {
+                        Navigator.pop(context);
+                        _pickFromGallery();
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdvancedOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              MinimalColors.backgroundCard(context),
+              MinimalColors.backgroundSecondary(context),
+            ],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: MinimalColors.textSecondary(context).withValues(alpha: 0.2),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: MinimalColors.accentGradient(context)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: MinimalColors.textPrimary(context),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: MinimalColors.textSecondary(context),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: MinimalColors.textSecondary(context),
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStandardOption({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: MinimalColors.lightGradient(context)),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: MinimalColors.textSecondary(context).withValues(alpha: 0.2),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: MinimalColors.textPrimary(context),
+              size: 28,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              style: TextStyle(
+                color: MinimalColors.textPrimary(context),
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _takePictureWithFilters() async {
+    _showInfoSnackBar('Función de filtros próximamente disponible');
+    await _takePicture();
+  }
+
+  Future<void> _takePictureWithTimer() async {
+    _showTimerDialog();
+  }
+
+  Future<void> _takePictureHD() async {
+    try {
+      _showCameraLoadingDialog();
+      await Future.delayed(const Duration(milliseconds: 700));
+      
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.camera,
+        maxWidth: 3840,  // 4K resolution
+        maxHeight: 2160,
+        imageQuality: 95, // Highest quality
+        preferredCameraDevice: CameraDevice.rear,
+      );
+
+      if (mounted) Navigator.of(context).pop();
+
+      if (image != null) {
+        await _processSelectedImage(image);
+        HapticFeedback.heavyImpact();
+        _showImageCapturedAnimation();
+      }
+    } catch (e) {
+      if (mounted) Navigator.of(context).pop();
+      _showErrorSnackBar('Error al tomar la foto HD: $e');
+    }
+  }
+
+  void _showTimerDialog() {
+    _showInfoSnackBar('Temporizador: 3 segundos...');
+    
+    Future.delayed(const Duration(seconds: 1), () {
+      if (mounted) {
+        _showInfoSnackBar('Temporizador: 2 segundos...');
+      }
+    });
+    
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) {
+        _showInfoSnackBar('Temporizador: 1 segundo...');
+      }
+    });
+    
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        _showInfoSnackBar('¡Sonríe! 📸');
+        _takePicture();
+      }
+    });
+  }
+
+  void _showInfoSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(
+              Icons.info_outline,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF3b82f6),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),

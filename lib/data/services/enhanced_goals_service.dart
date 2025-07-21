@@ -17,7 +17,22 @@ class EnhancedGoalsService {
   EnhancedGoalsService._internal();
 
   final Logger _logger = Logger();
-  final OptimizedDatabaseService _dbService = OptimizedDatabaseService();
+  OptimizedDatabaseService? _dbService;
+  bool _isInitialized = false;
+
+  void initialize(OptimizedDatabaseService dbService) {
+    if (!_isInitialized) {
+      _dbService = dbService;
+      _isInitialized = true;
+    }
+  }
+
+  OptimizedDatabaseService get databaseService {
+    if (_dbService == null) {
+      throw StateError('EnhancedGoalsService not initialized. Call initialize() first.');
+    }
+    return _dbService!;
+  }
 
   // ============================================================================
   // DATABASE SCHEMA UPDATES FOR PHASE 1
@@ -25,16 +40,31 @@ class EnhancedGoalsService {
 
   /// Actualiza la esquema de base de datos para Phase 1
   Future<void> migrateToPhase1Schema() async {
-    final db = await _dbService.database;
+    final db = await databaseService.database;
     
     await db.transaction((txn) async {
       try {
-        // Agregar nuevas columnas a user_goals si no existen
+        // Agregar nuevas columnas simplificadas a user_goals si no existen
         await _addColumnIfNotExists(txn, 'user_goals', 'category', 'TEXT DEFAULT "habits"');
-        await _addColumnIfNotExists(txn, 'user_goals', 'difficulty', 'TEXT DEFAULT "medium"');
-        await _addColumnIfNotExists(txn, 'user_goals', 'estimated_days', 'INTEGER DEFAULT 30');
+        await _addColumnIfNotExists(txn, 'user_goals', 'duration_days', 'INTEGER DEFAULT 30');
         await _addColumnIfNotExists(txn, 'user_goals', 'milestones', 'TEXT DEFAULT "[]"');
         await _addColumnIfNotExists(txn, 'user_goals', 'metrics', 'TEXT DEFAULT "{}"');
+        
+        // Essential tracking fields
+        await _addColumnIfNotExists(txn, 'user_goals', 'frequency', 'TEXT DEFAULT "daily"');
+        await _addColumnIfNotExists(txn, 'user_goals', 'custom_unit', 'TEXT');
+        await _addColumnIfNotExists(txn, 'user_goals', 'icon_code', 'TEXT');
+        await _addColumnIfNotExists(txn, 'user_goals', 'color_hex', 'TEXT');
+        await _addColumnIfNotExists(txn, 'user_goals', 'tags', 'TEXT DEFAULT "[]"');
+        await _addColumnIfNotExists(txn, 'user_goals', 'custom_settings', 'TEXT DEFAULT "{}"');
+        await _addColumnIfNotExists(txn, 'user_goals', 'start_date', 'INTEGER');
+        await _addColumnIfNotExists(txn, 'user_goals', 'end_date', 'INTEGER');
+        await _addColumnIfNotExists(txn, 'user_goals', 'motivational_quotes', 'TEXT DEFAULT "[]"');
+        await _addColumnIfNotExists(txn, 'user_goals', 'reminder_settings', 'TEXT DEFAULT "{}"');
+        await _addColumnIfNotExists(txn, 'user_goals', 'is_template', 'INTEGER DEFAULT 0');
+        await _addColumnIfNotExists(txn, 'user_goals', 'template_id', 'TEXT');
+        await _addColumnIfNotExists(txn, 'user_goals', 'progress_notes', 'TEXT');
+        await _addColumnIfNotExists(txn, 'user_goals', 'last_updated', 'INTEGER DEFAULT (strftime(\'%s\', \'now\'))');
         
         await txn.execute('''
           CREATE TABLE IF NOT EXISTS progress_entries (
@@ -84,26 +114,24 @@ class EnhancedGoalsService {
     required int userId,
     required String title,
     required String description,
-    required GoalType type,
     required int targetValue,
     required GoalCategory category,
-    GoalDifficulty difficulty = GoalDifficulty.medium,
-    int? estimatedDays,
+    int durationDays = 30,
+    FrequencyType frequency = FrequencyType.daily,
     List<Milestone>? customMilestones,
     Map<String, dynamic>? initialMetrics,
   }) async {
-    final db = await _dbService.database;
+    final db = await databaseService.database;
     
     try {
       final goal = GoalModel.createEnhanced(
         userId: userId,
         title: title,
         description: description,
-        type: type,
         targetValue: targetValue,
         category: category,
-        difficulty: difficulty,
-        estimatedDays: estimatedDays,
+        durationDays: durationDays,
+        frequency: frequency,
         customMilestones: customMilestones,
         initialMetrics: initialMetrics,
       );
@@ -116,6 +144,10 @@ class EnhancedGoalsService {
       
       goalData['milestones'] = jsonEncode(goal.milestones.map((m) => m.toJson()).toList());
       goalData['metrics'] = jsonEncode(goal.metrics);
+      goalData['tags'] = jsonEncode(goal.tags);
+      goalData['custom_settings'] = jsonEncode(goal.customSettings);
+      goalData['motivational_quotes'] = jsonEncode(goal.motivationalQuotes);
+      goalData['reminder_settings'] = jsonEncode(goal.reminderSettings);
       
       _logger.i('📊 Creating enhanced goal: $goalData');
       
@@ -130,8 +162,8 @@ class EnhancedGoalsService {
   }
 
   /// Crea un objetivo mejorado desde un modelo GoalModel
-  Future<GoalModel> createEnhancedGoalFromModel(GoalModel goal) async {
-    final db = await _dbService.database;
+  Future<int> createEnhancedGoalFromModel(GoalModel goal) async {
+    final db = await databaseService.database;
     
     try {
       // Generar milestones automáticamente si no los tiene
@@ -147,13 +179,17 @@ class EnhancedGoalsService {
       
       goalData['milestones'] = jsonEncode(enhancedGoal.milestones.map((m) => m.toJson()).toList());
       goalData['metrics'] = jsonEncode(enhancedGoal.metrics);
+      goalData['tags'] = jsonEncode(enhancedGoal.tags);
+      goalData['custom_settings'] = jsonEncode(enhancedGoal.customSettings);
+      goalData['motivational_quotes'] = jsonEncode(enhancedGoal.motivationalQuotes);
+      goalData['reminder_settings'] = jsonEncode(enhancedGoal.reminderSettings);
       
       _logger.i('📊 Inserting goal data: $goalData');
       
       final goalId = await db.insert('user_goals', goalData);
       
       _logger.i('✅ Enhanced goal created from model with ID: $goalId');
-      return enhancedGoal.copyWith(id: goalId);
+      return goalId;
     } catch (e) {
       _logger.e('❌ Error creating enhanced goal from model: $e');
       rethrow;
@@ -162,7 +198,7 @@ class EnhancedGoalsService {
 
   /// Obtiene objetivos con configuración completa
   Future<List<GoalModel>> getUserGoalsEnhanced(int userId) async {
-    final db = await _dbService.database;
+    final db = await databaseService.database;
     
     final results = await db.query(
       'user_goals',
@@ -196,6 +232,86 @@ class EnhancedGoalsService {
     }).toList();
   }
 
+  /// Actualiza un objetivo existente con toda su configuración mejorada
+  Future<GoalModel> updateGoal(GoalModel updatedGoal) async {
+    final db = await databaseService.database;
+    
+    try {
+      if (updatedGoal.id == null) {
+        throw Exception('Goal ID cannot be null for update');
+      }
+      
+      // Preparar datos para la base de datos
+      final goalData = updatedGoal.toDatabase();
+      
+      // ✅ FIX: Convertir integers a doubles para compatibilidad con esquema REAL
+      goalData['target_value'] = (goalData['target_value'] as int).toDouble();
+      goalData['current_value'] = (goalData['current_value'] as int).toDouble();
+      
+      // Serializar campos JSON
+      goalData['milestones'] = jsonEncode(updatedGoal.milestones.map((m) => m.toJson()).toList());
+      goalData['metrics'] = jsonEncode(updatedGoal.metrics);
+      goalData['tags'] = jsonEncode(updatedGoal.tags);
+      goalData['custom_settings'] = jsonEncode(updatedGoal.customSettings);
+      goalData['motivational_quotes'] = jsonEncode(updatedGoal.motivationalQuotes);
+      goalData['reminder_settings'] = jsonEncode(updatedGoal.reminderSettings);
+      
+      // Actualizar timestamp
+      goalData['last_updated'] = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      
+      _logger.i('📊 Updating goal data: $goalData');
+      
+      final rowsAffected = await db.update(
+        'user_goals',
+        goalData,
+        where: 'id = ?',
+        whereArgs: [updatedGoal.id],
+      );
+      
+      if (rowsAffected == 0) {
+        throw Exception('No goal found with ID ${updatedGoal.id}');
+      }
+      
+      _logger.i('✅ Enhanced goal updated with ID: ${updatedGoal.id}');
+      return updatedGoal.copyWith(lastUpdated: DateTime.now());
+    } catch (e) {
+      _logger.e('❌ Error updating enhanced goal: $e');
+      rethrow;
+    }
+  }
+
+  /// Elimina un objetivo y todas sus entradas de progreso asociadas
+  Future<void> deleteGoal(int goalId) async {
+    final db = await databaseService.database;
+    
+    try {
+      await db.transaction((txn) async {
+        // Eliminar entradas de progreso primero
+        await txn.delete(
+          'progress_entries',
+          where: 'goal_id = ?',
+          whereArgs: [goalId.toString()],
+        );
+        
+        // Eliminar el objetivo
+        final rowsAffected = await txn.delete(
+          'user_goals',
+          where: 'id = ?',
+          whereArgs: [goalId],
+        );
+        
+        if (rowsAffected == 0) {
+          throw Exception('No goal found with ID $goalId');
+        }
+      });
+      
+      _logger.i('✅ Enhanced goal deleted with ID: $goalId');
+    } catch (e) {
+      _logger.e('❌ Error deleting enhanced goal: $e');
+      rethrow;
+    }
+  }
+
   /// Actualiza progreso con verificación automática de milestones
   Future<GoalModel> updateGoalProgressWithMilestones(
     int goalId,
@@ -203,7 +319,7 @@ class EnhancedGoalsService {
     String? notes,
     Map<String, dynamic>? metrics,
   }) async {
-    final db = await _dbService.database;
+    final db = await databaseService.database;
     
     // Obtener objetivo actual
     final goalResults = await db.query(
@@ -270,7 +386,7 @@ class EnhancedGoalsService {
 
   /// Agrega una entrada de progreso rica
   Future<ProgressEntry> addProgressEntry(ProgressEntry entry) async {
-    final db = await _dbService.database;
+    final db = await databaseService.database;
     
     final entryData = {
       'id': entry.id,
@@ -292,7 +408,7 @@ class EnhancedGoalsService {
 
   /// Obtiene entradas de progreso para un objetivo
   Future<List<ProgressEntry>> getProgressEntries(String goalId, {int? limit}) async {
-    final db = await _dbService.database;
+    final db = await databaseService.database;
     
     final results = await db.query(
       'progress_entries',
@@ -461,7 +577,7 @@ class EnhancedGoalsService {
 
   /// Obtiene objetivos por categoría
   Future<List<GoalModel>> getGoalsByCategory(int userId, GoalCategory category) async {
-    final db = await _dbService.database;
+    final db = await databaseService.database;
     
     final results = await db.query(
       'user_goals',
@@ -485,31 +601,31 @@ class EnhancedGoalsService {
         goalsNeedingAttention.add({
           'goal': goal,
           'streak_data': streakData,
-          'priority': _calculateAttentionPriority(goal, streakData),
+          'urgency': _calculateAttentionUrgency(goal, streakData),
         });
       }
     }
     
     // Ordenar por prioridad
-    goalsNeedingAttention.sort((a, b) => (b['priority'] as double).compareTo(a['priority'] as double));
+    goalsNeedingAttention.sort((a, b) => (b['urgency'] as double).compareTo(a['urgency'] as double));
     
     return goalsNeedingAttention;
   }
 
-  double _calculateAttentionPriority(GoalModel goal, StreakData streakData) {
-    double priority = 0.0;
+  double _calculateAttentionUrgency(GoalModel goal, StreakData streakData) {
+    double urgency = 0.0;
     
-    // Más días sin actividad = mayor prioridad
-    priority += streakData.daysSinceLastActivity * 0.3;
+    // Más días sin actividad = mayor urgencia
+    urgency += streakData.daysSinceLastActivity * 0.3;
     
-    // Menor momentum = mayor prioridad
-    priority += (1.0 - streakData.momentumScore) * 0.4;
+    // Menor momentum = mayor urgencia
+    urgency += (1.0 - streakData.momentumScore) * 0.4;
     
-    // Progreso cercano a milestone = mayor prioridad
+    // Progreso cercano a milestone = mayor urgencia
     if (goal.nextMilestone != null) {
-      priority += goal.progressToNextMilestone * 0.3;
+      urgency += goal.progressToNextMilestone * 0.3;
     }
     
-    return priority.clamp(0.0, 1.0);
+    return urgency.clamp(0.0, 1.0);
   }
 }

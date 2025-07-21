@@ -552,8 +552,8 @@ class DatabaseService {
       String combinedReflection = reflection ?? '';
       if (existingEntry != null) {
         _logger.d('📝 Combinando con entrada existente');
-        combinedPositiveTags.addAll(existingEntry.positiveTags);
-        combinedNegativeTags.addAll(existingEntry.negativeTags);
+        combinedPositiveTags.addAll(existingEntry.positiveTags.map((tag) => TagModel(name: tag, context: '', emoji: '')));
+        combinedNegativeTags.addAll(existingEntry.negativeTags.map((tag) => TagModel(name: tag, context: '', emoji: '')));
         if (existingEntry.freeReflection.isNotEmpty) {
           combinedReflection = existingEntry.freeReflection;
           if (reflection != null && reflection.isNotEmpty) {
@@ -569,8 +569,8 @@ class DatabaseService {
       final entry = DailyEntryModel.create(
         userId: userId,
         freeReflection: combinedReflection.isNotEmpty ? combinedReflection : 'Momentos registrados a lo largo del día',
-        positiveTags: combinedPositiveTags,
-        negativeTags: combinedNegativeTags,
+        positiveTags: combinedPositiveTags.map((tag) => tag.name).toList(),
+        negativeTags: combinedNegativeTags.map((tag) => tag.name).toList(),
         worthIt: worthIt,
       );
       final entryId = await saveDailyEntry(entry);

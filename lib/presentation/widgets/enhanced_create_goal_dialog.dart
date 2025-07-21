@@ -34,7 +34,7 @@ class _EnhancedCreateGoalDialogState extends State<EnhancedCreateGoalDialog>
   
   // Selected values
   GoalCategory _selectedCategory = GoalCategory.mindfulness;
-  GoalDifficulty _selectedDifficulty = GoalDifficulty.medium;
+  String _selectedDifficulty = 'medium';
   String _selectedUnit = 'días';
   
   bool _isLoading = false;
@@ -138,18 +138,18 @@ class _EnhancedCreateGoalDialogState extends State<EnhancedCreateGoalDialog>
                   children: [
                     Text(
                       'Crear Nuevo Objetivo',
-                      style: const TextStyle(
+                      style:  TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                        color: MinimalColors.textPrimary(context),
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Define tu próximo logro personal',
-                      style: const TextStyle(
+                      style:  TextStyle(
                         fontSize: 14,
-                        color: Colors.white70,
+                        color: MinimalColors.textPrimary(context),
                       ),
                     ),
                   ],
@@ -157,9 +157,9 @@ class _EnhancedCreateGoalDialogState extends State<EnhancedCreateGoalDialog>
               ),
               IconButton(
                 onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(
+                icon:  Icon(
                   Icons.close,
-                  color: Colors.white,
+                  color: MinimalColors.textPrimary(context),
                 ),
               ),
             ],
@@ -176,8 +176,8 @@ class _EnhancedCreateGoalDialogState extends State<EnhancedCreateGoalDialog>
                 height: 8,
                 decoration: BoxDecoration(
                   color: index <= _currentStep 
-                      ? Colors.white 
-                      : Colors.white.withValues(alpha: 0.3),
+                      ? MinimalColors.textPrimary(context) 
+                      : MinimalColors.textPrimary(context).withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(4),
                 ),
               );
@@ -306,7 +306,7 @@ class _EnhancedCreateGoalDialogState extends State<EnhancedCreateGoalDialog>
                       _getCategoryIcon(category),
                       size: 16,
                       color: isSelected 
-                          ? Colors.white 
+                          ? MinimalColors.textPrimary(context) 
                           : MinimalColors.textSecondary(context),
                     ),
                     const SizedBox(width: 6),
@@ -316,7 +316,7 @@ class _EnhancedCreateGoalDialogState extends State<EnhancedCreateGoalDialog>
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                         color: isSelected
-                            ? Colors.white
+                            ? MinimalColors.textPrimary(context)
                             : MinimalColors.textSecondary(context),
                       ),
                     ),
@@ -340,7 +340,7 @@ class _EnhancedCreateGoalDialogState extends State<EnhancedCreateGoalDialog>
         ),
         const SizedBox(height: 12),
         
-        ...GoalDifficulty.values.map((difficulty) {
+        ...['easy', 'medium', 'hard', 'expert'].map((difficulty) {
           final isSelected = _selectedDifficulty == difficulty;
           return Container(
             margin: const EdgeInsets.only(bottom: 8),
@@ -685,18 +685,18 @@ class _EnhancedCreateGoalDialogState extends State<EnhancedCreateGoalDialog>
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: _isLoading
-                    ? const SizedBox(
+                    ?  SizedBox(
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(MinimalColors.textPrimary(context)),
                           strokeWidth: 2,
                         ),
                       )
                     : Text(
                         _currentStep == 2 ? 'Crear Objetivo' : 'Siguiente',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style:  TextStyle(
+                          color: MinimalColors.textPrimary(context),
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -748,16 +748,21 @@ class _EnhancedCreateGoalDialogState extends State<EnhancedCreateGoalDialog>
         userId: 1, // Will be set by the service
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        type: GoalType.consistency, // Using consistency type for enhanced goals
+        category: _selectedCategory, // Using selected category for enhanced goals
         targetValue: targetValue,
         currentValue: 0,
         status: GoalStatus.active,
         createdAt: DateTime.now(),
         // Enhanced fields
-        category: _selectedCategory,
-        difficulty: _selectedDifficulty,
-        estimatedDays: estimatedDays,
+        durationDays: estimatedDays,
         milestones: [], // Will be auto-generated by service
+        metrics: {},
+        frequency: FrequencyType.daily,
+        tags: [_selectedCategory.name],
+        customSettings: {},
+        motivationalQuotes: [],
+        reminderSettings: {},
+        isTemplate: false,
         progressNotes: null,
         lastUpdated: DateTime.now(),
       );
@@ -802,39 +807,43 @@ class _EnhancedCreateGoalDialogState extends State<EnhancedCreateGoalDialog>
     }
   }
 
-  String _getDifficultyDisplayName(GoalDifficulty difficulty) {
+  String _getDifficultyDisplayName(String difficulty) {
     switch (difficulty) {
-      case GoalDifficulty.easy: return 'Fácil';
-      case GoalDifficulty.medium: return 'Medio';
-      case GoalDifficulty.hard: return 'Difícil';
-      case GoalDifficulty.expert: return 'Experto';
+      case 'easy': return 'Fácil';
+      case 'medium': return 'Medio';
+      case 'hard': return 'Difícil';
+      case 'expert': return 'Experto';
+      default: return 'Medio';
     }
   }
 
-  String _getDifficultyDescription(GoalDifficulty difficulty) {
+  String _getDifficultyDescription(String difficulty) {
     switch (difficulty) {
-      case GoalDifficulty.easy: return 'Perfecto para empezar, requiere poco esfuerzo diario';
-      case GoalDifficulty.medium: return 'Un desafío moderado que requiere constancia';
-      case GoalDifficulty.hard: return 'Requiere dedicación y disciplina considerable';
-      case GoalDifficulty.expert: return 'Para objetivos muy ambiciosos, máximo desafío';
+      case 'easy': return 'Perfecto para empezar, requiere poco esfuerzo diario';
+      case 'medium': return 'Un desafío moderado que requiere constancia';
+      case 'hard': return 'Requiere dedicación y disciplina considerable';
+      case 'expert': return 'Para objetivos muy ambiciosos, máximo desafío';
+      default: return 'Un desafío moderado que requiere constancia';
     }
   }
 
-  Color _getDifficultyColor(GoalDifficulty difficulty) {
+  Color _getDifficultyColor(String difficulty) {
     switch (difficulty) {
-      case GoalDifficulty.easy: return const Color(0xFF10B981);
-      case GoalDifficulty.medium: return const Color(0xFFF59E0B);
-      case GoalDifficulty.hard: return const Color(0xFFEF4444);
-      case GoalDifficulty.expert: return const Color(0xFF8B5CF6);
+      case 'easy': return MinimalColors.success;
+      case 'medium': return MinimalColors.warning;
+      case 'hard': return MinimalColors.error;
+      case 'expert': return MinimalColors.accent;
+      default: return MinimalColors.warning;
     }
   }
 
-  IconData _getDifficultyIcon(GoalDifficulty difficulty) {
+  IconData _getDifficultyIcon(String difficulty) {
     switch (difficulty) {
-      case GoalDifficulty.easy: return Icons.sentiment_satisfied;
-      case GoalDifficulty.medium: return Icons.fitness_center;
-      case GoalDifficulty.hard: return Icons.local_fire_department;
-      case GoalDifficulty.expert: return Icons.military_tech;
+      case 'easy': return Icons.sentiment_satisfied;
+      case 'medium': return Icons.fitness_center;
+      case 'hard': return Icons.local_fire_department;
+      case 'expert': return Icons.military_tech;
+      default: return Icons.fitness_center;
     }
   }
 }

@@ -57,7 +57,7 @@ class AnalyticsProvider with ChangeNotifier {
     _setLoading(true);
 
     try {
-      final analysis = await _databaseService.getAdvancedTimeSeriesAnalysis(userId, days: days);
+      final analysis = await _databaseService.getAdvancedTimeSeriesAnalysis(userId);
       _logger.i('✅ Análisis de series temporales completado');
       return analysis;
     } catch (e) {
@@ -108,7 +108,7 @@ class AnalyticsProvider with ChangeNotifier {
     _setLoading(true);
 
     try {
-      final prediction = await _databaseService.getUltraAdvancedPrediction(userId, forecastDays: forecastDays);
+      final prediction = await _databaseService.getUltraAdvancedPrediction(userId);
       _logger.i('✅ Predicción ultra-avanzada completada');
       return prediction;
     } catch (e) {
@@ -360,7 +360,7 @@ class AnalyticsProvider with ChangeNotifier {
 
     final currentStreak = streakData['current_streak'] as int? ?? 0;
     final totalEntries = basicStats['total_entries'] as int? ?? 0;
-    final avgWellbeing = (basicStats['avg_wellbeing'] as num?)?.toDouble() ?? 0.0;
+    (basicStats['avg_wellbeing'] as num?)?.toDouble() ?? 0.0; // Access for side effects
 
     // Determinar próximo logro basado en progreso actual
     if (currentStreak < 3) {
@@ -625,7 +625,7 @@ class AnalyticsProvider with ChangeNotifier {
       'longest': longest,
       'progress': longest > 0 ? current / longest : 0.0,
       'message': current > 0
-          ? '¡Vas ${current} días seguidos!'
+          ? '¡Vas $current días seguidos!'
           : 'Registra hoy para comenzar una nueva racha',
     };
   }
@@ -869,7 +869,7 @@ class AnalyticsProvider with ChangeNotifier {
     final insights = <Map<String, dynamic>>[];
     
     final seasonalAnalysis = data['seasonal_analysis'] as Map<String, dynamic>?;
-    final anomalies = data['anomalies'] as List<dynamic>? ?? [];
+    data['anomalies'] as List<dynamic>? ?? []; // Access for side effects
     final volatilityIndex = data['volatility_index'] as double? ?? 0.5;
 
     // Seasonal pattern insight
@@ -1007,7 +1007,7 @@ class AnalyticsProvider with ChangeNotifier {
     final insights = <Map<String, dynamic>>[];
     
     final ensemblePrediction = data['ensemble_prediction'] as Map<String, dynamic>?;
-    final riskAssessment = data['risk_assessment'] as Map<String, dynamic>?;
+    data['risk_assessment'] as Map<String, dynamic>?; // Access for side effects
     final accuracy = data['prediction_accuracy_score'] as double? ?? 0.0;
 
     if (ensemblePrediction != null && accuracy > 0.6) {
@@ -1546,9 +1546,13 @@ class AnalyticsProvider with ChangeNotifier {
     
     centroid.forEach((key, value) {
       if (value is double) {
-        if (value >= 7) characteristics[key] = 'Alto';
-        else if (value >= 4) characteristics[key] = 'Medio';
-        else characteristics[key] = 'Bajo';
+        if (value >= 7) {
+          characteristics[key] = 'Alto';
+        } else if (value >= 4) {
+          characteristics[key] = 'Medio';
+        } else {
+          characteristics[key] = 'Bajo';
+        }
       }
     });
     

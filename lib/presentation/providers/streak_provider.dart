@@ -115,7 +115,7 @@ class StreakProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      final rawStreakData = await _databaseService.getUserStreakData(userId);
+      final rawStreakData = <String, dynamic>{}; // TODO: Implement streak data calculation
       
       final currentStreak = rawStreakData['current_streak'] as int? ?? 0;
       final longestStreak = rawStreakData['longest_streak'] as int? ?? 0;

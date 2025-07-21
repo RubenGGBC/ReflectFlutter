@@ -96,6 +96,12 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   @override
   void dispose() {
+    // Restore system UI when leaving the screen
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.edgeToEdge,
+      overlays: SystemUiOverlay.values,
+    );
+    
     _pageController.dispose();
     _progressController.dispose();
     _cardController.dispose();
@@ -353,33 +359,39 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   @override
   Widget build(BuildContext context) {
+    // Hide system navigation buttons for more screen space
+    SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.immersiveSticky,
+      overlays: [SystemUiOverlay.top],
+    );
+    
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return AnimatedTheme(
           duration: const Duration(milliseconds: 300),
           data: themeProvider.currentThemeData,
           child: Scaffold(
-            backgroundColor: MinimalColors.backgroundPrimary(context),
-            body: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    MinimalColors.backgroundPrimary(context),
-                    MinimalColors.backgroundSecondary(context).withValues(alpha: 0.8),
-                    MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.1),
-                  ],
-                  stops: const [0.0, 0.7, 1.0],
-                ),
-              ),
-              child: SafeArea(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: Column(
-                    children: [
-                      _buildHeader(),
-                      Expanded(
+            backgroundColor: Colors.white,
+            body: SafeArea(
+              child: FadeTransition(
+                opacity: _fadeAnimation,
+                child: Column(
+                  children: [
+                    _buildHeader(),
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              MinimalColors.backgroundPrimary(context),
+                              MinimalColors.backgroundSecondary(context).withValues(alpha: 0.8),
+                              MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.1),
+                            ],
+                            stops: const [0.0, 0.7, 1.0],
+                          ),
+                        ),
                         child: PageView(
                           controller: _pageController,
                           onPageChanged: (index) {
@@ -400,9 +412,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                           ],
                         ),
                       ),
-                      _buildBottomActions(),
-                    ],
-                  ),
+                    ),
+                    _buildBottomActions(),
+                  ],
                 ),
               ),
             ),
@@ -418,152 +430,71 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   Widget _buildHeader() {
     final now = DateTime.now();
-    final weekDays = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-    final months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-
-    final dayName = weekDays[now.weekday - 1];
-    final monthName = months[now.month - 1];
+    final dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    final monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    final dayName = dayNames[now.weekday - 1];
+    final monthName = monthNames[now.month - 1];
 
     return SlideTransition(
       position: Tween<Offset>(
-        begin: const Offset(0, -0.3),
+        begin: const Offset(0, -1),
         end: Offset.zero,
-      ).animate(CurvedAnimation(parent: _cardController, curve: Curves.easeOutBack)),
+      ).animate(CurvedAnimation(parent: _cardController, curve: Curves.easeOutCubic)),
       child: Container(
-        margin: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: MinimalColors.primaryGradient(context),
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.4),
-              blurRadius: 25,
-              offset: const Offset(0, 12),
-              spreadRadius: 2,
-            ),
-            BoxShadow(
-              color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
-              blurRadius: 40,
-              offset: const Offset(0, 20),
-            ),
-          ],
         ),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.2),
-              width: 1,
+        child: Column(
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ShaderMask(
+                        shaderCallback: (bounds) => LinearGradient(
+                          colors: MinimalColors.accentGradient(context),
+                        ).createShader(bounds),
+                        child: const Text(
+                          'Reflexión Diaria',
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        'Paso ${_currentStep + 1} de $_totalSteps',
+                        style: const TextStyle(
+                          color: Colors.black54,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _buildSmartEmoji(),
+              ],
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
-                      iconSize: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  colors: MinimalColors.primaryGradient(context),
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: const Icon(
-                                Icons.auto_awesome,
-                                color: Colors.white,
-                                size: 28,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Reflexión del Día',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  Text(
-                                    '$dayName, ${now.day} de $monthName',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  AnimatedBuilder(
-                    animation: _pulseController,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: 1.0 + (_pulseController.value * 0.1),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.white.withValues(alpha: 0.3),
-                              width: 1,
-                            ),
-                          ),
-                          child: IconButton(
-                            onPressed: _navigateToCalendar,
-                            icon: const Icon(Icons.calendar_month, color: Colors.white),
-                            iconSize: 20,
-                            tooltip: 'Ver todas las reflexiones',
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
-          ),
+            const SizedBox(height: 12),
+            _buildProgressBar(),
+          ],
         ),
       ),
     );
   }
-
-
-
 
   // ============================================================================
   // PASO 1: REFLEXIÓN LIBRE
@@ -3612,6 +3543,41 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             child: Text('Guardar'),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSmartEmoji() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Text(
+        '🧠',
+        style: TextStyle(fontSize: 32),
+      ),
+    );
+  }
+
+  Widget _buildProgressBar() {
+    return Container(
+      height: 4,
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(2),
+        color: Colors.white.withValues(alpha: 0.3),
+      ),
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: (_currentStep + 1) / _totalSteps,
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(2),
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }

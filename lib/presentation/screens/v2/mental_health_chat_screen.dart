@@ -9,7 +9,7 @@ import 'package:flutter/services.dart';
 
 // Models and Services
 import '../../../data/models/chat_message_model.dart';
-import '../../../ai/provider/mental_health_chat_provider.dart';
+// AI provider removed - screen disabled
 
 // Components
 import 'components/minimal_colors.dart';
@@ -103,24 +103,15 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
   }
   
   void _sendMessage() {
-    final message = _messageController.text.trim();
-    if (message.isEmpty) return;
-    
-    _messageController.clear();
-    setState(() {
-      _isComposing = false;
-    });
-    
-    final provider = context.read<MentalHealthChatProvider>();
-    provider.sendMessage(message);
-    
-    // Add haptic feedback
+    // AI removed - show disabled message
     HapticFeedback.lightImpact();
     
-    // Scroll to bottom after sending
-    Future.delayed(const Duration(milliseconds: 100), () {
-      _scrollToBottom();
-    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('IA deshabilitada - Funcionalidad no disponible'),
+        backgroundColor: MinimalColors.negativeGradient(context)[0],
+      ),
+    );
   }
   
   @override
@@ -136,9 +127,7 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
   
   @override
   Widget build(BuildContext context) {
-    return Consumer<MentalHealthChatProvider>(
-      builder: (context, provider, child) {
-        return Scaffold(
+    return Scaffold(
           body: Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -155,15 +144,15 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
                   child: Column(
                     children: [
                       // Header
-                      _buildHeader(provider),
+                      _buildHeader(),
                       
                       // Messages
                       Expanded(
-                        child: _buildMessagesArea(provider),
+                        child: _buildMessagesArea(),
                       ),
                       
                       // Input Area
-                      _buildInputArea(provider),
+                      _buildInputArea(),
                     ],
                   ),
                 ),
@@ -171,11 +160,9 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
             ),
           ),
         );
-      },
-    );
   }
   
-  Widget _buildHeader(MentalHealthChatProvider provider) {
+  Widget _buildHeader() {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -241,30 +228,11 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
                 ),
               ),
               
-              // Debug Download Button (only show if AI not ready)
-              if (!provider.isAIReady) ...[
-                GestureDetector(
-                  onTap: () => provider.forceDownloadModel(),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3)),
-                    ),
-                    child: Icon(
-                      Icons.download_rounded,
-                      color: MinimalColors.primaryGradient(context)[0],
-                      size: 16,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-              ],
+              // AI removed - no download button needed
               
               // New Chat Button
               GestureDetector(
-                onTap: () => _showNewChatDialog(provider),
+                onTap: () => _showNewChatDialog(),
                 child: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
@@ -283,66 +251,17 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
           
           const SizedBox(height: 16),
           
-          // AI Status Indicator
-          _buildAIStatusIndicator(provider),
+          // AI Status Indicator (AI removed)
+          _buildAIStatusIndicator(),
         ],
       ),
     );
   }
   
-  Widget _buildAIStatusIndicator(MentalHealthChatProvider provider) {
-    final isReady = provider.isAIReady;
-    final status = provider.aiStatus;
-    final isDownloading = status.contains('Descargando modelo:');
-    final isInitializing = status.contains('Verificando') || status.contains('Inicializando');
-    
-    // Determine color based on status
-    Color statusColor;
-    Color backgroundColor;
-    Widget statusWidget;
-    
-    if (isReady) {
-      statusColor = MinimalColors.positiveGradient(context)[0];
-      backgroundColor = MinimalColors.positiveGradient(context)[0].withValues(alpha: 0.1);
-      statusWidget = Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: statusColor,
-          borderRadius: BorderRadius.circular(4),
-        ),
-      );
-    } else if (isDownloading) {
-      statusColor = MinimalColors.primaryGradient(context)[0];
-      backgroundColor = MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.1);
-      statusWidget = SizedBox(
-        width: 12,
-        height: 12,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-        ),
-      );
-    } else if (isInitializing) {
-      statusColor = MinimalColors.neutralGradient(context)[0];
-      backgroundColor = MinimalColors.neutralGradient(context)[0].withValues(alpha: 0.1);
-      statusWidget = SizedBox(
-        width: 12,
-        height: 12,
-        child: CircularProgressIndicator(
-          strokeWidth: 2,
-          valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-        ),
-      );
-    } else {
-      statusColor = MinimalColors.negativeGradient(context)[0];
-      backgroundColor = MinimalColors.negativeGradient(context)[0].withValues(alpha: 0.1);
-      statusWidget = Icon(
-        Icons.error_outline,
-        color: statusColor,
-        size: 12,
-      );
-    }
+  Widget _buildAIStatusIndicator() {
+    // AI removed - show disabled status
+    final statusColor = MinimalColors.negativeGradient(context)[0];
+    final backgroundColor = MinimalColors.negativeGradient(context)[0].withValues(alpha: 0.1);
     
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -357,15 +276,15 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Status widget (dot, spinner, or error icon)
-          statusWidget,
-          
+          Icon(
+            Icons.block,
+            color: statusColor,
+            size: 12,
+          ),
           const SizedBox(width: 8),
-          
-          // Status text
           Flexible(
             child: Text(
-              status,
+              'IA deshabilitada',
               style: TextStyle(
                 color: statusColor,
                 fontSize: 12,
@@ -379,51 +298,9 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
     );
   }
   
-  Widget _buildMessagesArea(MentalHealthChatProvider provider) {
-    if (provider.isLoading) {
-      return _buildLoadingState();
-    }
-    
-    if (provider.errorMessage != null) {
-      return _buildErrorState(provider.errorMessage!);
-    }
-    
-    final messages = provider.currentMessages;
-    
-    if (messages.isEmpty) {
-      return _buildEmptyState();
-    }
-    
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      decoration: BoxDecoration(
-        color: MinimalColors.backgroundCard(context).withOpacity(0.4),
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-        child: ListView.builder(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(16),
-          itemCount: messages.length,
-          itemBuilder: (context, index) {
-            final message = messages[index];
-            
-            return AnimatedOpacity(
-              opacity: 1.0,
-              duration: Duration(milliseconds: 300 + (index * 100)),
-              child: _buildMessageBubble(message),
-            );
-          },
-        ),
-      ),
-    );
+  Widget _buildMessagesArea() {
+    // AI removed - show disabled state
+    return _buildDisabledState();
   }
   
   Widget _buildMessageBubble(ChatMessage message) {
@@ -556,7 +433,7 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
     );
   }
   
-  Widget _buildInputArea(MentalHealthChatProvider provider) {
+  Widget _buildInputArea() {
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       padding: const EdgeInsets.all(16),
@@ -611,42 +488,20 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
           
           const SizedBox(width: 12),
           
-          // Send button
+          // Send button (disabled)
           GestureDetector(
-            onTap: _isComposing && !provider.isSendingMessage
-              ? _sendMessage
-              : null,
+            onTap: _sendMessage,
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                gradient: _isComposing && !provider.isSendingMessage
-                  ? LinearGradient(
-                      colors: MinimalColors.accentGradient(context),
-                    )
-                  : null,
-                color: !_isComposing || provider.isSendingMessage
-                  ? MinimalColors.backgroundSecondary(context)
-                  : null,
+                color: MinimalColors.backgroundSecondary(context),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: provider.isSendingMessage
-                ? SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        MinimalColors.textSecondary(context),
-                      ),
-                    ),
-                  )
-                : Icon(
-                    Icons.send_rounded,
-                    color: _isComposing && !provider.isSendingMessage
-                      ? Colors.white
-                      : MinimalColors.textMuted(context),
-                    size: 20,
-                  ),
+              child: Icon(
+                Icons.block,
+                color: MinimalColors.textMuted(context),
+                size: 20,
+              ),
             ),
           ),
         ],
@@ -706,16 +561,66 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
-          // Retry button
+          // AI removed - no retry available
           ElevatedButton.icon(
-            onPressed: () {
-              final provider = context.read<MentalHealthChatProvider>();
-              provider.clearError();
-              // Trigger re-initialization
-              provider.initializeChat();
-            },
-            icon: const Icon(Icons.refresh_rounded),
-            label: const Text('Reintentar'),
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Volver'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: MinimalColors.backgroundSecondary(context),
+              foregroundColor: MinimalColors.textPrimary(context),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDisabledState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: MinimalColors.backgroundSecondary(context),
+              borderRadius: BorderRadius.circular(32),
+            ),
+            child: Icon(
+              Icons.block,
+              color: MinimalColors.negativeGradient(context)[0],
+              size: 48,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Chat IA Deshabilitado',
+            style: TextStyle(
+              color: MinimalColors.textPrimary(context),
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'La funcionalidad de chat con IA ha sido deshabilitada.\nUtiliza otras funciones de la app para el seguimiento de tu bienestar.',
+            style: TextStyle(
+              color: MinimalColors.textSecondary(context),
+              fontSize: 16,
+              height: 1.5,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.pop(context),
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Volver al inicio'),
             style: ElevatedButton.styleFrom(
               backgroundColor: MinimalColors.backgroundSecondary(context),
               foregroundColor: MinimalColors.textPrimary(context),
@@ -781,7 +686,7 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
     );
   }
   
-  void _showNewChatDialog(MentalHealthChatProvider provider) {
+  void _showNewChatDialog() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -811,7 +716,13 @@ class _MentalHealthChatScreenState extends State<MentalHealthChatScreen>
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              provider.startNewConversation();
+              // AI removed - no new conversation available
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('IA deshabilitada - Funcionalidad no disponible'),
+                  backgroundColor: MinimalColors.negativeGradient(context)[0],
+                ),
+              );
             },
             child: Text(
               'Nueva Conversación',

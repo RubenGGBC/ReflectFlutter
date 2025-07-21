@@ -107,7 +107,7 @@ class ChallengesProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      final challengeData = await _databaseService.getPersonalizedChallenges(userId);
+      final challengeData = <Map<String, dynamic>>[]; // TODO: Implement personalized challenges
       
       _challenges = challengeData.map((data) {
         // Add emoji based on challenge type

@@ -2027,48 +2027,173 @@ class _AnalyticsScreenOptimizedState extends State<AnalyticsScreenOptimized>
 
   Widget _buildNoDataWidget() {
     return Center(
-      child: _buildModernCard(
+      child: Container(
         margin: const EdgeInsets.all(40),
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AnalyticsColors.backgroundCard,
+              AnalyticsColors.backgroundSecondary,
+            ],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: AnalyticsColors.accentGradient[0].withOpacity(0.2),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AnalyticsColors.accentGradient[0].withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 15,
+              offset: const Offset(0, 5),
+            ),
+          ],
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: AnalyticsColors.neutralGradient,
+                  colors: AnalyticsColors.accentGradient,
                 ),
                 shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AnalyticsColors.accentGradient[0].withOpacity(0.4),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
               child: const Icon(
-                Icons.analytics_outlined,
-                size: 32,
+                Icons.insights,
+                size: 40,
                 color: AnalyticsColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
             Text(
-              'No hay datos suficientes',
+              '¡Comienza tu análisis!',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: AnalyticsColors.textPrimary,
-                letterSpacing: -0.2,
+                letterSpacing: -0.3,
               ),
             ),
             const SizedBox(height: 12),
             Text(
-              'Agrega más entradas y momentos para generar análisis avanzados',
+              'Agrega entradas diarias y momentos para desbloquear insights poderosos sobre tu bienestar mental',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 color: AnalyticsColors.textSecondary,
                 letterSpacing: 0.1,
+                height: 1.4,
               ),
+            ),
+            const SizedBox(height: 32),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: AnalyticsColors.accentGradient,
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: AnalyticsColors.accentGradient[0].withOpacity(0.4),
+                    blurRadius: 15,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  // Navigate back to main screen or home to start adding entries
+                  Navigator.of(context).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                icon: const Icon(
+                  Icons.add_circle_outline,
+                  color: AnalyticsColors.textPrimary,
+                  size: 20,
+                ),
+                label: const Text(
+                  'Agregar Primera Entrada',
+                  style: TextStyle(
+                    color: AnalyticsColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _buildNoDataFeatureItem('Predicciones IA', Icons.psychology),
+                const SizedBox(width: 24),
+                _buildNoDataFeatureItem('Análisis Rutinas', Icons.repeat),
+                const SizedBox(width: 24),
+                _buildNoDataFeatureItem('Control Ansiedad', Icons.healing),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildNoDataFeatureItem(String label, IconData icon) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: AnalyticsColors.backgroundTertiary,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: AnalyticsColors.accentGradient[0].withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Icon(
+            icon,
+            size: 16,
+            color: AnalyticsColors.accentGradient[0],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: AnalyticsColors.textTertiary,
+            letterSpacing: 0.1,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
     );
   }
 

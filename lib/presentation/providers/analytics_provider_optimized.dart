@@ -500,7 +500,7 @@ class AnalyticsProviderOptimized extends ChangeNotifier {
       entryDate: m.entryDate,
     )).toList();
     
-    _goalsCache = goals.map((goalMap) => GoalModel.fromDatabase(goalMap)).toList();
+    _goalsCache = goals;
   }
 
   Future<void> _generarPrediccionEstadoAnimo() async {

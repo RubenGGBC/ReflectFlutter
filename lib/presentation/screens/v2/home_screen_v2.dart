@@ -126,27 +126,47 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       final user = authProvider.currentUser;
 
       if (user != null) {
-        // Load data sequentially to avoid overwhelming the database
-        await Provider.of<OptimizedMomentsProvider>(context, listen: false).loadTodayMoments(user.id);
+        // ✅ FIX: Load data with proper error handling and retry logic
+        final futures = <Future>[];
+        
+        // Load critical data first
+        futures.add(Provider.of<OptimizedDailyEntriesProvider>(context, listen: false).loadEntries(user.id, limitDays: 30));
+        futures.add(Provider.of<OptimizedMomentsProvider>(context, listen: false).loadTodayMoments(user.id));
+        
+        // Wait for critical data
+        await Future.wait(futures);
         if (!mounted) return;
-
-        await Provider.of<OptimizedDailyEntriesProvider>(context, listen: false).loadEntries(user.id);
-        if (!mounted) return;
-
-        await Provider.of<GoalsProvider>(context, listen: false).loadUserGoals(user.id);
-        if (!mounted) return;
-
-        await Provider.of<OptimizedAnalyticsProvider>(context, listen: false).loadCompleteAnalytics(user.id);
-        if (!mounted) return;
-
-        // await Provider.of<ChallengesProvider>(context, listen: false).loadChallenges(user.id); // Removed
-        if (!mounted) return;
-
-        await Provider.of<StreakProvider>(context, listen: false).loadStreakData(user.id);
+        
+        // Load remaining data
+        final secondaryFutures = <Future>[];
+        secondaryFutures.add(Provider.of<OptimizedAnalyticsProvider>(context, listen: false).loadCompleteAnalytics(user.id, days: 30));
+        secondaryFutures.add(Provider.of<GoalsProvider>(context, listen: false).loadUserGoals(user.id));
+        secondaryFutures.add(Provider.of<StreakProvider>(context, listen: false).loadStreakData(user.id));
+        
+        // Load secondary data with timeout
+        await Future.wait(secondaryFutures).timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            // Continue with partial data if timeout
+            return [];
+          },
+        );
       }
     } catch (e) {
       // Log error but don't break the UI
-      // Error loading initial data: $e
+      print('⚠️ Error loading initial data: $e');
+      // Try to reload critical data only
+      if (mounted) {
+        final authProvider = Provider.of<OptimizedAuthProvider>(context, listen: false);
+        final user = authProvider.currentUser;
+        if (user != null) {
+          try {
+            await Provider.of<OptimizedMomentsProvider>(context, listen: false).loadTodayMoments(user.id);
+          } catch (_) {
+            // Fail silently
+          }
+        }
+      }
     }
   }
 
@@ -565,10 +585,26 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     for (final entry in dailyEntries) {
       final date = entry.entryDate;
       final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+      
+      // ✅ FIX: Calcular un score de bienestar más robusto
+      final moodScore = (entry.moodScore as num?)?.toDouble() ?? 5.0;
+      final energyLevel = (entry.energyLevel as num?)?.toDouble() ?? 5.0;
+      final stressLevel = (entry.stressLevel as num?)?.toDouble() ?? 5.0;
+      final lifeSatisfaction = (entry.lifeSatisfaction as num?)?.toDouble() ?? 5.0;
+      
+      // Calcular score promedio de bienestar (mood, energy, life satisfaction, stress invertido)
+      final wellbeingScore = (
+        moodScore + 
+        energyLevel + 
+        lifeSatisfaction + 
+        (10.0 - stressLevel.clamp(1.0, 10.0))
+      ) / 4.0;
+      
       dataByDate[dateStr] = {
-        'mood': entry.moodScore ?? 3.0,
-        'energy': (entry.energyLevel as num?)?.toDouble() ?? 3.0,
-        'stress': (entry.stressLevel as num?)?.toDouble() ?? 3.0,
+        'mood': moodScore,
+        'energy': energyLevel,
+        'stress': stressLevel,
+        'review': wellbeingScore.clamp(1.0, 10.0), // Score de bienestar calculado
         'hasEntry': true,
       };
     }
@@ -587,9 +623,10 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       final dayData = dataByDate[dateStr];
       final hasEntry = dayData?['hasEntry'] ?? false;
       final mood = dayData?['mood'] ?? 0.0;
+      final review = dayData?['review'] ?? 0.0;
 
-      // Calcular score basado en mood (1-5 -> 0.0-1.0)
-      final score = hasEntry ? ((mood - 1) / 4).clamp(0.0, 1.0) : 0.0;
+      // ✅ FIX: Score solo si hay entrada real, otherwise 0
+      final score = hasEntry && review > 0 ? review.clamp(0.0, 10.0) : 0.0;
 
       weeklyData.add({
         'dayName': dayNames[i],
@@ -597,8 +634,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
         'score': score,
         'isToday': isToday,
         'isPast': isPast,
-        'hasData': hasEntry,
+        'hasData': hasEntry && score > 0, // ✅ FIX: Datos válidos solo si score > 0
         'mood': mood,
+        'review': review,
         'energy': dayData?['energy'] ?? 0.0,
         'stress': dayData?['stress'] ?? 0.0,
       });
@@ -614,10 +652,16 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       final dayData = entry.value;
       final score = dayData['score'] as double;
       final isToday = dayData['isToday'] as bool;
-      final hasData = score > 0;
+      final hasData = dayData['hasData'] as bool; // ✅ FIX: Use hasData flag
 
-      // Altura basada en el score (0-10 -> 0-100px)
-      final height = hasData ? (score / 10.0) * 100 : 0.0;
+      // ✅ FIX: Altura mínima y máxima para mejor visualización
+      double height;
+      if (hasData && score > 0) {
+        // Mapear score de 1-10 a altura de 20-100px para mejor visualización
+        height = 20 + ((score.clamp(1.0, 10.0) - 1.0) / 9.0) * 80;
+      } else {
+        height = 8.0; // Altura mínima para días sin datos
+      }
 
       return AnimatedBuilder(
         animation: _fadeController,
@@ -657,7 +701,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
               ]
                   : [],
             ),
-            child: hasData
+            child: hasData && height > 30 // ✅ FIX: Solo mostrar texto si hay espacio
                 ? Center(
               child: Text(
                 score.toStringAsFixed(1),
@@ -668,7 +712,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                 ),
               ),
             )
-                : Container(), // Vacío para días sin datos
+                : Container(), // Vacío para días sin datos o barras muy pequeñas
           );
         },
       );
@@ -676,9 +720,10 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   }
 
   Map<String, dynamic> _getWeeklyProgress(OptimizedAnalyticsProvider analyticsProvider) {
-    final moodData = analyticsProvider.getMoodChartData();
-
-    if (moodData.isEmpty) {
+    // ✅ FIX: Usar los datos reales de la semana en lugar de analytics
+    final weeklyData = _getRealWeeklyData(analyticsProvider);
+    
+    if (weeklyData.isEmpty) {
       return {
         'trend': '📊 Sin datos',
         'average': 0.0,
@@ -686,7 +731,18 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       };
     }
 
-    final values = moodData.take(7).map((data) => (data['mood'] as num? ?? 5.0).toDouble()).toList();
+    // ✅ FIX: Obtener scores solo de días con datos
+    final validDays = weeklyData.where((day) => day['hasData'] == true).toList();
+    
+    if (validDays.isEmpty) {
+      return {
+        'trend': '🌱 Comenzando',
+        'average': 0.0,
+        'improvement': false,
+      };
+    }
+    
+    final values = validDays.map((day) => (day['score'] as num).toDouble()).toList();
     final average = values.isNotEmpty ? values.reduce((a, b) => a + b) / values.length : 0.0;
 
     String trend;
@@ -696,8 +752,10 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       trend = '📈 Mejorando';
     } else if (average >= 5.0) {
       trend = '📊 Estable';
-    } else {
+    } else if (validDays.length >= 3) {
       trend = '💪 Creciendo';
+    } else {
+      trend = '🌱 Comenzando';
     }
 
     return {
@@ -969,11 +1027,25 @@ class _HomeScreenV2State extends State<HomeScreenV2>
 // ============================================================================
 
   Widget _buildTodaysWellbeingScore(OptimizedAnalyticsProvider analyticsProvider) {
-    return Consumer<OptimizedDailyEntriesProvider>(
-      builder: (context, entriesProvider, child) {
-        final todayEntry = entriesProvider.todayEntry;
-        final hasData = todayEntry != null && todayEntry.wellbeingScore > 0;
-        final score = hasData ? todayEntry.wellbeingScore : 0.0;
+    return Consumer2<OptimizedMomentsProvider, OptimizedDailyEntriesProvider>(
+      builder: (context, momentsProvider, dailyEntriesProvider, child) {
+        // ✅ FIX: Combinar datos de momentos y entrada diaria para score más preciso
+        final todayMoments = momentsProvider.todayMoments;
+        final todayEntry = dailyEntriesProvider.todayEntry;
+        
+        double score = 0.0;
+        bool hasData = false;
+        
+        // Priorizar entrada diaria si existe
+        if (todayEntry != null) {
+          score = todayEntry.wellbeingScore;
+          hasData = true;
+        }
+        // Sino, usar momentos del día
+        else if (todayMoments.isNotEmpty) {
+          score = _calculateWeightedMoodFromMoments(todayMoments);
+          hasData = true;
+        }
 
         return AnimatedBuilder(
           animation: _pulseAnimation,
@@ -1002,7 +1074,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     ),
                   ],
                 ),
-                child: hasData
+                child: hasData && score > 0
                     ? _buildScoreContent(score)
                     : _buildNoDataContent(),
               ),
@@ -1132,6 +1204,41 @@ class _HomeScreenV2State extends State<HomeScreenV2>
     if (score >= 5.5) return '🙂';
     if (score >= 4.0) return '😐';
     return '😔';
+  }
+
+  /// Calculate weighted average mood from today's moments
+  /// Uses intensity as weight: (sum of mood_value * intensity) / total_intensity
+  double _calculateWeightedMoodFromMoments(List<OptimizedInteractiveMomentModel> moments) {
+    if (moments.isEmpty) return 0.0;
+
+    double totalWeightedMood = 0.0;
+    double totalIntensity = 0.0;
+
+    for (final moment in moments) {
+      // Convert moment type to mood value
+      double moodValue;
+      switch (moment.type) {
+        case 'positive':
+          moodValue = 7.0 + (moment.intensity / 10.0) * 3.0; // 7.0-10.0 range
+          break;
+        case 'negative':
+          moodValue = 4.0 - (moment.intensity / 10.0) * 3.0; // 1.0-4.0 range
+          break;
+        default: // neutral
+          moodValue = 5.0 + ((moment.intensity - 5.0) / 10.0) * 2.0; // 4.0-6.0 range
+      }
+
+      // Apply intensity as weight
+      final intensity = moment.intensity.toDouble();
+      totalWeightedMood += moodValue * intensity;
+      totalIntensity += intensity;
+    }
+
+    if (totalIntensity == 0) return 5.0; // Default neutral score
+
+    // Calculate weighted average and scale to 0-10 range
+    final weightedAverage = totalWeightedMood / totalIntensity;
+    return weightedAverage.clamp(0.0, 10.0);
   }
 
   Widget _buildMomentsFaceCard(OptimizedMomentsProvider momentsProvider) {

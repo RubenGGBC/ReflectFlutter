@@ -2852,26 +2852,51 @@ class _UserProgressionAnalyticsScreenState extends State<UserProgressionAnalytic
           
           if (themes.isEmpty)
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: MinimalColors.backgroundSecondary(context),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: MinimalColors.primaryGradient(context).map((c) => c.withValues(alpha: 0.1)).toList(),
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(
+                  color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: MinimalColors.textSecondary(context),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'No hay datos suficientes para mostrar temas',
-                      style: TextStyle(
-                        color: MinimalColors.textSecondary(context),
-                        fontSize: 14,
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: MinimalColors.primaryGradient(context),
                       ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.lightbulb_outline,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Descubre tus patrones',
+                    style: TextStyle(
+                      color: MinimalColors.textPrimary(context),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Registra más reflexiones para descubrir los temas que más influyen en tu bienestar',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: MinimalColors.textSecondary(context),
+                      fontSize: 14,
                     ),
                   ),
                 ],
@@ -2995,26 +3020,51 @@ class _UserProgressionAnalyticsScreenState extends State<UserProgressionAnalytic
           
           if (recommendations.isEmpty)
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: MinimalColors.backgroundSecondary(context),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: MinimalColors.positiveGradient(context).map((c) => c.withValues(alpha: 0.1)).toList(),
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(
+                  color: MinimalColors.positiveGradient(context)[0].withValues(alpha: 0.3),
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Icon(
-                    Icons.check_circle,
-                    color: Colors.green,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      '¡Excelente! No hay recomendaciones prioritarias',
-                      style: TextStyle(
-                        color: MinimalColors.textSecondary(context),
-                        fontSize: 14,
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: MinimalColors.positiveGradient(context),
                       ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.emoji_events,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '¡Vas muy bien!',
+                    style: TextStyle(
+                      color: MinimalColors.textPrimary(context),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Tu progreso es excelente. No hay recomendaciones urgentes en este momento',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: MinimalColors.textSecondary(context),
+                      fontSize: 14,
                     ),
                   ),
                 ],
@@ -3140,9 +3190,9 @@ class _UserProgressionAnalyticsScreenState extends State<UserProgressionAnalytic
   Widget _buildCurrentDayAnalysisCard(AnalyticsProvider analyticsProvider) {
     final dayAnalysis = analyticsProvider.getCurrentDayAnalysis();
     final hasEntry = dayAnalysis['has_entry'] as bool;
-    final mood = dayAnalysis['mood'] as double;
-    final energy = dayAnalysis['energy'] as double;
-    final stress = dayAnalysis['stress'] as double;
+    final mood = (dayAnalysis['mood'] as num).toDouble();
+    final energy = (dayAnalysis['energy'] as num).toDouble();
+    final stress = (dayAnalysis['stress'] as num).toDouble();
     final message = dayAnalysis['message'] as String;
     final recommendation = dayAnalysis['recommendation'] as String;
     
@@ -3346,26 +3396,51 @@ class _UserProgressionAnalyticsScreenState extends State<UserProgressionAnalytic
           
           if (insights.isEmpty)
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: MinimalColors.backgroundSecondary(context),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: MinimalColors.accentGradient(context).map((c) => c.withValues(alpha: 0.1)).toList(),
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(
+                  color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.3),
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: MinimalColors.textSecondary(context),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Continúa registrando para obtener insights',
-                      style: TextStyle(
-                        color: MinimalColors.textSecondary(context),
-                        fontSize: 14,
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: MinimalColors.accentGradient(context),
                       ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.psychology,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Insights en camino',
+                    style: TextStyle(
+                      color: MinimalColors.textPrimary(context),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Continúa registrando tus reflexiones diarias para obtener insights personalizados sobre tu bienestar',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: MinimalColors.textSecondary(context),
+                      fontSize: 14,
                     ),
                   ),
                 ],
@@ -3864,26 +3939,54 @@ class _UserProgressionAnalyticsScreenState extends State<UserProgressionAnalytic
           
           if (moodChartData.isEmpty)
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: MinimalColors.backgroundSecondary(context),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                    const Color(0xFF8B5CF6).withValues(alpha: 0.1),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                border: Border.all(
+                  color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
+                  width: 1,
+                ),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: Row(
+              child: Column(
                 children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: MinimalColors.textSecondary(context),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'No hay datos suficientes para mostrar tendencias',
-                      style: TextStyle(
-                        color: MinimalColors.textSecondary(context),
-                        fontSize: 14,
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF3B82F6), Color(0xFF8B5CF6)],
                       ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.trending_up,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Tu gráfico está creciendo',
+                    style: TextStyle(
+                      color: MinimalColors.textPrimary(context),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Registra tu estado de ánimo durante unos días más para ver tendencias fascinantes sobre tu bienestar',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: MinimalColors.textSecondary(context),
+                      fontSize: 14,
                     ),
                   ),
                 ],

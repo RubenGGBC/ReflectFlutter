@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'dart:math' as math;
 
-import '../../../ai/provider/predective_analysis_provider.dart';
+// AI provider removed
 import '../../providers/optimized_providers.dart';
 
 // ============================================================================

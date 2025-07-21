@@ -8,17 +8,17 @@ import 'package:flutter/services.dart';
 
 // Providers optimizados
 import '../../providers/optimized_providers.dart';
-import '../../providers/image_moments_provider.dart';
+import '../../providers/theme_provider.dart';
 
 // Screens optimizadas - ACTUALIZADO
 import 'home_screen_v2.dart';
 import 'quick_moments_screen.dart'; // ✅ NUEVA PANTALLA RÁPIDA
 import 'daily_review_screen_v2.dart';
 import 'profile_screen_v2.dart';
-import 'goals_screen.dart';
 import 'user_progression_analytics_screen.dart';
 import 'goals_screen_enhanced.dart';
-import 'mental_health_chat_screen.dart'; // ✅ NUEVA PANTALLA DE CHAT IA
+import 'daily_roadmap_screen.dart';
+import 'analytics_v3_screen.dart';// ✅ NUEVA PANTALLA DE ROADMAP DIARIO
 
 // Componentes modernos
 
@@ -36,7 +36,7 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
   // VARIABLES DE ESTADO MEJORADAS
   // ============================================================================
 
-  int _currentIndex = 0;
+  int _currentIndex =3 ;
   PageController? _pageController;
   late AnimationController _navAnimationController;
   late Animation<double> _navAnimation;
@@ -54,10 +54,16 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
 
   final List<NavigationItem> _navigationItems = [
     NavigationItem(
-      icon: Icons.home_outlined,
-      activeIcon: Icons.home,
-      label: 'Inicio',
-      color: const Color(0xFF3B82F6),
+      icon: Icons.analytics_outlined,
+      activeIcon: Icons.analytics,
+      label: 'Analytics',
+      color: const Color(0xFFF59E0B),
+    ),
+    NavigationItem(
+      icon: Icons.map_outlined,
+      activeIcon: Icons.map,
+      label: 'Roadmap',
+      color: const Color(0xFF9333EA),
     ),
     NavigationItem(
       icon: Icons.camera_alt_outlined,
@@ -66,22 +72,16 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
       color: const Color(0xFF8B5CF6),
     ),
     NavigationItem(
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home,
+      label: 'Inicio',
+      color: const Color(0xFF3B82F6),
+    ),
+    NavigationItem(
       icon: Icons.edit_note_outlined,
       activeIcon: Icons.edit_note,
       label: 'Reflexión',
       color: const Color(0xFF10B981),
-    ),
-    NavigationItem(
-      icon: Icons.psychology_outlined,
-      activeIcon: Icons.psychology,
-      label: 'Coach IA',
-      color: const Color(0xFF9333EA),
-    ),
-    NavigationItem(
-      icon: Icons.analytics_outlined,
-      activeIcon: Icons.analytics,
-      label: 'Analytics',
-      color: const Color(0xFFF59E0B),
     ),
     NavigationItem(
       icon: Icons.flag_outlined,
@@ -140,11 +140,11 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
 
   void _initializeScreens() {
     _screens = [
-      const _SafeScreenWrapper(child: HomeScreenV2()),
+      const _SafeScreenWrapper(child: AnalyticsV3Screen()),
+      const _SafeScreenWrapper(child: DailyRoadmapScreen()),
       const _SafeScreenWrapper(child: QuickMomentsScreen()),
+      const _SafeScreenWrapper(child: HomeScreenV2()),
       const _SafeScreenWrapper(child: DailyReviewScreenV2()),
-      const _SafeScreenWrapper(child: MentalHealthChatScreen()),
-      const _SafeScreenWrapper(child: UserProgressionAnalyticsScreen()),
       const _SafeScreenWrapper(child: GoalsScreenEnhanced()),
       const _SafeScreenWrapper(child: ProfileScreenV2()),
     ];
@@ -220,99 +220,111 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
           return _buildNoUserScreen();
         }
 
-        return Scaffold(
-          backgroundColor: Colors.black,
-          extendBody: true,
-          body: SafeArea(
-            child: _buildBody(),
-          ),
-          bottomNavigationBar: _buildBottomNavigation(),
+        return Consumer<ThemeProvider>(
+          builder: (context, themeProvider, _) {
+            return Scaffold(
+              backgroundColor: themeProvider.primaryBg,
+              extendBody: true,
+              body: SafeArea(
+                child: _buildBody(),
+              ),
+              bottomNavigationBar: _buildBottomNavigation(),
+            );
+          },
         );
       },
     );
   }
 
   Widget _buildLoadingScreen() {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Colors.blue, Colors.purple],
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        return Scaffold(
+          backgroundColor: themeProvider.primaryBg,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 60,
+                  height: 60,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: themeProvider.gradientHeader,
+                    ),
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Icon(
+                    Icons.auto_awesome,
+                    size: 30,
+                    color: themeProvider.surface,
+                  ),
                 ),
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: const Icon(
-                Icons.auto_awesome,
-                size: 30,
-                color: Colors.white,
-              ),
+                const SizedBox(height: 20),
+                Text(
+                  'Preparando tu experiencia...',
+                  style: TextStyle(
+                    color: themeProvider.textSecondary,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(themeProvider.accentPrimary),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            const Text(
-              'Preparando tu experiencia...',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 16,
-              ),
-            ),
-            const SizedBox(height: 20),
-            const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildNoUserScreen() {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.person_off,
-              size: 64,
-              color: Colors.white54,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        return Scaffold(
+          backgroundColor: themeProvider.primaryBg,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.person_off,
+                  size: 64,
+                  color: themeProvider.textSecondary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Usuario no disponible',
+                  style: TextStyle(
+                    color: themeProvider.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Por favor, reinicia la aplicación',
+                  style: TextStyle(color: themeProvider.textSecondary),
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: () {
+                    // Reinicializar auth provider
+                    context.read<OptimizedAuthProvider>().loginAsDeveloper();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: themeProvider.accentPrimary,
+                    foregroundColor: themeProvider.surface,
+                  ),
+                  child: const Text('Reiniciar sesión'),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Usuario no disponible',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Por favor, reinicia la aplicación',
-              style: TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                // Reinicializar auth provider
-                context.read<OptimizedAuthProvider>().loginAsDeveloper();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Reiniciar sesión'),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -340,34 +352,38 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
   // ============================================================================
 
   Widget _buildBottomNavigation() {
-    return AnimatedBuilder(
-      animation: _navAnimation,
-      builder: (context, child) {
-        return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 1),
-            end: Offset.zero,
-          ).animate(_navAnimation),
-          child: _buildBottomNavigationContent(),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        return AnimatedBuilder(
+          animation: _navAnimation,
+          builder: (context, child) {
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0, 1),
+                end: Offset.zero,
+              ).animate(_navAnimation),
+              child: _buildBottomNavigationContent(themeProvider),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildBottomNavigationContent() {
+  Widget _buildBottomNavigationContent(ThemeProvider themeProvider) {
     return Container(
       height: MediaQuery.of(context).size.width > 600 ? 80 : 70,
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       decoration: BoxDecoration(
-        color: Colors.black.withOpacity(0.9),
+        color: themeProvider.surface.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: Colors.white.withOpacity(0.1),
+          color: themeProvider.borderColor.withValues(alpha: 0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: themeProvider.shadowColor.withValues(alpha: 0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -382,7 +398,7 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
             final isSelected = _currentIndex == index;
 
             return Expanded(
-              child: _buildNavigationItem(item, index, isSelected),
+              child: _buildNavigationItem(item, index, isSelected, themeProvider),
             );
           }).toList(),
         ),
@@ -390,7 +406,7 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
     );
   }
 
-  Widget _buildNavigationItem(NavigationItem item, int index, bool isSelected) {
+  Widget _buildNavigationItem(NavigationItem item, int index, bool isSelected, ThemeProvider themeProvider) {
     return GestureDetector(
       onTap: () => _onNavigationTap(index),
       behavior: HitTestBehavior.opaque,
@@ -404,14 +420,14 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? item.color.withOpacity(0.2)
+                    ? item.color.withValues(alpha: 0.2)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 isSelected ? item.activeIcon : item.icon,
                 size: MediaQuery.of(context).size.width > 600 ? 22 : 18,
-                color: isSelected ? item.color : Colors.white60,
+                color: isSelected ? item.color : themeProvider.textSecondary,
               ),
             ),
             const SizedBox(height: 2),
@@ -421,7 +437,7 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
                 style: TextStyle(
                   fontSize: MediaQuery.of(context).size.width > 600 ? 11 : 9,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                  color: isSelected ? item.color : Colors.white60,
+                  color: isSelected ? item.color : themeProvider.textSecondary,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -522,40 +538,44 @@ class _SafeScreenWrapper extends StatelessWidget {
   }
 
   Widget _buildErrorScreen(String error) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red,
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, _) {
+        return Scaffold(
+          backgroundColor: themeProvider.primaryBg,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 64,
+                  color: themeProvider.negativeMain,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Error en la pantalla',
+                  style: TextStyle(
+                    color: themeProvider.textPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    error,
+                    style: TextStyle(color: themeProvider.negativeMain),
+                    textAlign: TextAlign.center,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Error en la pantalla',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                error,
-                style: const TextStyle(color: Colors.red),
-                textAlign: TextAlign.center,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
