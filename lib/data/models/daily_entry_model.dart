@@ -90,6 +90,7 @@ class DailyEntryModel {
     this.focusLevel,
     this.lifeSatisfaction,
     this.voiceRecordingPath,
+    this.imagePaths = const [],
   });
 
   factory DailyEntryModel.create({
@@ -123,6 +124,7 @@ class DailyEntryModel {
     int? focusLevel,
     int? lifeSatisfaction,
     String? voiceRecordingPath,
+    List<String> imagePaths = const [],
     DateTime? entryDate,
   }) {
     final now = DateTime.now();
@@ -180,6 +182,7 @@ class DailyEntryModel {
       focusLevel: focusLevel,
       lifeSatisfaction: lifeSatisfaction,
       voiceRecordingPath: voiceRecordingPath,
+      imagePaths: imagePaths,
     );
   }
 
@@ -237,6 +240,7 @@ class DailyEntryModel {
       focusLevel: map['focus_level'] as int?,
       lifeSatisfaction: map['life_satisfaction'] as int?,
       voiceRecordingPath: map['voice_recording_path'] as String?,
+      imagePaths: parseTagsJson(map['image_paths'] as String?),
     );
   }
 
@@ -280,6 +284,7 @@ class DailyEntryModel {
       'focus_level': focusLevel,
       'life_satisfaction': lifeSatisfaction,
       'voice_recording_path': voiceRecordingPath,
+      'image_paths': json.encode(imagePaths),
     };
   }
 
@@ -322,6 +327,7 @@ class DailyEntryModel {
     int? focusLevel,
     int? lifeSatisfaction,
     String? voiceRecordingPath,
+    List<String>? imagePaths,
   }) {
     return DailyEntryModel(
       id: id ?? this.id,
@@ -362,6 +368,7 @@ class DailyEntryModel {
       focusLevel: focusLevel ?? this.focusLevel,
       lifeSatisfaction: lifeSatisfaction ?? this.lifeSatisfaction,
       voiceRecordingPath: voiceRecordingPath ?? this.voiceRecordingPath,
+      imagePaths: imagePaths ?? this.imagePaths,
     );
   }
 }
