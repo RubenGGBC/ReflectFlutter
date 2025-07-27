@@ -4,7 +4,6 @@
 // ============================================================================
 
 import 'dart:math' as math;
-import 'package:sqflite/sqflite.dart';
 import '../models/analytics_v3_models.dart';
 import 'optimized_database_service.dart';
 
@@ -18,8 +17,6 @@ class AnalyticsV3Extension {
   // ============================================================================
   
   Future<AnalyticsV3Model> generateComprehensiveAnalytics(int userId, int periodDays) async {
-    final endDate = DateTime.now();
-    final startDate = endDate.subtract(Duration(days: periodDays));
     
     // Generate all analytics components
     final wellnessScore = await calculateWellnessScore(userId, periodDays);
@@ -61,6 +58,11 @@ class AnalyticsV3Extension {
   // ============================================================================
   
   Future<WellnessScoreModel> calculateWellnessScore(int userId, int periodDays) async {
+    // Validate input parameters
+    if (userId <= 0 || periodDays <= 0) {
+      throw ArgumentError('Invalid parameters: userId and periodDays must be positive');
+    }
+    
     final db = await _databaseService.database;
     final endDate = DateTime.now();
     final startDate = endDate.subtract(Duration(days: periodDays));
@@ -75,7 +77,10 @@ class AnalyticsV3Extension {
         AVG(CAST(motivation_level as REAL)) as avg_motivation,
         AVG(CAST(emotional_stability as REAL)) as avg_emotional_stability,
         AVG(CAST(life_satisfaction as REAL)) as avg_life_satisfaction,
-        COUNT(*) as total_entries
+        COUNT(*) as total_entries,
+        COUNT(CASE WHEN mood_score IS NOT NULL THEN 1 END) as mood_entries,
+        COUNT(CASE WHEN stress_level IS NOT NULL THEN 1 END) as stress_entries,
+        COUNT(CASE WHEN anxiety_level IS NOT NULL THEN 1 END) as anxiety_entries
       FROM daily_entries 
       WHERE user_id = ? AND entry_date BETWEEN ? AND ?
         AND (mood_score IS NOT NULL OR energy_level IS NOT NULL)
@@ -86,16 +91,37 @@ class AnalyticsV3Extension {
     }
 
     final data = result.first;
+    final totalEntries = data['total_entries'] as int;
     
-    // Calculate component scores (normalized to 0-10)
-    final moodScore = (data['avg_mood'] as double? ?? 5.0);
-    final energyScore = (data['avg_energy'] as double? ?? 5.0);
-    final stressScore = 10.0 - (data['avg_stress'] as double? ?? 5.0); // Invert stress
-    final sleepScore = (data['avg_sleep_quality'] as double? ?? 5.0);
-    final anxietyScore = 10.0 - (data['avg_anxiety'] as double? ?? 5.0); // Invert anxiety
-    final motivationScore = (data['avg_motivation'] as double? ?? 5.0);
-    final emotionalScore = (data['avg_emotional_stability'] as double? ?? 5.0);
-    final satisfactionScore = (data['avg_life_satisfaction'] as double? ?? 5.0);
+    // Require minimum data for reliable analysis
+    if (totalEntries < 3) {
+      return _createDefaultWellnessScore();
+    }
+    
+    // Calculate component scores with proper validation and normalization
+    final moodScore = _validateAndNormalizeScore(data['avg_mood'] as double?, 'mood');
+    final energyScore = _validateAndNormalizeScore(data['avg_energy'] as double?, 'energy');
+    
+    // Fix stress/anxiety inversion with proper scale validation
+    final stressCount = data['stress_entries'] as int;
+    final anxietyCount = data['anxiety_entries'] as int;
+    
+    final rawStress = data['avg_stress'] as double? ?? 5.0;
+    final rawAnxiety = data['avg_anxiety'] as double? ?? 5.0;
+    
+    // Only invert if we have sufficient data and values are in expected range (1-10)
+    final stressScore = (stressCount >= 2 && rawStress >= 1.0 && rawStress <= 10.0) 
+        ? math.max(0.0, math.min(10.0, 11.0 - rawStress)) 
+        : _validateAndNormalizeScore(rawStress, 'stress');
+        
+    final anxietyScore = (anxietyCount >= 2 && rawAnxiety >= 1.0 && rawAnxiety <= 10.0) 
+        ? math.max(0.0, math.min(10.0, 11.0 - rawAnxiety)) 
+        : _validateAndNormalizeScore(rawAnxiety, 'anxiety');
+    
+    final sleepScore = _validateAndNormalizeScore(data['avg_sleep_quality'] as double?, 'sleep');
+    final motivationScore = _validateAndNormalizeScore(data['avg_motivation'] as double?, 'motivation');
+    final emotionalScore = _validateAndNormalizeScore(data['avg_emotional_stability'] as double?, 'emotional');
+    final satisfactionScore = _validateAndNormalizeScore(data['avg_life_satisfaction'] as double?, 'satisfaction');
 
     final componentScores = {
       'mood': moodScore,
@@ -122,10 +148,15 @@ class AnalyticsV3Extension {
 
     // Determine wellness level
     String wellnessLevel;
-    if (overallScore >= 8.0) wellnessLevel = 'excellent';
-    else if (overallScore >= 6.5) wellnessLevel = 'good';
-    else if (overallScore >= 5.0) wellnessLevel = 'average';
-    else wellnessLevel = 'poor';
+    if (overallScore >= 8.0) {
+      wellnessLevel = 'excellent';
+    } else if (overallScore >= 6.5) {
+      wellnessLevel = 'good';
+    } else if (overallScore >= 5.0) {
+      wellnessLevel = 'average';
+    } else {
+      wellnessLevel = 'poor';
+    }
 
     // Generate recommendations
     final recommendations = _generateWellnessRecommendations(componentScores, overallScore);
@@ -154,31 +185,41 @@ class AnalyticsV3Extension {
     final exerciseEnergyCorr = await _calculateActivityCorrelation(
       userId, periodDays, 'physical_activity', 'energy_level', 'Ejercicio Físico', 'Energía'
     );
-    if (exerciseEnergyCorr != null) correlations.add(exerciseEnergyCorr);
+    if (exerciseEnergyCorr != null) {
+      correlations.add(exerciseEnergyCorr);
+    }
 
     // Sleep vs Mood
     final sleepMoodCorr = await _calculateActivityCorrelation(
       userId, periodDays, 'sleep_quality', 'mood_score', 'Calidad del Sueño', 'Estado de Ánimo'
     );
-    if (sleepMoodCorr != null) correlations.add(sleepMoodCorr);
+    if (sleepMoodCorr != null) {
+      correlations.add(sleepMoodCorr);
+    }
 
     // Social vs Mood
     final socialMoodCorr = await _calculateActivityCorrelation(
       userId, periodDays, 'social_interaction', 'mood_score', 'Interacción Social', 'Estado de Ánimo'
     );
-    if (socialMoodCorr != null) correlations.add(socialMoodCorr);
+    if (socialMoodCorr != null) {
+      correlations.add(socialMoodCorr);
+    }
 
     // Meditation vs Stress
     final meditationStressCorr = await _calculateActivityCorrelation(
       userId, periodDays, 'meditation_minutes', 'stress_level', 'Meditación', 'Estrés', invertTarget: true
     );
-    if (meditationStressCorr != null) correlations.add(meditationStressCorr);
+    if (meditationStressCorr != null) {
+      correlations.add(meditationStressCorr);
+    }
 
     // Water vs Energy
     final waterEnergyCorr = await _calculateActivityCorrelation(
       userId, periodDays, 'water_intake', 'energy_level', 'Hidratación', 'Energía'
     );
-    if (waterEnergyCorr != null) correlations.add(waterEnergyCorr);
+    if (waterEnergyCorr != null) {
+      correlations.add(waterEnergyCorr);
+    }
 
     return correlations;
   }
@@ -202,7 +243,19 @@ class AnalyticsV3Extension {
       ORDER BY entry_date
     ''', [userId, startDate.toIso8601String(), endDate.toIso8601String()]);
 
-    if (result.length < 3) return null; // Need at least 3 data points
+    if (result.length < 7) {
+      // Return a special correlation indicating insufficient data
+      return ActivityCorrelationModel(
+        activityName: activityName,
+        targetMetric: targetName,
+        correlationStrength: 0.0,
+        correlationType: 'insufficient_data',
+        dataPoints: [],
+        insight: 'Necesitas al menos 7 días de datos para analizar la correlación entre $activityName y $targetName',
+        recommendation: 'Continúa registrando $activityName y $targetName diariamente para obtener insights confiables',
+        dataPointsCount: result.length,
+      );
+    }
 
     final dataPoints = result.map((row) {
       final targetValue = invertTarget 
@@ -222,14 +275,23 @@ class AnalyticsV3Extension {
       dataPoints.map((dp) => dp.metricValue).toList(),
     );
 
-    // Determine correlation type
+    // Calculate statistical significance
+    final significance = _calculateCorrelationSignificance(correlation, dataPoints.length);
+    
+    // Determine correlation type with significance consideration
     String correlationType;
-    if (correlation.abs() >= 0.7) {
+    final absCorr = correlation.abs();
+    
+    if (!significance.isSignificant) {
+      correlationType = 'not_significant';
+    } else if (absCorr >= 0.7) {
       correlationType = correlation > 0 ? 'strong_positive' : 'strong_negative';
-    } else if (correlation.abs() >= 0.3) {
+    } else if (absCorr >= 0.5) {
       correlationType = correlation > 0 ? 'moderate_positive' : 'moderate_negative';
-    } else {
+    } else if (absCorr >= 0.3) {
       correlationType = correlation > 0 ? 'weak_positive' : 'weak_negative';
+    } else {
+      correlationType = 'negligible';
     }
 
     // Generate insights and recommendations
@@ -294,27 +356,53 @@ class AnalyticsV3Extension {
       }
     }
 
-    // Determine sleep pattern
-    final hoursVariance = _calculateVariance(validHours);
+    // Determine sleep pattern with improved variance analysis
+    final hoursVariance = validHours.length >= 3 ? _calculateVariance(validHours) : 0.0;
+    
+    // Calculate coefficient of variation for better pattern assessment
+    final coefficientOfVariation = avgHours > 0 ? (math.sqrt(hoursVariance) / avgHours) : 0.0;
+    
     String sleepPattern;
-    if (hoursVariance < 0.5) {
+    if (validHours.length < 3) {
+      sleepPattern = 'needs_data';
+    } else if (coefficientOfVariation < 0.1) { // Less than 10% variation
       sleepPattern = 'consistent';
-    } else if (hoursVariance > 2.0) {
+    } else if (coefficientOfVariation > 0.25) { // More than 25% variation
       sleepPattern = 'irregular';
     } else {
-      sleepPattern = avgHours > 7.0 ? 'improving' : 'needs_attention';
+      sleepPattern = avgHours >= 7.0 ? 'improving' : 'needs_attention';
     }
 
-    // Quality trend analysis
+    // Enhanced quality trend analysis with chronological ordering
     String qualityTrend = 'stable';
     if (validQuality.length >= 7) {
-      final firstHalf = validQuality.take(validQuality.length ~/ 2).toList();
-      final secondHalf = validQuality.skip(validQuality.length ~/ 2).toList();
-      final firstAvg = firstHalf.reduce((a, b) => a + b) / firstHalf.length;
-      final secondAvg = secondHalf.reduce((a, b) => a + b) / secondHalf.length;
+      // Ensure we have chronological data by using result entries with dates
+      final chronologicalQuality = result
+          .where((r) => r['quality'] != null)
+          .map((r) => r['quality'] as double)
+          .toList();
       
-      if (secondAvg - firstAvg > 0.5) qualityTrend = 'improving';
-      else if (firstAvg - secondAvg > 0.5) qualityTrend = 'declining';
+      if (chronologicalQuality.length >= 7) {
+        final splitPoint = chronologicalQuality.length ~/ 2;
+        final firstHalf = chronologicalQuality.take(splitPoint).toList();
+        final secondHalf = chronologicalQuality.skip(splitPoint).toList();
+        
+        if (firstHalf.isNotEmpty && secondHalf.isNotEmpty) {
+          final firstAvg = firstHalf.reduce((a, b) => a + b) / firstHalf.length;
+          final secondAvg = secondHalf.reduce((a, b) => a + b) / secondHalf.length;
+          final difference = secondAvg - firstAvg;
+          
+          // Use statistical significance threshold based on data variance
+          final qualityVariance = _calculateVariance(chronologicalQuality);
+          final threshold = math.max(0.3, math.sqrt(qualityVariance) * 0.5);
+          
+          if (difference > threshold) {
+            qualityTrend = 'improving';
+          } else if (difference < -threshold) {
+            qualityTrend = 'declining';
+          }
+        }
+      }
     }
 
     // Generate insights
@@ -372,8 +460,11 @@ class AnalyticsV3Extension {
       final firstAvg = firstHalf.reduce((a, b) => a + b) / firstHalf.length;
       final secondAvg = secondHalf.reduce((a, b) => a + b) / secondHalf.length;
       
-      if (secondAvg - firstAvg > 0.5) stressTrend = 'worsening';
-      else if (firstAvg - secondAvg > 0.5) stressTrend = 'improving';
+      if (secondAvg - firstAvg > 0.5) {
+        stressTrend = 'worsening';
+      } else if (firstAvg - secondAvg > 0.5) {
+        stressTrend = 'improving';
+      }
     }
 
     // Time patterns
@@ -461,8 +552,11 @@ class AnalyticsV3Extension {
 
     // Performance trend (simplified)
     String performanceTrend = 'stable';
-    if (completionRate > 0.7) performanceTrend = 'improving';
-    else if (completionRate < 0.3) performanceTrend = 'declining';
+    if (completionRate > 0.7) {
+      performanceTrend = 'improving';
+    } else if (completionRate < 0.3) {
+      performanceTrend = 'declining';
+    }
 
     // Generate insights
     final insights = _generateGoalInsights(completionRate, completionByCategory, averageCompletionTime);
@@ -563,9 +657,27 @@ class AnalyticsV3Extension {
   // ============================================================================
 
   double _calculatePearsonCorrelation(List<double> x, List<double> y) {
-    if (x.length != y.length || x.length < 2) return 0.0;
+    // Enhanced validation for reliable correlation analysis
+    if (x.isEmpty || y.isEmpty || x.length != y.length) return 0.0;
+    
+    // Require minimum 7 data points for reliable correlation
+    if (x.length < 7) return 0.0;
+    
+    // Check for valid numeric values
+    if (x.any((v) => !v.isFinite) || y.any((v) => !v.isFinite)) return 0.0;
     
     final n = x.length;
+    
+    // Calculate means for validation
+    final meanX = x.reduce((a, b) => a + b) / n;
+    final meanY = y.reduce((a, b) => a + b) / n;
+    
+    // Check for zero variance (constant values)
+    final varianceX = x.map((v) => math.pow(v - meanX, 2)).reduce((a, b) => a + b) / n;
+    final varianceY = y.map((v) => math.pow(v - meanY, 2)).reduce((a, b) => a + b) / n;
+    
+    if (varianceX < 0.001 || varianceY < 0.001) return 0.0; // Insufficient variance
+    
     final sumX = x.reduce((a, b) => a + b);
     final sumY = y.reduce((a, b) => a + b);
     final sumXY = List.generate(n, (i) => x[i] * y[i]).reduce((a, b) => a + b);
@@ -573,9 +685,20 @@ class AnalyticsV3Extension {
     final sumY2 = y.map((v) => v * v).reduce((a, b) => a + b);
     
     final numerator = n * sumXY - sumX * sumY;
-    final denominator = math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
+    final denominatorPart1 = n * sumX2 - sumX * sumX;
+    final denominatorPart2 = n * sumY2 - sumY * sumY;
     
-    return denominator == 0 ? 0.0 : numerator / denominator;
+    // Enhanced denominator validation
+    if (denominatorPart1 <= 0 || denominatorPart2 <= 0) return 0.0;
+    
+    final denominator = math.sqrt(denominatorPart1 * denominatorPart2);
+    
+    if (denominator == 0 || !denominator.isFinite) return 0.0;
+    
+    final correlation = numerator / denominator;
+    
+    // Clamp result to valid range [-1, 1]
+    return math.max(-1.0, math.min(1.0, correlation));
   }
 
   double _calculateVariance(List<double> values) {
@@ -583,6 +706,70 @@ class AnalyticsV3Extension {
     final mean = values.reduce((a, b) => a + b) / values.length;
     final squaredDiffs = values.map((v) => math.pow(v - mean, 2));
     return squaredDiffs.reduce((a, b) => a + b) / values.length;
+  }
+
+  /// Validates and normalizes a score to the 0-10 range with proper error handling
+  double _validateAndNormalizeScore(double? value, String scoreType) {
+    if (value == null || !value.isFinite) {
+      return 5.0; // Default neutral value
+    }
+    
+    // Clamp to valid range based on expected scale
+    final clampedValue = math.max(0.0, math.min(10.0, value));
+    
+    // Additional validation for specific score types
+    switch (scoreType) {
+      case 'stress':
+      case 'anxiety':
+        // For stress/anxiety, ensure we're working with valid inverted scores
+        return clampedValue;
+      default:
+        return clampedValue;
+    }
+  }
+
+  /// Calculate statistical significance of a correlation coefficient
+  CorrelationSignificance _calculateCorrelationSignificance(double correlation, int sampleSize) {
+    if (sampleSize < 3) {
+      return CorrelationSignificance(isSignificant: false, pValue: 1.0, confidence: 0.0);
+    }
+    
+    // Calculate t-statistic for Pearson correlation
+    final absR = correlation.abs();
+    final degreesOfFreedom = sampleSize - 2;
+    
+    if (absR >= 1.0 || degreesOfFreedom <= 0) {
+      return CorrelationSignificance(isSignificant: false, pValue: 1.0, confidence: 0.0);
+    }
+    
+    final tStatistic = absR * math.sqrt(degreesOfFreedom / (1 - absR * absR));
+    
+    // Simplified significance thresholds based on degrees of freedom
+    // For p < 0.05 (95% confidence)
+    double criticalValue;
+    if (degreesOfFreedom >= 30) {
+      criticalValue = 2.042; // Approximately for large samples
+    } else if (degreesOfFreedom >= 20) {
+      criticalValue = 2.086;
+    } else if (degreesOfFreedom >= 10) {
+      criticalValue = 2.228;
+    } else if (degreesOfFreedom >= 5) {
+      criticalValue = 2.571;
+    } else {
+      criticalValue = 3.182; // Very small samples
+    }
+    
+    final isSignificant = tStatistic > criticalValue;
+    final confidence = isSignificant ? 0.95 : 0.0;
+    
+    // Rough p-value estimation (simplified)
+    final pValue = isSignificant ? 0.04 : 0.10; // Simplified estimation
+    
+    return CorrelationSignificance(
+      isSignificant: isSignificant,
+      pValue: pValue,
+      confidence: confidence,
+    );
   }
 
   // Default models for when there's insufficient data
@@ -595,10 +782,14 @@ class AnalyticsV3Extension {
         'stress': 5.0,
         'sleep': 5.0,
       },
-      wellnessLevel: 'average',
-      recommendations: ['Comienza a registrar tus datos diarios para obtener insights personalizados'],
+      wellnessLevel: 'insufficient_data',
+      recommendations: [
+        'Necesitas registrar al menos 3 días de datos para obtener un análisis confiable de bienestar',
+        'Continúa usando la app diariamente para generar insights personalizados',
+        'Registra tu estado de ánimo, nivel de energía y calidad de sueño regularmente'
+      ],
       calculatedAt: DateTime.now(),
-      rawMetrics: {'total_entries': 0},
+      rawMetrics: {'total_entries': 0, 'minimum_required': 3},
     );
   }
 
@@ -606,11 +797,11 @@ class AnalyticsV3Extension {
     return SleepPatternModel(
       averageSleepHours: 7.0,
       averageSleepQuality: 5.0,
-      sleepPattern: 'needs_data',
+      sleepPattern: 'insufficient_data',
       weeklyPattern: {},
-      insights: [],
+      insights: [], // Empty list for insufficient data
       optimalSleepHours: 8.0,
-      qualityTrend: 'stable',
+      qualityTrend: 'needs_more_data',
       correlations: {},
     );
   }
@@ -618,12 +809,16 @@ class AnalyticsV3Extension {
   StressManagementModel _createDefaultStressManagement() {
     return StressManagementModel(
       averageStressLevel: 5.0,
-      stressTrend: 'stable',
+      stressTrend: 'insufficient_data',
       identifiedTriggers: [],
       effectiveMethods: [],
       stressByTimeOfDay: {},
       stressByDayOfWeek: {},
-      recommendations: ['Registra tus niveles de estrés para identificar patrones'],
+      recommendations: [
+        'Registra tus niveles de estrés diariamente para identificar patrones',
+        'Necesitas al menos 7 días de datos para análisis de tendencias confiables',
+        'Incluye información sobre actividades y situaciones que afectan tu estrés'
+      ],
       highStressDaysCount: 0,
     );
   }
@@ -635,10 +830,14 @@ class AnalyticsV3Extension {
       inProgressGoals: 0,
       completionRate: 0.0,
       completionByCategory: {},
-      insights: [],
-      performanceTrend: 'stable',
+      insights: [], // Empty list for insufficient data
+      performanceTrend: 'insufficient_data',
       averageCompletionTime: 0.0,
-      successFactors: ['Crea tus primeras metas para comenzar el análisis'],
+      successFactors: [
+        'Define metas claras y alcanzables',
+        'Revisa y actualiza el progreso de tus metas regularmente',
+        'Establece fechas límite realistas para tus objetivos'
+      ],
     );
   }
 
@@ -647,9 +846,9 @@ class AnalyticsV3Extension {
       hourlyPatterns: {},
       dailyPatterns: {},
       monthlyTrends: {},
-      optimalTimeOfDay: 'morning',
-      weeklyPattern: 'consistent',
-      insights: [],
+      optimalTimeOfDay: 'insufficient_data',
+      weeklyPattern: 'needs_more_data',
+      insights: [], // Empty list for insufficient data
     );
   }
 
@@ -770,7 +969,20 @@ class AnalyticsV3Extension {
     ''', [userId, startDate.toIso8601String(), endDate.toIso8601String()]);
 
     if (result.isEmpty) {
-      return {'insights': [], 'peak_hours': [], 'recommendations': []};
+      return {
+        'insights': [
+          'No hay datos de productividad disponibles',
+          'Registra tu nivel de productividad y concentración diariamente'
+        ],
+        'peak_hours': [],
+        'recommendations': [
+          'Necesitas al menos 7 días de datos para identificar patrones de productividad',
+          'Incluye información sobre tu trabajo y nivel de concentración',
+          'Registra la hora en que te sientes más productivo'
+        ],
+        'productivity_score': 0.0,
+        'status': 'insufficient_data'
+      };
     }
 
     // Analyze productivity by hour
@@ -778,9 +990,27 @@ class AnalyticsV3Extension {
     final focusByHour = <int, List<double>>{};
     
     for (final row in result) {
-      final hour = int.tryParse(row['hour']?.toString() ?? '12') ?? 12;
-      final productivity = (row['work_productivity'] as num?)?.toDouble() ?? 5.0;
-      final focus = (row['focus_level'] as num?)?.toDouble() ?? 5.0;
+      final hourStr = row['hour']?.toString();
+      final productivity = (row['work_productivity'] as num?)?.toDouble();
+      final focus = (row['focus_level'] as num?)?.toDouble();
+      
+      // Validate data quality
+      if (productivity == null || focus == null || 
+          !productivity.isFinite || !focus.isFinite ||
+          productivity < 0 || productivity > 10 ||
+          focus < 0 || focus > 10) {
+        continue; // Skip invalid data
+      }
+      
+      int hour;
+      if (hourStr != null) {
+        hour = int.tryParse(hourStr) ?? -1;
+        if (hour < 0 || hour > 23) {
+          continue; // Skip invalid hours
+        }
+      } else {
+        continue; // Skip entries without time data
+      }
       
       productivityByHour.putIfAbsent(hour, () => []).add(productivity);
       focusByHour.putIfAbsent(hour, () => []).add(focus);
@@ -874,7 +1104,21 @@ class AnalyticsV3Extension {
     ''', [userId, startDate.toIso8601String(), endDate.toIso8601String()]);
 
     if (result.length < 5) {
-      return {'stability_score': 5.0, 'insights': [], 'triggers': []};
+      return {
+        'stability_score': 5.0,
+        'insights': [
+          'Necesitas al menos 5 días de datos para analizar la estabilidad del ánimo',
+          'Registra tu estado de ánimo diariamente para detectar patrones emocionales'
+        ],
+        'triggers': [],
+        'recommendations': [
+          'Continúa registrando tu estado de ánimo diariamente',
+          'Incluye notas sobre eventos o situaciones que afectan tu ánimo',
+          'Mantén consistencia en tus registros para mejores insights'
+        ],
+        'mood_variance': 0.0,
+        'status': 'insufficient_data'
+      };
     }
 
     // Calculate mood variance (stability indicator)
@@ -964,7 +1208,20 @@ class AnalyticsV3Extension {
     ''', [userId, startDate.toIso8601String(), endDate.toIso8601String()]);
 
     if (result.isEmpty) {
-      return {'balance_score': 5.0, 'areas': {}, 'recommendations': []};
+      return {
+        'balance_score': 5.0,
+        'areas': {},
+        'recommendations': [
+          'Registra datos en diferentes áreas de tu vida para analizar el equilibrio',
+          'Incluye información sobre trabajo, actividad física, vida social y bienestar',
+          'Necesitas al menos 10 días de datos para un análisis de balance confiable'
+        ],
+        'insights': [
+          'No hay suficientes datos para evaluar tu equilibrio de vida',
+          'Registra actividades en diferentes categorías para obtener insights'
+        ],
+        'status': 'insufficient_data'
+      };
     }
 
     // Calculate balance scores for different life areas
@@ -1054,15 +1311,67 @@ class AnalyticsV3Extension {
     ''', [userId, startDate.toIso8601String(), endDate.toIso8601String()]);
 
     if (result.isEmpty) {
-      return {'energy_pattern': 'insufficient_data', 'peak_times': [], 'energy_boosters': []};
+      return {
+        'energy_pattern': 'insufficient_data',
+        'peak_times': [],
+        'energy_boosters': [],
+        'recommendations': [
+          'Registra tu nivel de energía a diferentes horas del día',
+          'Necesitas al menos 10 días de datos para identificar patrones de energía',
+          'Incluye factores como sueño, ejercicio e hidratación en tus registros'
+        ],
+        'insights': [
+          'No hay datos suficientes para analizar tus patrones de energía',
+          'Registra tu nivel de energía junto con actividades y horarios'
+        ],
+        'status': 'insufficient_data'
+      };
     }
 
-    // Analyze energy by time of day
+    // Analyze energy by time of day with improved error handling
     final energyByHour = <int, List<double>>{};
+    int invalidTimeEntries = 0;
+    
     for (final row in result) {
-      final hour = int.tryParse(row['hour']?.toString() ?? '12') ?? 12;
-      final energy = (row['energy_level'] as num).toDouble();
+      final hourStr = row['hour']?.toString();
+      final energy = (row['energy_level'] as num?)?.toDouble();
+      
+      if (energy == null || !energy.isFinite || energy < 0 || energy > 10) {
+        continue; // Skip invalid energy values
+      }
+      
+      int hour;
+      if (hourStr != null) {
+        hour = int.tryParse(hourStr) ?? -1;
+        if (hour < 0 || hour > 23) {
+          invalidTimeEntries++;
+          continue; // Skip invalid hours
+        }
+      } else {
+        invalidTimeEntries++;
+        continue; // Skip entries without time data
+      }
+      
       energyByHour.putIfAbsent(hour, () => []).add(energy);
+    }
+    
+    // Check if we have enough valid data
+    if (energyByHour.isEmpty || invalidTimeEntries > result.length * 0.5) {
+      return {
+        'energy_pattern': 'insufficient_data',
+        'peak_times': [],
+        'energy_boosters': [],
+        'recommendations': [
+          'Muchos registros tienen datos de hora inválidos o faltan',
+          'Asegúrate de registrar tu energía con la hora correcta',
+          'Necesitas datos válidos durante al menos 7 días diferentes'
+        ],
+        'insights': [
+          'Datos de tiempo insuficientes o inválidos para analizar patrones de energía',
+          'Verifica que tus registros incluyan información de hora precisa'
+        ],
+        'status': 'invalid_data'
+      };
     }
 
     // Calculate average energy per hour
@@ -1127,20 +1436,37 @@ class AnalyticsV3Extension {
       });
     }
 
-    // Determine energy pattern
+    // Determine energy pattern with statistical significance
     final morningEnergy = _getAverageEnergyForTimeRange(hourlyAverages, 6, 12);
     final afternoonEnergy = _getAverageEnergyForTimeRange(hourlyAverages, 12, 18);
     final eveningEnergy = _getAverageEnergyForTimeRange(hourlyAverages, 18, 22);
     
+    // Calculate overall variance to determine if differences are significant
+    final allPeriodValues = [morningEnergy, afternoonEnergy, eveningEnergy]
+        .where((v) => v > 0)
+        .toList();
+    
     String energyPattern;
-    if (morningEnergy > afternoonEnergy && morningEnergy > eveningEnergy) {
-      energyPattern = 'morning_person';
-    } else if (afternoonEnergy > morningEnergy && afternoonEnergy > eveningEnergy) {
-      energyPattern = 'afternoon_peak';
-    } else if (eveningEnergy > morningEnergy && eveningEnergy > afternoonEnergy) {
-      energyPattern = 'evening_person';
+    if (allPeriodValues.length < 2) {
+      energyPattern = 'insufficient_data';
     } else {
-      energyPattern = 'consistent';
+      final periodVariance = _calculateVariance(allPeriodValues);
+      final significanceThreshold = math.sqrt(periodVariance) * 0.5; // 0.5 standard deviations
+      
+      if (significanceThreshold < 0.3) {
+        energyPattern = 'consistent'; // Very little variation
+      } else if (morningEnergy > afternoonEnergy + significanceThreshold && 
+                 morningEnergy > eveningEnergy + significanceThreshold) {
+        energyPattern = 'morning_person';
+      } else if (afternoonEnergy > morningEnergy + significanceThreshold && 
+                 afternoonEnergy > eveningEnergy + significanceThreshold) {
+        energyPattern = 'afternoon_peak';
+      } else if (eveningEnergy > morningEnergy + significanceThreshold && 
+                 eveningEnergy > afternoonEnergy + significanceThreshold) {
+        energyPattern = 'evening_person';
+      } else {
+        energyPattern = 'balanced';
+      }
     }
 
     return {
@@ -1182,7 +1508,21 @@ class AnalyticsV3Extension {
     ''', [userId, startDate.toIso8601String(), endDate.toIso8601String()]);
 
     if (result.isEmpty) {
-      return {'social_wellness_score': 5.0, 'patterns': {}, 'recommendations': []};
+      return {
+        'social_wellness_score': 5.0,
+        'patterns': {},
+        'recommendations': [
+          'Registra tu nivel de interacción social diariamente',
+          'Incluye información sobre cómo te sientes después de actividades sociales',
+          'Necesitas al menos 7 días de datos para analizar tu bienestar social'
+        ],
+        'insights': [
+          'No hay suficientes datos para evaluar tu bienestar social',
+          'Registra tanto actividades sociales como momentos de soledad'
+        ],
+        'social_battery_pattern': 'unknown',
+        'status': 'insufficient_data'
+      };
     }
 
     // Calculate social wellness metrics
@@ -1276,17 +1616,35 @@ class AnalyticsV3Extension {
     ''', [userId, startDate.toIso8601String(), endDate.toIso8601String()]);
 
     if (result.isEmpty) {
-      return {'habits': {}, 'overall_consistency': 0.0, 'streaks': {}};
+      return {
+        'habits': {},
+        'overall_consistency': 0.0,
+        'streaks': {},
+        'recommendations': [
+          'Registra hábitos como meditación, ejercicio e hidratación diariamente',
+          'Necesitas al menos 14 días de datos para analizar la consistencia de hábitos',
+          'Establece metas realistas para cada hábito que quieras desarrollar'
+        ],
+        'insights': [
+          'No hay datos suficientes para evaluar la consistencia de tus hábitos',
+          'Comienza registrando hábitos simples como beber agua o hacer ejercicio'
+        ],
+        'consistency_score': 0.0,
+        'status': 'insufficient_data'
+      };
     }
 
     final habits = <String, Map<String, dynamic>>{};
 
+    // Calculate dynamic targets based on user's historical data
+    final dynamicTargets = _calculateDynamicTargets(result);
+    
     // Analyze meditation habit
     habits['meditation'] = _analyzeHabitPattern(
       result, 
       'meditation_minutes', 
       'Meditación',
-      targetValue: 10.0,
+      targetValue: dynamicTargets['meditation'] ?? 10.0,
       isMinutes: true
     );
 
@@ -1295,7 +1653,7 @@ class AnalyticsV3Extension {
       result, 
       'exercise_minutes', 
       'Ejercicio',
-      targetValue: 30.0,
+      targetValue: dynamicTargets['exercise'] ?? 30.0,
       isMinutes: true
     );
 
@@ -1304,7 +1662,7 @@ class AnalyticsV3Extension {
       result, 
       'water_intake', 
       'Hidratación',
-      targetValue: 8.0,
+      targetValue: dynamicTargets['hydration'] ?? 8.0,
       isGlasses: true
     );
 
@@ -1313,7 +1671,7 @@ class AnalyticsV3Extension {
       result, 
       'sleep_hours', 
       'Sueño',
-      targetValue: 7.5,
+      targetValue: dynamicTargets['sleep'] ?? 7.5,
       isHours: true
     );
 
@@ -1322,7 +1680,7 @@ class AnalyticsV3Extension {
       result, 
       'physical_activity', 
       'Actividad Física',
-      targetValue: 6.0,
+      targetValue: dynamicTargets['physical_activity'] ?? 6.0,
       isRating: true
     );
 
@@ -1484,11 +1842,25 @@ class AnalyticsV3Extension {
     final targetMetDays = values.where((v) => v >= targetValue).length;
     final consistency = targetMetDays / values.length;
 
-    // Calculate current streak
-    int streak = 0;
+    // Calculate current streak with proper chronological handling
+    int currentStreak = 0;
+    int longestStreak = 0;
+    int tempStreak = 0;
+    
+    // Process data chronologically (assuming data is ordered by entry_date)
+    for (int i = 0; i < values.length; i++) {
+      if (values[i] >= targetValue) {
+        tempStreak++;
+        longestStreak = math.max(longestStreak, tempStreak);
+      } else {
+        tempStreak = 0;
+      }
+    }
+    
+    // Calculate current streak from the end
     for (int i = values.length - 1; i >= 0; i--) {
       if (values[i] >= targetValue) {
-        streak++;
+        currentStreak++;
       } else {
         break;
       }
@@ -1500,9 +1872,78 @@ class AnalyticsV3Extension {
       'average': average,
       'target_met_days': targetMetDays,
       'total_days': values.length,
-      'streak': streak,
+      'current_streak': currentStreak,
+      'longest_streak': longestStreak,
       'target': targetValue,
     };
+  }
+
+  /// Calculate dynamic targets based on user's historical performance
+  Map<String, double> _calculateDynamicTargets(List<Map<String, Object?>> data) {
+    final targets = <String, double>{};
+    
+    if (data.isEmpty) {
+      return {
+        'meditation': 10.0,
+        'exercise': 30.0,
+        'hydration': 8.0,
+        'sleep': 7.5,
+        'physical_activity': 6.0,
+      };
+    }
+    
+    // Calculate percentile-based targets (75th percentile as achievable goals)
+    final habits = {
+      'meditation': 'meditation_minutes',
+      'exercise': 'exercise_minutes',
+      'hydration': 'water_intake',
+      'sleep': 'sleep_hours',
+      'physical_activity': 'physical_activity',
+    };
+    
+    habits.forEach((habitName, columnName) {
+      final values = data
+          .map((r) => (r[columnName] as num?)?.toDouble())
+          .where((v) => v != null && v > 0)
+          .cast<double>()
+          .toList();
+      
+      if (values.length >= 5) {
+        values.sort();
+        final percentile75Index = (values.length * 0.75).floor();
+        final target = values[math.min(percentile75Index, values.length - 1)];
+        
+        // Apply reasonable bounds
+        switch (habitName) {
+          case 'meditation':
+            targets[habitName] = math.max(5.0, math.min(60.0, target));
+            break;
+          case 'exercise':
+            targets[habitName] = math.max(15.0, math.min(120.0, target));
+            break;
+          case 'hydration':
+            targets[habitName] = math.max(4.0, math.min(12.0, target));
+            break;
+          case 'sleep':
+            targets[habitName] = math.max(6.0, math.min(9.0, target));
+            break;
+          case 'physical_activity':
+            targets[habitName] = math.max(3.0, math.min(10.0, target));
+            break;
+        }
+      } else {
+        // Fallback to defaults for insufficient data
+        targets[habitName] = {
+          'meditation': 10.0,
+          'exercise': 30.0,
+          'hydration': 8.0,
+          'sleep': 7.5,
+          'physical_activity': 6.0,
+        }[habitName] ?? 5.0;
+      }
+    });
+    
+    return targets;
   }
 
   Map<String, dynamic> _findBestHabit(Map<String, Map<String, dynamic>> habits) {

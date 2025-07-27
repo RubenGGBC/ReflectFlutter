@@ -2,10 +2,12 @@
 // voice_recording_widget.dart - WIDGET DE GRABACIÓN DE VOZ PARA REFLEXIÓN
 // ============================================================================
 
+import 'dart:io';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../services/voice_recording_service.dart';
+import '../../../injection_container_clean.dart';
 import '../screens/v2/components/minimal_colors.dart';
 
 class VoiceRecordingWidget extends StatefulWidget {
@@ -74,8 +76,29 @@ class _VoiceRecordingWidgetState extends State<VoiceRecordingWidget>
 
   Future<void> _initializeVoiceService() async {
     try {
-      _voiceService = VoiceRecordingService();
-      await _voiceService!.initialize();
+      // Usar el servicio del contenedor de dependencias en lugar de crear uno nuevo
+      _voiceService = sl<VoiceRecordingService>();
+      
+      // El servicio ya está inicializado desde initCriticalServices()
+      // pero verificamos si necesita permisos adicionales
+      if (!_voiceService!.hasPermission) {
+        debugPrint('🎤 Requesting microphone permissions...');
+        final permissionGranted = await _voiceService!.requestPermissions();
+        debugPrint('🎤 Permission granted: $permissionGranted');
+        
+        if (!permissionGranted) {
+          debugPrint('❌ Microphone permission denied');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Permisos de micrófono necesarios para grabación de voz'),
+                backgroundColor: Colors.red,
+                duration: Duration(seconds: 5),
+              ),
+            );
+          }
+        }
+      }
       
       if (mounted) {
         setState(() {
@@ -83,7 +106,16 @@ class _VoiceRecordingWidgetState extends State<VoiceRecordingWidget>
         });
       }
     } catch (e) {
-      debugPrint('Error initializing voice service: $e');
+      debugPrint('❌ Error initializing voice service: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error inicializando grabación de voz: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
@@ -91,7 +123,8 @@ class _VoiceRecordingWidgetState extends State<VoiceRecordingWidget>
   void dispose() {
     _pulseController.dispose();
     _waveController.dispose();
-    _voiceService?.dispose();
+    // No llamar dispose() en el servicio compartido del DI
+    // _voiceService?.dispose();
     super.dispose();
   }
 
@@ -594,11 +627,40 @@ class _VoiceRecordingWidgetState extends State<VoiceRecordingWidget>
 
   Future<void> _requestPermissions(VoiceRecordingService voiceService) async {
     final granted = await voiceService.requestPermissions();
-    if (!granted) {
+    if (!granted && mounted) {
+      final errorMessage = voiceService.errorMessage ?? 'Permisos de micrófono requeridos para grabar';
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Permisos de micrófono requeridos para grabar'),
+        SnackBar(
+          content: Text(errorMessage),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 7),
+          action: Platform.isIOS ? SnackBarAction(
+            label: 'Configuración',
+            textColor: Colors.white,
+            onPressed: () async {
+              // En iOS, mostrar cómo acceder a configuración
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Permisos de Micrófono'),
+                  content: const Text(
+                    'Para habilitar la grabación de voz:\n\n'
+                    '1. Ve a Configuración del dispositivo\n'
+                    '2. Selecciona Privacidad y Seguridad\n'
+                    '3. Toca Micrófono\n'
+                    '4. Activa el permiso para Reflect'
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Entendido'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ) : null,
         ),
       );
     }

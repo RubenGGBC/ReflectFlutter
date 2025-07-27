@@ -290,17 +290,23 @@ class _DailyRoadmapScreenV3State extends State<DailyRoadmapScreenV3>
   }
 
   Widget _buildMainContent(DailyRoadmapProvider provider, ThemeProvider theme) {
-    return Column(
-      children: [
-        _buildHeader(provider, theme),
-        const SizedBox(height: 12),
-        _buildDateSelector(provider, theme),
-        const SizedBox(height: 12),
-        _buildProgressIndicator(provider, theme),
-        const SizedBox(height: 12),
-        Expanded(
-          child: _buildTimelineView(provider, theme),
+    return CustomScrollView(
+      controller: _scrollController,
+      slivers: [
+        SliverToBoxAdapter(
+          child: Column(
+            children: [
+              _buildHeader(provider, theme),
+              const SizedBox(height: 12),
+              _buildDateSelector(provider, theme),
+              const SizedBox(height: 12),
+              _buildProgressIndicator(provider, theme),
+              const SizedBox(height: 12),
+              _buildTimelineHeader(theme),
+            ],
+          ),
         ),
+        _buildTimelineSlivers(provider, theme),
       ],
     );
   }
@@ -634,12 +640,88 @@ class _DailyRoadmapScreenV3State extends State<DailyRoadmapScreenV3>
     );
   }
 
-  Widget _buildTimelineView(DailyRoadmapProvider provider, ThemeProvider theme) {
-    return EnhancedTimelineWidget(
-      provider: provider,
-      onAddActivity: (hour, minute) => _showAddActivityModal(provider, hour, minute),
-      onActivityTap: (activity) => _showActivityDetailsModal(provider, activity),
-      onHourTap: (hour) => _handleHourTap(provider, hour),
+  Widget _buildTimelineHeader(ThemeProvider theme) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: theme.isDarkMode 
+            ? theme.surface 
+            : theme.surface.withValues(alpha: 0.98),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border.all(
+          color: theme.isDarkMode 
+              ? theme.borderColor.withValues(alpha: 0.3)
+              : theme.borderColor.withValues(alpha: 0.5),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: theme.shadowColor.withValues(alpha: theme.isDarkMode ? 0.1 : 0.12),
+            blurRadius: theme.isDarkMode ? 16 : 20,
+            offset: Offset(0, theme.isDarkMode ? 6 : 8),
+          ),
+          if (!theme.isDarkMode)
+            BoxShadow(
+              color: theme.borderColor.withValues(alpha: 0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+        ],
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: theme.gradientHeader,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              Icons.schedule,
+              color: Colors.white,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Cronograma del Día',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const Spacer(),
+            Text(
+              _getCurrentTimeString(),
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.9),
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimelineSlivers(DailyRoadmapProvider provider, ThemeProvider theme) {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
+          final hour = index;
+          final isCurrentHour = _isCurrentHour(hour);
+          final isPastHour = _isPastHour(hour);
+          final activities = _getActivitiesForHour(provider, hour);
+          
+          return _buildHourSection(hour, isCurrentHour, isPastHour, activities, provider, theme);
+        },
+        childCount: 24,
+      ),
     );
   }
 
@@ -901,6 +983,20 @@ class _DailyRoadmapScreenV3State extends State<DailyRoadmapScreenV3>
     );
   }
 
+  void _showRoadmapAddActivityModal(DailyRoadmapProvider provider, int hour, int minute) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _RoadmapAddActivityModal(
+        provider: provider,
+        theme: Provider.of<ThemeProvider>(context, listen: false),
+        initialHour: hour,
+        initialMinute: minute,
+      ),
+    );
+  }
+
   // ============================================================================
   // FUNCIONES DE INTERACCIÓN
   // ============================================================================
@@ -913,8 +1009,8 @@ class _DailyRoadmapScreenV3State extends State<DailyRoadmapScreenV3>
         .toList();
 
     if (activities.isEmpty) {
-      // No hay actividades, mostrar modal para crear nueva
-      _showAddActivityModal(provider, hour, 0);
+      // No hay actividades, mostrar modal para crear nueva desde roadmap
+      _showRoadmapAddActivityModal(provider, hour, 0);
     } else if (activities.length == 1) {
       // Solo una actividad, mostrar modal apropiado
       final activity = activities.first;
@@ -975,6 +1071,425 @@ class _DailyRoadmapScreenV3State extends State<DailyRoadmapScreenV3>
   String _getDayName(DateTime date) {
     const days = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
     return days[date.weekday % 7];
+  }
+
+  // Timeline helper methods
+  bool _isCurrentHour(int hour) {
+    return DateTime.now().hour == hour;
+  }
+
+  bool _isPastHour(int hour) {
+    return DateTime.now().hour > hour;
+  }
+
+  List<RoadmapActivityModel> _getActivitiesForHour(DailyRoadmapProvider provider, int hour) {
+    return provider.activitiesByTime
+        .where((activity) => activity.hour == hour)
+        .toList();
+  }
+
+  String _formatHour(int hour) {
+    if (hour == 0) return 'Medianoche';
+    if (hour == 12) return 'Mediodía';
+    if (hour < 12) return '${hour}AM';
+    return '${hour - 12}PM';
+  }
+
+  String _getCurrentTimeString() {
+    final now = DateTime.now();
+    return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+  }
+
+  Widget _buildHourSection(int hour, bool isCurrentHour, bool isPastHour, List<RoadmapActivityModel> activities, DailyRoadmapProvider provider, ThemeProvider theme) {
+    const double hourSpacing = 80.0;
+    const double hourCircleSize = 24.0;
+    const double lineWidth = 3.0;
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: theme.isDarkMode 
+            ? theme.surface 
+            : theme.surface.withValues(alpha: 0.98),
+        borderRadius: hour == 23 ? const BorderRadius.vertical(bottom: Radius.circular(20)) : null,
+        border: Border(
+          left: BorderSide(
+            color: theme.isDarkMode 
+                ? theme.borderColor.withValues(alpha: 0.3)
+                : theme.borderColor.withValues(alpha: 0.5),
+            width: 1,
+          ),
+          right: BorderSide(
+            color: theme.isDarkMode 
+                ? theme.borderColor.withValues(alpha: 0.3)
+                : theme.borderColor.withValues(alpha: 0.5),
+            width: 1,
+          ),
+          bottom: hour == 23 ? BorderSide(
+            color: theme.isDarkMode 
+                ? theme.borderColor.withValues(alpha: 0.3)
+                : theme.borderColor.withValues(alpha: 0.5),
+            width: 1,
+          ) : BorderSide.none,
+        ),
+        boxShadow: hour == 23 ? [
+          BoxShadow(
+            color: theme.shadowColor.withValues(alpha: theme.isDarkMode ? 0.1 : 0.12),
+            blurRadius: theme.isDarkMode ? 16 : 20,
+            offset: Offset(0, theme.isDarkMode ? 6 : 8),
+          ),
+          if (!theme.isDarkMode)
+            BoxShadow(
+              color: theme.borderColor.withValues(alpha: 0.15),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+        ] : null,
+      ),
+      child: SizedBox(
+        height: hourSpacing,
+        child: Row(
+          children: [
+            // Time column
+            SizedBox(
+              width: 80,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _formatHour(hour),
+                    style: TextStyle(
+                      color: isCurrentHour 
+                          ? theme.accentPrimary
+                          : theme.isDarkMode 
+                              ? theme.textPrimary
+                              : theme.textPrimary.withValues(alpha: 0.9),
+                      fontSize: 14,
+                      fontWeight: isCurrentHour ? FontWeight.w700 : FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${hour.toString().padLeft(2, '0')}:00',
+                    style: TextStyle(
+                      color: theme.isDarkMode 
+                          ? theme.textSecondary
+                          : theme.textSecondary.withValues(alpha: 0.8),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Timeline line and circle
+            SizedBox(
+              width: 40,
+              child: Stack(
+                children: [
+                  // Vertical line
+                  Positioned(
+                    left: 18,
+                    top: 0,
+                    bottom: 0,
+                    child: Container(
+                      width: lineWidth,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: isPastHour 
+                              ? [theme.positiveMain, theme.positiveMain.withValues(alpha: 0.5)]
+                              : theme.isDarkMode
+                                  ? [theme.borderColor.withValues(alpha: 0.3), theme.borderColor.withValues(alpha: 0.1)]
+                                  : [theme.borderColor.withValues(alpha: 0.6), theme.borderColor.withValues(alpha: 0.3)],
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  // Hour circle (clickable)
+                  Positioned(
+                    left: 8,
+                    top: 20,
+                    child: _buildHourCircle(hour, isCurrentHour, isPastHour, activities.isNotEmpty, theme),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Activities column
+            Expanded(
+              child: activities.isEmpty 
+                  ? _buildEmptyHourSlot(hour, isPastHour, theme)
+                  : _buildActivitiesColumn(activities, isPastHour, theme),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHourCircle(int hour, bool isCurrentHour, bool isPastHour, bool hasActivities, ThemeProvider theme) {
+    const double hourCircleSize = 24.0;
+    
+    Color circleColor;
+    Color iconColor = Colors.white;
+    IconData icon;
+    
+    if (hasActivities) {
+      circleColor = isPastHour ? theme.positiveMain : theme.accentPrimary;
+      icon = isPastHour ? Icons.check_circle : Icons.event;
+    } else {
+      circleColor = isCurrentHour 
+          ? theme.accentPrimary 
+          : theme.borderColor.withValues(alpha: 0.6);
+      icon = Icons.add_circle_outline;
+      iconColor = isCurrentHour ? Colors.white : theme.textSecondary;
+    }
+
+    Widget circle = GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _handleHourTap(context.read<DailyRoadmapProvider>(), hour);
+      },
+      child: Container(
+        width: hourCircleSize,
+        height: hourCircleSize,
+        decoration: BoxDecoration(
+          color: circleColor,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: isCurrentHour 
+                ? theme.accentSecondary
+                : Colors.transparent,
+            width: 2,
+          ),
+          boxShadow: hasActivities || isCurrentHour ? [
+            BoxShadow(
+              color: circleColor.withValues(alpha: theme.isDarkMode ? 0.4 : 0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+            if (!theme.isDarkMode)
+              BoxShadow(
+                color: theme.shadowColor.withValues(alpha: 0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 1),
+              ),
+          ] : null,
+        ),
+        child: Icon(
+          icon,
+          size: 14,
+          color: iconColor,
+        ),
+      ),
+    );
+
+    // Add pulse animation for current hour
+    if (isCurrentHour) {
+      return AnimatedBuilder(
+        animation: _pulseAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: _pulseAnimation.value,
+            child: circle,
+          );
+        },
+      );
+    }
+
+    return circle;
+  }
+
+  Widget _buildEmptyHourSlot(int hour, bool isPastHour, ThemeProvider theme) {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _showRoadmapAddActivityModal(context.read<DailyRoadmapProvider>(), hour, 0);
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 16, top: 16, bottom: 16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.isDarkMode 
+              ? theme.surfaceVariant.withValues(alpha: 0.3)
+              : theme.surfaceVariant.withValues(alpha: 0.9),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: theme.isDarkMode 
+                ? theme.borderColor.withValues(alpha: 0.2)
+                : theme.borderColor.withValues(alpha: 0.5),
+            width: 1,
+          ),
+          boxShadow: theme.isDarkMode ? null : [
+            BoxShadow(
+              color: theme.shadowColor.withValues(alpha: 0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(
+              isPastHour ? Icons.history : Icons.add,
+              size: 16,
+              color: theme.isDarkMode 
+                  ? theme.textSecondary
+                  : theme.textSecondary.withValues(alpha: 0.8),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              isPastHour ? 'Sin actividad' : 'Agregar actividad',
+              style: TextStyle(
+                color: theme.isDarkMode 
+                    ? theme.textSecondary
+                    : theme.textSecondary.withValues(alpha: 0.8),
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivitiesColumn(List<RoadmapActivityModel> activities, bool isPastHour, ThemeProvider theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: activities.asMap().entries.map((entry) {
+        final index = entry.key;
+        final activity = entry.value;
+        return Container(
+          margin: EdgeInsets.only(
+            right: 16,
+            top: index == 0 ? 8 : 4,
+            bottom: index == activities.length - 1 ? 8 : 4,
+          ),
+          child: _buildActivityCard(activity, isPastHour, theme),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildActivityCard(RoadmapActivityModel activity, bool isPastHour, ThemeProvider theme) {
+    final isCompleted = activity.isCompleted;
+    
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        _showActivityDetailsModal(context.read<DailyRoadmapProvider>(), activity);
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          gradient: isCompleted 
+              ? LinearGradient(
+                  colors: theme.isDarkMode ? [
+                    theme.positiveMain.withValues(alpha: 0.1),
+                    theme.positiveMain.withValues(alpha: 0.05),
+                  ] : [
+                    theme.positiveLight,
+                    theme.positiveLight.withValues(alpha: 0.7),
+                  ],
+                )
+              : null,
+          color: !isCompleted 
+              ? (theme.isDarkMode 
+                  ? theme.surfaceVariant 
+                  : theme.surfaceVariant.withValues(alpha: 0.9))
+              : null,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isCompleted 
+                ? theme.positiveMain.withValues(alpha: theme.isDarkMode ? 0.3 : 0.5)
+                : theme.borderColor.withValues(alpha: theme.isDarkMode ? 0.3 : 0.6),
+            width: 1,
+          ),
+          boxShadow: theme.isDarkMode ? null : [
+            BoxShadow(
+              color: theme.shadowColor.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            // Status indicator
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: isCompleted 
+                    ? theme.positiveMain
+                    : theme.accentPrimary,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 12),
+            
+            // Activity content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    activity.title,
+                    style: TextStyle(
+                      color: theme.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      decoration: isCompleted ? TextDecoration.lineThrough : null,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  if (activity.description?.isNotEmpty == true) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      activity.description!,
+                      style: TextStyle(
+                        color: theme.textSecondary,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            
+            // Time and status
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  activity.timeString,
+                  style: TextStyle(
+                    color: theme.textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                if (isCompleted) ...[
+                  const SizedBox(height: 2),
+                  Icon(
+                    Icons.check_circle,
+                    size: 12,
+                    color: theme.positiveMain,
+                  ),
+                ],
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -1636,7 +2151,547 @@ class _ActivitySelectorModal extends StatelessWidget {
 }
 
 // ============================================================================
-// MODAL MEJORADO PARA AGREGAR NUEVA ACTIVIDAD
+// MODAL PARA AGREGAR ACTIVIDAD DESDE ROADMAP (ENFOCADO EN HORA ESPECÍFICA)
+// ============================================================================
+
+class _RoadmapAddActivityModal extends StatefulWidget {
+  final DailyRoadmapProvider provider;
+  final ThemeProvider theme;
+  final int initialHour;
+  final int initialMinute;
+
+  const _RoadmapAddActivityModal({
+    required this.provider,
+    required this.theme,
+    required this.initialHour,
+    required this.initialMinute,
+  });
+
+  @override
+  State<_RoadmapAddActivityModal> createState() => _RoadmapAddActivityModalState();
+}
+
+class _RoadmapAddActivityModalState extends State<_RoadmapAddActivityModal>
+    with TickerProviderStateMixin {
+  
+  late AnimationController _slideController;
+  late Animation<Offset> _slideAnimation;
+  
+  final _titleController = TextEditingController();
+  final _descriptionController = TextEditingController();
+  final _categoryController = TextEditingController();
+  
+  late int _selectedHour;
+  late int _selectedMinute;
+  int _estimatedDuration = 60;
+  ActivityPriority _selectedPriority = ActivityPriority.medium;
+  
+  final List<String> _quickTitles = [
+    'Reunión', 'Llamada', 'Ejercicio', 'Almuerzo', 'Descanso', 'Estudio', 'Revisar emails'
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedHour = widget.initialHour;
+    _selectedMinute = widget.initialMinute;
+    _setupAnimations();
+  }
+
+  @override
+  void dispose() {
+    _slideController.dispose();
+    _titleController.dispose();
+    _descriptionController.dispose();
+    _categoryController.dispose();
+    super.dispose();
+  }
+
+  void _setupAnimations() {
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _slideController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _slideController.forward();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.75,
+        decoration: BoxDecoration(
+          color: widget.theme.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          border: Border.all(
+            color: widget.theme.borderColor.withValues(alpha: 0.3),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: widget.theme.shadowColor.withValues(alpha: widget.theme.isDark ? 0.2 : 0.15),
+              blurRadius: 20,
+              offset: const Offset(0, -4),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12),
+              decoration: BoxDecoration(
+                color: widget.theme.borderColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            
+            // Header - Específico para roadmap
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [
+                  widget.theme.accentPrimary,
+                  widget.theme.accentPrimary.withValues(alpha: 0.8),
+                ]),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.schedule,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Agregar a las ${_selectedHour.toString().padLeft(2, '0')}:${_selectedMinute.toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        Text(
+                          'Nueva actividad en tu roadmap',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Quick titles
+                    _buildQuickSection(
+                      'Títulos Rápidos',
+                      Icons.flash_on,
+                      _quickTitles,
+                      (title) => _titleController.text = title,
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Title input
+                    _buildInputField(
+                      'Título de la actividad',
+                      _titleController,
+                      Icons.event,
+                      'ej. Reunión con equipo',
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Description input
+                    _buildInputField(
+                      'Descripción (opcional)',
+                      _descriptionController,
+                      Icons.description,
+                      'ej. Revisar avances del proyecto',
+                      maxLines: 2,
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Category input
+                    _buildInputField(
+                      'Categoría (opcional)',
+                      _categoryController,
+                      Icons.folder,
+                      'ej. Trabajo, Personal',
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Duration and priority
+                    Row(
+                      children: [
+                        Expanded(child: _buildDurationSection()),
+                        const SizedBox(width: 16),
+                        Expanded(child: _buildPrioritySection()),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+            // Action buttons
+            Container(
+              padding: const EdgeInsets.all(24),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: widget.theme.accentPrimary,
+                        side: BorderSide(color: widget.theme.accentPrimary, width: 2),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancelar',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: _canSave() ? _saveActivity : null,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: widget.theme.accentPrimary,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Agregar a Roadmap',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickSection(String title, IconData icon, List<String> items, Function(String) onTap) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              icon,
+              color: widget.theme.accentPrimary,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                color: widget.theme.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: items.map((item) => _buildQuickChip(item, onTap)).toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickChip(String text, Function(String) onTap) {
+    return GestureDetector(
+      onTap: () {
+        onTap(text);
+        setState(() {});
+        HapticFeedback.lightImpact();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: widget.theme.isDark 
+              ? widget.theme.surfaceVariant
+              : widget.theme.surfaceVariant.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: widget.theme.borderColor.withValues(alpha: widget.theme.isDark ? 0.3 : 0.5),
+          ),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            color: widget.theme.textPrimary,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputField(String label, TextEditingController controller, IconData icon, String hint, {int maxLines = 1}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              icon,
+              color: widget.theme.accentPrimary,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: widget.theme.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: controller,
+          maxLines: maxLines,
+          style: TextStyle(color: widget.theme.textPrimary),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: TextStyle(color: widget.theme.textHint),
+            filled: true,
+            fillColor: widget.theme.isDark 
+                ? widget.theme.surfaceVariant
+                : widget.theme.surfaceVariant.withValues(alpha: 0.6),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: widget.theme.borderColor),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: widget.theme.borderColor),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide(color: widget.theme.accentPrimary, width: 2),
+            ),
+            contentPadding: const EdgeInsets.all(16),
+          ),
+          onChanged: (value) => setState(() {}),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDurationSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Duración (min)',
+          style: TextStyle(
+            color: widget.theme.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: widget.theme.surfaceVariant,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: widget.theme.borderColor.withValues(alpha: 0.3),
+            ),
+          ),
+          child: DropdownButton<int>(
+            value: _estimatedDuration,
+            underline: Container(),
+            isExpanded: true,
+            dropdownColor: widget.theme.surface,
+            style: TextStyle(color: widget.theme.textPrimary),
+            items: [15, 30, 45, 60, 90, 120].map((duration) {
+              return DropdownMenuItem<int>(
+                value: duration,
+                child: Text('$duration min'),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _estimatedDuration = value;
+                });
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPrioritySection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Prioridad',
+          style: TextStyle(
+            color: widget.theme.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: widget.theme.surfaceVariant,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: widget.theme.borderColor.withValues(alpha: 0.3),
+            ),
+          ),
+          child: DropdownButton<ActivityPriority>(
+            value: _selectedPriority,
+            underline: Container(),
+            isExpanded: true,
+            dropdownColor: widget.theme.surface,
+            style: TextStyle(color: widget.theme.textPrimary),
+            items: ActivityPriority.values.map((priority) {
+              return DropdownMenuItem<ActivityPriority>(
+                value: priority,
+                child: Text(_getPriorityLabel(priority)),
+              );
+            }).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() {
+                  _selectedPriority = value;
+                });
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  bool _canSave() {
+    return _titleController.text.trim().isNotEmpty;
+  }
+
+  Future<void> _saveActivity() async {
+    if (!_canSave()) return;
+
+    final success = await widget.provider.addActivity(
+      title: _titleController.text.trim(),
+      hour: _selectedHour,
+      minute: _selectedMinute,
+      description: _descriptionController.text.trim().isEmpty 
+          ? null 
+          : _descriptionController.text.trim(),
+      priority: _selectedPriority,
+      category: _categoryController.text.trim().isEmpty 
+          ? null 
+          : _categoryController.text.trim(),
+      estimatedDuration: _estimatedDuration,
+    );
+
+    if (success && mounted) {
+      HapticFeedback.mediumImpact();
+      Navigator.pop(context);
+      
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Actividad agregada a las ${_selectedHour.toString().padLeft(2, '0')}:${_selectedMinute.toString().padLeft(2, '0')}'),
+          backgroundColor: widget.theme.positiveMain,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  String _getPriorityLabel(ActivityPriority priority) {
+    switch (priority) {
+      case ActivityPriority.low:
+        return 'Baja';
+      case ActivityPriority.medium:
+        return 'Media';
+      case ActivityPriority.high:
+        return 'Alta';
+      case ActivityPriority.urgent:
+        return 'Urgente';
+    }
+  }
+}
+
+// ============================================================================
+// MODAL MEJORADO PARA AGREGAR NUEVA ACTIVIDAD (DESDE BOTÓN PROGRAMAR)
 // ============================================================================
 
 class _EnhancedAddActivityModal extends StatefulWidget {

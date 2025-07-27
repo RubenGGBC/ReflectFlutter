@@ -6,6 +6,34 @@
 import 'dart:math';
 
 // ============================================================================
+// CORRELATION SIGNIFICANCE MODEL
+// ============================================================================
+class CorrelationSignificance {
+  final bool isSignificant;
+  final double pValue;
+  final double confidence;
+
+  const CorrelationSignificance({
+    required this.isSignificant,
+    required this.pValue,
+    required this.confidence,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'isSignificant': isSignificant,
+    'pValue': pValue,
+    'confidence': confidence,
+  };
+
+  factory CorrelationSignificance.fromJson(Map<String, dynamic> json) =>
+      CorrelationSignificance(
+        isSignificant: json['isSignificant'],
+        pValue: json['pValue'].toDouble(),
+        confidence: json['confidence'].toDouble(),
+      );
+}
+
+// ============================================================================
 // WELLNESS SCORE MODEL
 // ============================================================================
 class WellnessScoreModel {

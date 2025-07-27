@@ -21,7 +21,7 @@ import '../models/roadmap_activity_model.dart';
 
 class OptimizedDatabaseService {
   static const String _databaseName = 'reflect_optimized_v2.db';
-  static const int _databaseVersion = 12;
+  static const int _databaseVersion = 14;
 
   static Database? _database;
   static final OptimizedDatabaseService _instance = OptimizedDatabaseService
@@ -208,10 +208,10 @@ class OptimizedDatabaseService {
         user_id INTEGER NOT NULL,
         title TEXT NOT NULL,
         description TEXT NOT NULL,
-        type TEXT NOT NULL,
-        status TEXT NOT NULL DEFAULT 'active',
-        target_value REAL NOT NULL,
-        current_value REAL NOT NULL DEFAULT 0.0,
+        type TEXT NOT NULL CHECK (type IN ('mindfulness', 'stress', 'sleep', 'social', 'physical', 'emotional', 'productivity', 'habits')),
+        status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused', 'cancelled')),
+        target_value REAL NOT NULL CHECK (target_value > 0),
+        current_value REAL NOT NULL DEFAULT 0.0 CHECK (current_value >= 0),
         created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
         completed_at INTEGER,
         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
@@ -375,7 +375,7 @@ class OptimizedDatabaseService {
             user_id INTEGER NOT NULL,
             title TEXT NOT NULL,
             description TEXT NOT NULL,
-            type TEXT NOT NULL CHECK (type IN ('consistency', 'mood', 'positiveMoments', 'stressReduction', 'habits')),
+            type TEXT NOT NULL CHECK (type IN ('mindfulness', 'stress', 'sleep', 'social', 'physical', 'emotional', 'productivity', 'habits')),
             status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused', 'cancelled')),
             target_value REAL NOT NULL CHECK (target_value > 0),
             current_value REAL NOT NULL DEFAULT 0.0 CHECK (current_value >= 0),
@@ -536,6 +536,12 @@ class OptimizedDatabaseService {
       if (oldVersion < 12) {
         await _migrateToV12(db);
       }
+      if (oldVersion < 13) {
+        await _migrateToV13(db);
+      }
+      if (oldVersion < 14) {
+        await _migrateToV14(db);
+      }
     } catch (e) {
       _logger.e('❌ Error en migración: $e');
       // En APK, mejor recrear la BD si hay errores críticos
@@ -561,7 +567,7 @@ class OptimizedDatabaseService {
             user_id INTEGER NOT NULL,
             title TEXT NOT NULL,
             description TEXT NOT NULL,
-            type TEXT NOT NULL CHECK (type IN ('consistency', 'mood', 'positiveMoments', 'stressReduction', 'habits')),
+            type TEXT NOT NULL CHECK (type IN ('mindfulness', 'stress', 'sleep', 'social', 'physical', 'emotional', 'productivity', 'habits')),
             status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused', 'cancelled')),
             target_value REAL NOT NULL CHECK (target_value > 0),
             current_value REAL NOT NULL DEFAULT 0.0 CHECK (current_value >= 0),
@@ -774,7 +780,7 @@ class OptimizedDatabaseService {
           user_id INTEGER NOT NULL,
           title TEXT NOT NULL,
           description TEXT NOT NULL,
-          type TEXT NOT NULL CHECK (type IN ('consistency', 'mood', 'positiveMoments', 'stressReduction', 'habits')),
+          type TEXT NOT NULL CHECK (type IN ('mindfulness', 'stress', 'sleep', 'social', 'physical', 'emotional', 'productivity', 'habits')),
           status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused', 'cancelled')),
           target_value REAL NOT NULL CHECK (target_value > 0),
           current_value REAL NOT NULL DEFAULT 0.0 CHECK (current_value >= 0),
@@ -857,7 +863,7 @@ class OptimizedDatabaseService {
           user_id INTEGER NOT NULL,
           title TEXT NOT NULL,
           description TEXT NOT NULL,
-          type TEXT NOT NULL CHECK (type IN ('consistency', 'mood', 'positiveMoments', 'stressReduction', 'habits')),
+          type TEXT NOT NULL CHECK (type IN ('mindfulness', 'stress', 'sleep', 'social', 'physical', 'emotional', 'productivity', 'habits')),
           status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused', 'cancelled')),
           target_value REAL NOT NULL CHECK (target_value > 0),
           current_value REAL NOT NULL DEFAULT 0.0 CHECK (current_value >= 0),
@@ -882,6 +888,138 @@ class OptimizedDatabaseService {
       _logger.i('✅ Migración v12 completada - Constraintos de user_goals actualizados');
     } catch (e) {
       _logger.e('❌ Error en migración v12: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _migrateToV13(Database db) async {
+    try {
+      _logger.i('📦 Verificando y corrigiendo constraints de user_goals en migración v13');
+      
+      // Verificar la definición actual de la tabla
+      final createSql = await db.rawQuery("""
+        SELECT sql FROM sqlite_master 
+        WHERE type='table' AND name='user_goals'
+      """);
+      
+      if (createSql.isNotEmpty) {
+        final tableSql = createSql.first['sql'] as String;
+        _logger.i('📝 SQL actual de user_goals: $tableSql');
+        
+        // Si no contiene la constraint con 'habits', recrear la tabla
+        if (!tableSql.contains("type IN ('consistency', 'mood', 'positiveMoments', 'stressReduction', 'habits')")) {
+          _logger.i('🔧 Recreando tabla user_goals con constraints correctas');
+          
+          // Crear tabla temporal con constraints correctas
+          await db.execute('''
+            CREATE TABLE user_goals_v13 (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER NOT NULL,
+              title TEXT NOT NULL,
+              description TEXT NOT NULL,
+              type TEXT NOT NULL CHECK (type IN ('mindfulness', 'stress', 'sleep', 'social', 'physical', 'emotional', 'productivity', 'habits')),
+              status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused', 'cancelled')),
+              target_value REAL NOT NULL CHECK (target_value > 0),
+              current_value REAL NOT NULL DEFAULT 0.0 CHECK (current_value >= 0),
+              created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+              completed_at INTEGER,
+              FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+          ''');
+          
+          // Copiar datos existentes
+          await db.execute('''
+            INSERT INTO user_goals_v13 (id, user_id, title, description, type, status, target_value, current_value, created_at, completed_at)
+            SELECT id, user_id, title, description, type, status, target_value, current_value, created_at, completed_at
+            FROM user_goals
+          ''');
+          
+          // Reemplazar tabla original
+          await db.execute('DROP TABLE user_goals');
+          await db.execute('ALTER TABLE user_goals_v13 RENAME TO user_goals');
+          
+          _logger.i('✅ Tabla user_goals recreada con constraints correctas');
+        } else {
+          _logger.i('✅ Tabla user_goals ya tiene las constraints correctas');
+        }
+      }
+      
+      _logger.i('✅ Migración v13 completada');
+    } catch (e) {
+      _logger.e('❌ Error en migración v13: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _migrateToV14(Database db) async {
+    try {
+      _logger.i('📦 Actualizando constraints de user_goals para tipos de objetivos en migración v14');
+      
+      // Verificar la definición actual de la tabla
+      final createSql = await db.rawQuery("""
+        SELECT sql FROM sqlite_master 
+        WHERE type='table' AND name='user_goals'
+      """);
+      
+      if (createSql.isNotEmpty) {
+        final tableSql = createSql.first['sql'] as String;
+        _logger.i('📝 SQL actual de user_goals: $tableSql');
+        
+        // Si no contiene los nuevos valores del enum GoalCategory, recrear la tabla
+        if (!tableSql.contains("'mindfulness', 'stress', 'sleep', 'social', 'physical', 'emotional', 'productivity', 'habits'")) {
+          _logger.i('🔧 Recreando tabla user_goals con constraints de GoalCategory actualizadas');
+          
+          // Crear tabla temporal con constraints correctas
+          await db.execute('''
+            CREATE TABLE user_goals_v14 (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              user_id INTEGER NOT NULL,
+              title TEXT NOT NULL,
+              description TEXT NOT NULL,
+              type TEXT NOT NULL CHECK (type IN ('mindfulness', 'stress', 'sleep', 'social', 'physical', 'emotional', 'productivity', 'habits')),
+              status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused', 'cancelled')),
+              target_value REAL NOT NULL CHECK (target_value > 0),
+              current_value REAL NOT NULL DEFAULT 0.0 CHECK (current_value >= 0),
+              created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+              completed_at INTEGER,
+              FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+          ''');
+          
+          // Copiar datos existentes, mapeando valores antiguos a nuevos
+          await db.execute('''
+            INSERT INTO user_goals_v14 (id, user_id, title, description, type, status, target_value, current_value, created_at, completed_at)
+            SELECT id, user_id, title, description, 
+              CASE 
+                WHEN type = 'consistency' THEN 'habits'
+                WHEN type = 'mood' THEN 'emotional' 
+                WHEN type = 'positiveMoments' THEN 'emotional'
+                WHEN type = 'stressReduction' THEN 'stress'
+                ELSE type 
+              END as type,
+              status, target_value, current_value, created_at, completed_at
+            FROM user_goals
+          ''');
+          
+          // Reemplazar tabla original
+          await db.execute('DROP TABLE user_goals');
+          await db.execute('ALTER TABLE user_goals_v14 RENAME TO user_goals');
+          
+          // Recrear índices
+          await db.execute('CREATE INDEX IF NOT EXISTS idx_user_goals_user_status ON user_goals (user_id, status)');
+          await db.execute('CREATE INDEX IF NOT EXISTS idx_user_goals_created ON user_goals (user_id, created_at DESC)');
+          await db.execute('CREATE INDEX IF NOT EXISTS idx_user_goals_type ON user_goals (user_id, type)');
+          await db.execute('CREATE INDEX IF NOT EXISTS idx_user_goals_progress ON user_goals (user_id, status, current_value, target_value)');
+          
+          _logger.i('✅ Tabla user_goals recreada con constraints de GoalCategory correctas');
+        } else {
+          _logger.i('✅ Tabla user_goals ya tiene las constraints de GoalCategory correctas');
+        }
+      }
+      
+      _logger.i('✅ Migración v14 completada');
+    } catch (e) {
+      _logger.e('❌ Error en migración v14: $e');
       rethrow;
     }
   }
@@ -2526,13 +2664,34 @@ class OptimizedDatabaseService {
 
   Future<void> deleteDatabase() async {
     try {
-      final dbPath = join((await getApplicationDocumentsDirectory()).path, _databaseName);
-      await databaseFactory.deleteDatabase(dbPath);
       _database = null;
-      _logger.i('🗑️ Base de datos eliminada');
+      
+      // Delete from all possible paths
+      final paths = await _getDatabasePaths();
+      
+      for (final path in paths) {
+        try {
+          await databaseFactory.deleteDatabase(path);
+          _logger.i('🗑️ Base de datos eliminada de: $path');
+        } catch (e) {
+          _logger.w('⚠️ No se pudo eliminar base de datos en: $path - $e');
+        }
+      }
+      
+      _logger.i('🗑️ Proceso de eliminación completado');
     } catch (e) {
       _logger.e('❌ Error eliminando base de datos: $e');
     }
+  }
+
+  /// Reset database for development/testing - forces fresh schema
+  Future<void> resetDatabaseForDevelopment() async {
+    _logger.i('🔄 RESETEANDO BASE DE DATOS PARA DESARROLLO');
+    await deleteDatabase();
+    _database = null;
+    // Next call to database getter will recreate with latest schema
+    await database;
+    _logger.i('✅ Base de datos reseteada y recreada');
   }
 
   Future<bool> hasAnyUsers() async {

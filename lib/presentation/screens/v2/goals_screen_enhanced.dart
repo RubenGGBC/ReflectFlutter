@@ -174,23 +174,9 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
             child: SafeArea(
               child: FadeTransition(
                 opacity: _fadeAnimation,
-                child: Column(
-                  children: [
-                    Flexible(
-                      flex: 0,
-                      child: _buildHeader(context, goalsProvider),
-                    ),
-                    Flexible(
-                      flex: 0,
-                      child: _buildCategoryFilter(context, goalsProvider),
-                    ),
-                    Expanded(
-                      child: goalsProvider.isLoading 
-                          ? _buildLoadingState(context)
-                          : _buildGoalsList(context, goalsProvider),
-                    ),
-                  ],
-                ),
+                child: goalsProvider.isLoading 
+                    ? _buildLoadingState(context)
+                    : _buildMainContent(context, goalsProvider),
               ),
             ),
           ),
@@ -438,30 +424,57 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
     );
   }
 
-  Widget _buildGoalsList(BuildContext context, EnhancedGoalsProvider goalsProvider) {
+  Widget _buildMainContent(BuildContext context, EnhancedGoalsProvider goalsProvider) {
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Column(
+            children: [
+              _buildHeader(context, goalsProvider),
+              _buildCategoryFilter(context, goalsProvider),
+            ],
+          ),
+        ),
+        _buildGoalsSlivers(context, goalsProvider),
+      ],
+    );
+  }
+
+  Widget _buildGoalsSlivers(BuildContext context, EnhancedGoalsProvider goalsProvider) {
     final filteredGoals = goalsProvider.filteredGoals;
     
     if (filteredGoals.isEmpty) {
-      return _buildEmptyState(context, goalsProvider);
+      return SliverFillRemaining(
+        child: _buildEmptyState(context, goalsProvider),
+      );
     }
 
-    return SlideTransition(
-      position: _slideAnimation,
-      child: ListView.builder(
-        padding: const EdgeInsets.all(24),
-        itemCount: filteredGoals.length,
-        itemBuilder: (context, index) {
+    return SliverList(
+      delegate: SliverChildBuilderDelegate(
+        (context, index) {
           final goal = filteredGoals[index];
           final streakData = goal.id != null ? goalsProvider.getStreakDataForGoal(goal.id!) : null;
           
-          return EnhancedGoalCard(
-            goal: goal,
-            streakData: streakData,
-            onTap: () => _showGoalDetails(goal),
-            onProgressUpdate: () => _showProgressUpdateDialog(goal, goalsProvider),
-            onAddNote: () => _showAddNoteDialog(goal),
+          return SlideTransition(
+            position: _slideAnimation,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: index == 0 ? 16 : 8,
+                bottom: index == filteredGoals.length - 1 ? 100 : 8,
+              ),
+              child: EnhancedGoalCard(
+                goal: goal,
+                streakData: streakData,
+                onTap: () => _showGoalDetails(goal),
+                onProgressUpdate: () => _showProgressUpdateDialog(goal, goalsProvider),
+                onAddNote: () => _showAddNoteDialog(goal),
+              ),
+            ),
           );
         },
+        childCount: filteredGoals.length,
       ),
     );
   }

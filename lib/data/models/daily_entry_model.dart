@@ -49,6 +49,7 @@ class DailyEntryModel {
   final int? focusLevel;
   final int? lifeSatisfaction;
   final String? voiceRecordingPath;
+  final List<String> imagePaths;
 
   const DailyEntryModel({
     this.id,

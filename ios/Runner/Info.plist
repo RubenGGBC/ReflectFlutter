@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Untitled3</string>
+	<string>Reflect</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>untitled3</string>
+	<string>Reflect</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -46,19 +46,29 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	
-	<!-- ✅ NOTIFICATION PERMISSIONS -->
-	<key>NSUserNotificationAlertStyle</key>
-	<string>alert</string>
 	
-	<!-- ✅ BACKGROUND MODES FOR NOTIFICATIONS -->
+	<!-- ✅ BACKGROUND MODES FOR NOTIFICATIONS AND AUDIO -->
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>background-processing</string>
 		<string>remote-notification</string>
+		<string>audio</string>
 	</array>
+	
+	<!-- ✅ LOCAL NOTIFICATIONS PERMISSION -->
+	<key>NSUserNotificationCenterPermission</key>
+	<true/>
 	
 	<!-- ✅ MICROPHONE PERMISSIONS -->
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Esta aplicación necesita acceso al micrófono para grabar notas de voz en tu diario de reflexión diaria.</string>
+	
+	<!-- ✅ CAMERA PERMISSIONS -->
+	<key>NSCameraUsageDescription</key>
+	<string>Esta aplicación necesita acceso a la cámara para tomar fotos de perfil y capturar momentos especiales en tu diario.</string>
+	
+	<!-- ✅ PHOTO LIBRARY PERMISSIONS -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Esta aplicación necesita acceso a tu galería de fotos para seleccionar imágenes de perfil y agregar fotos a tus momentos.</string>
 </dict>
 </plist>

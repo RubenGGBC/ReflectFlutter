@@ -5,11 +5,13 @@
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:device_info_plus/device_info_plus.dart';
 
 enum VoiceRecordingState {
   idle,
@@ -62,6 +64,11 @@ class VoiceRecordingService extends ChangeNotifier {
 
   Future<void> initialize() async {
     try {
+      // Configurar audio session para iOS
+      if (Platform.isIOS) {
+        await _setupIOSAudioSession();
+      }
+      
       _hasPermission = await _checkPermissions();
       
       // Configurar listeners del reproductor
@@ -85,18 +92,73 @@ class VoiceRecordingService extends ChangeNotifier {
     }
   }
 
+  /// Configurar audio session para iOS
+  Future<void> _setupIOSAudioSession() async {
+    try {
+      debugPrint('🎤 Setting up iOS audio session...');
+      // Configurar la sesión de audio para grabación
+      await const MethodChannel('com.reflect.audio_session')
+          .invokeMethod('configureAudioSession');
+      debugPrint('✅ iOS audio session configured successfully');
+    } catch (e) {
+      debugPrint('❌ iOS Audio Session setup error: $e');
+      // No es crítico, continuar sin configuración específica
+    }
+  }
+
   Future<bool> _checkPermissions() async {
     try {
+      // Para iOS, verificar el estado actual primero
+      if (Platform.isIOS) {
+        debugPrint('🎤 Checking iOS microphone permissions...');
+        
+        final currentStatus = await Permission.microphone.status;
+        debugPrint('🎤 Current permission status: $currentStatus');
+        
+        // Si ya está concedido, retornar true
+        if (currentStatus == PermissionStatus.granted) {
+          debugPrint('✅ Microphone permission already granted');
+          return true;
+        }
+        
+        // Si está denegado permanentemente, mostrar configuración
+        if (currentStatus == PermissionStatus.permanentlyDenied) {
+          _setError('Permisos de micrófono denegados permanentemente. Ve a Configuración > Privacidad y Seguridad > Micrófono > Reflect para habilitarlos.');
+          return false;
+        }
+        
+        // Solicitar permisos si no están concedidos
+        debugPrint('🎤 Requesting microphone permission...');
+        final status = await Permission.microphone.request();
+        debugPrint('🎤 Permission request result: $status');
+        
+        if (status == PermissionStatus.granted) {
+          debugPrint('✅ Microphone permission granted');
+          return true;
+        } else if (status == PermissionStatus.permanentlyDenied) {
+          _setError('Permisos de micrófono denegados. Ve a Configuración > Privacidad y Seguridad > Micrófono > Reflect para habilitarlos.');
+          return false;
+        } else if (status == PermissionStatus.denied) {
+          _setError('Permisos de micrófono denegados. La grabación de voz no estará disponible.');
+          return false;
+        } else {
+          _setError('Permisos de micrófono requeridos para grabación de voz.');
+          return false;
+        }
+      }
+      
+      // Para Android y otras plataformas
       final status = await Permission.microphone.request();
       return status == PermissionStatus.granted;
     } catch (e) {
-      debugPrint('Permission handler error (platform may not support): $e');
-      // Try to continue without explicit permission check on unsupported platforms
-      // Most desktop platforms don't need explicit permission requests
+      debugPrint('Permission handler error: $e');
+      
+      // Para plataformas de escritorio, asumir permisos concedidos
       if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
-        return true; // Assume permission is granted on desktop
+        return true;
       }
-      _setError('Error verificando permisos: $e');
+      
+      _setError('Error verificando permisos de micrófono: $e');
       return false;
     }
   }
@@ -113,8 +175,12 @@ class VoiceRecordingService extends ChangeNotifier {
 
   Future<void> startRecording() async {
     if (!_hasPermission) {
-      _setError('Permisos de micrófono no concedidos');
-      return;
+      debugPrint('❌ No microphone permission, requesting...');
+      final granted = await requestPermissions();
+      if (!granted) {
+        _setError('Permisos de micrófono no concedidos');
+        return;
+      }
     }
 
     if (_state == VoiceRecordingState.recording) {
@@ -122,6 +188,10 @@ class VoiceRecordingService extends ChangeNotifier {
     }
 
     try {
+      // Para iOS, configurar audio session antes de grabar
+      if (Platform.isIOS) {
+        await _setupIOSAudioSession();
+      }
       // Generar ruta para el archivo
       final directory = await getApplicationDocumentsDirectory();
       final fileName = 'voice_reflection_${DateTime.now().millisecondsSinceEpoch}.m4a';
@@ -133,20 +203,38 @@ class VoiceRecordingService extends ChangeNotifier {
         await recordingDir.create(recursive: true);
       }
 
-      // Configurar y iniciar grabación
-      await _recorder.start(
-        const RecordConfig(
+      // Configurar y iniciar grabación con configuración optimizada para iOS
+      RecordConfig recordConfig;
+      
+      if (Platform.isIOS) {
+        // Configuración específica para iOS con mejores ajustes
+        recordConfig = const RecordConfig(
           encoder: AudioEncoder.aacLc,
           sampleRate: 44100,
           bitRate: 128000,
-        ),
-        path: _currentRecordingPath!,
-      );
+          autoGain: true,
+          echoCancel: true,
+          noiseSuppress: true,
+        );
+        debugPrint('🎤 Using iOS-optimized recording config');
+      } else {
+        // Configuración para Android y otras plataformas
+        recordConfig = const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          sampleRate: 44100,
+          bitRate: 128000,
+        );
+      }
+
+      debugPrint('🎤 Starting recording to: $_currentRecordingPath');
+      await _recorder.start(recordConfig, path: _currentRecordingPath!);
 
       _setState(VoiceRecordingState.recording);
       _startRecordingTimer();
+      debugPrint('✅ Recording started successfully');
       
     } catch (e) {
+      debugPrint('❌ Error starting recording: $e');
       _setError('Error iniciando grabación: $e');
     }
   }

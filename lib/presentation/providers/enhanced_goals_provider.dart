@@ -92,8 +92,7 @@ class EnhancedGoalsProvider extends ChangeNotifier {
   // ============================================================================
 
   /// Cargar objetivos
-  Future<void> loadGoals(int id, {int? userId}) async {
-    if (userId == null) return;
+  Future<void> loadGoals(int userId) async {
     
     _setLoading(true);
     _clearError();

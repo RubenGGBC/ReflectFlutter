@@ -2,6 +2,7 @@
 // daily_detail_screen_v2.dart - DETALLE DIARIO CON ESTILO VISUAL MEJORADO
 // ============================================================================
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +11,7 @@ import 'package:provider/provider.dart';
 import '../../providers/optimized_providers.dart';
 import '../../providers/enhanced_goals_provider.dart';
 import '../../providers/daily_roadmap_provider.dart';
+import '../../providers/image_moments_provider.dart';
 
 // Pantallas relacionadas
 import 'daily_review_screen_v2.dart';
@@ -115,8 +117,8 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
     return Scaffold(
       backgroundColor: MinimalColors.backgroundPrimary(context),
       body: SafeArea(
-        child: Consumer5<OptimizedDailyEntriesProvider, OptimizedAnalyticsProvider, EnhancedGoalsProvider, DailyRoadmapProvider, OptimizedMomentsProvider>(
-          builder: (context, entriesProvider, analyticsProvider, goalsProvider, roadmapProvider, momentsProvider, child) {
+        child: Consumer6<OptimizedDailyEntriesProvider, OptimizedAnalyticsProvider, EnhancedGoalsProvider, DailyRoadmapProvider, OptimizedMomentsProvider, ImageMomentsProvider>(
+          builder: (context, entriesProvider, analyticsProvider, goalsProvider, roadmapProvider, momentsProvider, imageProvider, child) {
             final entry = _getEntryForDate(widget.date, entriesProvider.entries);
 
             return Column(
@@ -124,7 +126,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                 _buildHeader(),
                 Expanded(
                   child: entry != null
-                      ? _buildDetailContent(entry, goalsProvider, roadmapProvider, momentsProvider)
+                      ? _buildDetailContent(entry, goalsProvider, roadmapProvider, momentsProvider, imageProvider)
                       : _buildEmptyState(),
                 ),
               ],
@@ -147,83 +149,79 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
         end: Offset.zero,
       ).animate(CurvedAnimation(parent: _headerController, curve: Curves.easeOutCubic)),
       child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: MinimalColors.primaryGradient(context),
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: const BoxDecoration(
+          color: Color(0xFF1a1a2e), // Dark navy background similar to the image
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.arrow_back_ios, color: MinimalColors.textPrimary(context)),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ShaderMask(
-                        shaderCallback: (bounds) => LinearGradient(
-                          colors: MinimalColors.accentGradient(context),
-                        ).createShader(bounds),
-                        child: Text(
-                          'Detalle del Día',
-                          style: TextStyle(
-                            color: MinimalColors.textPrimary(context),
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        _formatDate(widget.date),
-                        style: TextStyle(
-                          color: MinimalColors.textSecondary(context),
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: 1.0 + (_pulseController.value * 0.1),
-                      child: IconButton(
-                        onPressed: _navigateToCalendar,
-                        icon: Icon(Icons.calendar_month, color: MinimalColors.textPrimary(context)),
-                        tooltip: 'Ver calendario',
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            // Indicador de día relativo
+            // Back button with rounded background
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              margin: const EdgeInsets.only(right: 16),
               decoration: BoxDecoration(
-                color: MinimalColors.backgroundCard(context).withValues(alpha: 0.7),
-                borderRadius: BorderRadius.circular(16),
+                color: Colors.white.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
-              child: Text(
-                _getRelativeDayText(widget.date),
-                style: TextStyle(
-                  color: MinimalColors.textPrimary(context),
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+              child: IconButton(
+                onPressed: () => Navigator.pop(context),
+                icon: const Icon(
+                  Icons.arrow_back_ios_new,
+                  color: Colors.white,
+                  size: 20,
                 ),
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
+                ),
+              ),
+            ),
+            // Title and subtitle
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Mi Calendario',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    _formatMonthYear(widget.date),
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.7),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Grid view button with rounded background and purple accent
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFF6c5ce7), // Purple background for the button
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                onPressed: _navigateToCalendar,
+                icon: const Icon(
+                  Icons.apps,
+                  color: Colors.white,
+                  size: 22,
+                ),
+                padding: const EdgeInsets.all(8),
+                constraints: const BoxConstraints(
+                  minWidth: 40,
+                  minHeight: 40,
+                ),
+                tooltip: 'Ver calendario',
               ),
             ),
           ],
@@ -236,7 +234,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
   // CONTENIDO PRINCIPAL
   // ============================================================================
 
-  Widget _buildDetailContent(dynamic entry, EnhancedGoalsProvider goalsProvider, DailyRoadmapProvider roadmapProvider, OptimizedMomentsProvider momentsProvider) {
+  Widget _buildDetailContent(dynamic entry, EnhancedGoalsProvider goalsProvider, DailyRoadmapProvider roadmapProvider, OptimizedMomentsProvider momentsProvider, ImageMomentsProvider imageProvider) {
     return FadeTransition(
       opacity: _contentController,
       child: SingleChildScrollView(
@@ -265,7 +263,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
             // Enhanced Roadmap Section
             _buildEnhancedDailyRoadmapSection(roadmapProvider),
             const SizedBox(height: 16),
-            _buildMomentsGallerySection(momentsProvider),
+            _buildMomentsGallerySection(momentsProvider, imageProvider),
             const SizedBox(height: 16),
             _buildDailyPhotosSection(),
             const SizedBox(height: 16),
@@ -1207,6 +1205,13 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
     return '$dayName, ${date.day} de $monthName de ${date.year}';
   }
 
+  String _formatMonthYear(DateTime date) {
+    final months = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+    final monthName = months[date.month - 1];
+    return '$monthName ${date.year}';
+  }
+
   String _getRelativeDayText(DateTime date) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -1383,7 +1388,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
   // ============================================================================
 
 
-  Widget _buildMomentsGallerySection(OptimizedMomentsProvider momentsProvider) {
+  Widget _buildMomentsGallerySection(OptimizedMomentsProvider momentsProvider, ImageMomentsProvider imageProvider) {
     final todayMoments = momentsProvider.moments
         .where((m) => _isSameDay(m.entryDate, widget.date))
         .toList();
@@ -1391,6 +1396,9 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
     if (todayMoments.isEmpty) {
       return const SizedBox.shrink();
     }
+
+    final positiveMoments = todayMoments.where((m) => m.type == 'positive').toList();
+    final negativeMoments = todayMoments.where((m) => m.type == 'negative').toList();
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -1442,31 +1450,93 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
           ),
           const SizedBox(height: 16),
           
-          SizedBox(
-            height: 100,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: todayMoments.length,
-              itemBuilder: (context, index) {
-                final moment = todayMoments[index];
-                return _buildMomentCard(moment);
-              },
+          // Momentos Positivos
+          if (positiveMoments.isNotEmpty) ...[
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Momentos Buenos (${positiveMoments.length})',
+                  style: TextStyle(
+                    color: const Color(0xFF10B981),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
-          ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 100,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: positiveMoments.length,
+                itemBuilder: (context, index) {
+                  final moment = positiveMoments[index];
+                  return _buildMomentCard(moment, imageProvider);
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+          
+          // Momentos Negativos
+          if (negativeMoments.isNotEmpty) ...[
+            Row(
+              children: [
+                Container(
+                  width: 4,
+                  height: 16,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Momentos Malos (${negativeMoments.length})',
+                  style: TextStyle(
+                    color: const Color(0xFFEF4444),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 100,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: negativeMoments.length,
+                itemBuilder: (context, index) {
+                  final moment = negativeMoments[index];
+                  return _buildMomentCard(moment, imageProvider);
+                },
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildMomentCard(dynamic moment) {
+  Widget _buildMomentCard(dynamic moment, ImageMomentsProvider imageProvider) {
     final color = moment.type == 'positive' 
         ? const Color(0xFF10B981) 
         : const Color(0xFFEF4444);
         
     return Container(
-      width: 120,
+      width: 140, // Increased width to accommodate images
       margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
@@ -1475,57 +1545,125 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Text(
-                moment.emoji,
-                style: const TextStyle(fontSize: 20),
-              ),
-              const Spacer(),
-              Text(
-                moment.timeStr,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Expanded(
-            child: Text(
-              moment.text,
-              style: TextStyle(
-                color: MinimalColors.textPrimary(context),
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+          // Image section (if available)
+          if (moment.id != null)
+            FutureBuilder<String?>(
+              future: imageProvider.getImageForMoment(moment.id is int ? moment.id : int.parse(moment.id.toString())),
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data != null) {
+                  return Container(
+                    height: 40,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(12),
+                        topRight: Radius.circular(12),
+                      ),
+                      image: DecorationImage(
+                        image: FileImage(File(snapshot.data!)),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(12),
+                          topRight: Radius.circular(12),
+                        ),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            color.withValues(alpha: 0.3),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
             ),
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              Container(
-                width: 4,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                ),
+          
+          // Content section
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        moment.emoji,
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                      const Spacer(),
+                      Text(
+                        moment.timeStr,
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Expanded(
+                    child: Text(
+                      moment.text,
+                      style: TextStyle(
+                        color: MinimalColors.textPrimary(context),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Container(
+                        width: 4,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: color,
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${moment.intensity}/10',
+                        style: TextStyle(
+                          color: color,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const Spacer(),
+                      // Image indicator if available
+                      if (moment.id != null)
+                        FutureBuilder<String?>(
+                          future: imageProvider.getImageForMoment(moment.id is int ? moment.id : int.parse(moment.id.toString())),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasData && snapshot.data != null) {
+                              return Icon(
+                                Icons.photo_camera,
+                                color: color,
+                                size: 12,
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                    ],
+                  ),
+                ],
               ),
-              const SizedBox(width: 4),
-              Text(
-                '${moment.intensity}/10',
-                style: TextStyle(
-                  color: color,
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
+            ),
           ),
         ],
       ),

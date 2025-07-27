@@ -18,6 +18,7 @@ import 'activities_screen.dart';
 
 // Componentes
 import 'components/minimal_colors.dart';
+import 'analytics_v3_screen.dart';
 import '../../widgets/voice_recording_widget.dart';
 import '../../widgets/progress_entry_dialog.dart';
 
@@ -414,7 +415,6 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                         ),
                       ),
                     ),
-                    _buildBottomActions(),
                   ],
                 ),
               ),
@@ -431,7 +431,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       child: Row(
         children: [
           GestureDetector(
@@ -472,24 +472,23 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   child: Text(
                     'Reflexión Diaria',
                     style: TextStyle(
-                      fontSize: 28,
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: MinimalColors.textPrimary(context),
                     ),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   'Paso ${_currentStep + 1} de $_totalSteps',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 14,
                     color: MinimalColors.textSecondary(context),
                   ),
                 ),
               ],
             ),
           ),
-          _buildSmartEmoji(),
         ],
       ),
     );
@@ -508,7 +507,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   Widget _buildReflectionStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1043,7 +1042,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   Widget _buildMoodStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           _buildStepCard(
@@ -1219,7 +1218,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   Widget _buildWellbeingStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           _buildStepCard(
@@ -1269,7 +1268,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     // final effectiveValue = isReversed ? (11 - value) : value;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -1421,7 +1420,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   Widget _buildMetricsStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           _buildStepCard(
@@ -1655,7 +1654,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   Widget _buildGoalsStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1685,7 +1684,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         
         if (activeGoals.isEmpty) {
           return Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: MinimalColors.backgroundCard(context),
               borderRadius: BorderRadius.circular(12),
@@ -2059,7 +2058,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   Widget _buildActivitiesStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2153,7 +2152,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         
         if (activities.isEmpty) {
           return Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
@@ -2470,7 +2469,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   Widget _buildInnerReflectionStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -2576,7 +2575,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
 
   Widget _buildFinalStep() {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         children: [
           _buildStepCard(
@@ -2588,12 +2587,70 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                 _buildWorthItQuestion(),
                 const SizedBox(height: 24),
                 _buildDaySummary(),
+                const SizedBox(height: 32),
+                _buildSaveButton(),
                 const SizedBox(height: 24),
                 _buildNavigationOptions(),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSaveButton() {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: _canContinue()
+            ? LinearGradient(colors: MinimalColors.accentGradient(context))
+            : null,
+        color: !_canContinue() 
+            ? MinimalColors.textMuted(context).withValues(alpha: 0.3)
+            : null,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: _canContinue()
+            ? [
+                BoxShadow(
+                  color: MinimalColors.gradientShadow(context, alpha: 0.2),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
+      ),
+      child: ElevatedButton(
+        onPressed: _canContinue() ? _saveReflection : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          foregroundColor: Colors.white,
+          shadowColor: Colors.transparent,
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.save_rounded,
+              size: 20,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Guardar Reflexión',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2621,7 +2678,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     gradient: _worthIt == true
                         ? LinearGradient(colors: MinimalColors.positiveGradient(context))
@@ -2665,7 +2722,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                 },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     gradient: _worthIt == false
                         ? LinearGradient(colors: MinimalColors.negativeGradient(context))
@@ -2710,7 +2767,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     final overallScore = (_moodScore + _energyLevel + (11 - _stressLevel)) / 3;
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(colors: _getMoodGradient(overallScore.round())),
         borderRadius: BorderRadius.circular(16),
@@ -2793,7 +2850,11 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           onTap: () {
             _saveReflection().then((success) {
               if (success && mounted) {
-                Navigator.pushReplacementNamed(context, '/analytics');
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AnalyticsV3Screen(),
+                  ),
+                );
               }
             });
           },
@@ -2878,7 +2939,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       ).animate(CurvedAnimation(parent: _cardController, curve: Curves.easeOutBack)),
       child: Container(
         width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 8),
+        margin: const EdgeInsets.only(bottom: 4),
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topLeft,
@@ -2909,7 +2970,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           ],
         ),
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
@@ -2921,7 +2982,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: MinimalColors.primaryGradient(context).map(
@@ -2937,19 +2998,19 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                 child: Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
                           colors: MinimalColors.primaryGradient(context),
                         ),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
                         icon,
-                        style: const TextStyle(fontSize: 28),
+                        style: const TextStyle(fontSize: 24),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2958,7 +3019,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                             title,
                             style: TextStyle(
                               color: MinimalColors.textPrimary(context),
-                              fontSize: 22,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 0.5,
                             ),
@@ -2968,7 +3029,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                             subtitle,
                             style: TextStyle(
                               color: MinimalColors.textSecondary(context),
-                              fontSize: 14,
+                              fontSize: 13,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -2990,7 +3051,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
               child,
             ],
           ),
@@ -2999,159 +3060,6 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     );
   }
 
-  // ============================================================================
-  // ACCIONES INFERIORES
-  // ============================================================================
-
-  Widget _buildBottomActions() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            MinimalColors.backgroundSecondary(context).withValues(alpha: 0.8),
-            MinimalColors.backgroundSecondary(context),
-          ],
-        ),
-        border: Border(
-          top: BorderSide(
-            color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
-            width: 1,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: MinimalColors.shadow(context),
-            blurRadius: 15,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          if (_currentStep > 0)
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.5),
-                    width: 2,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: MinimalColors.gradientShadow(context, alpha: 0.1),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: OutlinedButton(
-                  onPressed: _previousStep,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: MinimalColors.textPrimary(context),
-                    side: BorderSide.none,
-                    backgroundColor: MinimalColors.backgroundCard(context).withValues(alpha: 0.8),
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.arrow_back_ios,
-                        size: 16,
-                        color: MinimalColors.textPrimary(context),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Anterior',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: MinimalColors.textPrimary(context),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-          if (_currentStep > 0) const SizedBox(width: 16),
-
-          Expanded(
-            flex: _currentStep == 0 ? 1 : 2,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: _canContinue()
-                    ? LinearGradient(colors: MinimalColors.accentGradient(context))
-                    : null,
-                color: !_canContinue() 
-                    ? MinimalColors.textMuted(context).withValues(alpha: 0.3)
-                    : null,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: _canContinue()
-                    ? [
-                        BoxShadow(
-                          color: MinimalColors.gradientShadow(context, alpha: 0.2),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : null,
-              ),
-              child: ElevatedButton(
-                onPressed: _canContinue()
-                    ? (_currentStep == _totalSteps - 1 ? _saveReflection : _nextStep)
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.white,
-                  shadowColor: Colors.transparent,
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (_currentStep == _totalSteps - 1)
-                      const Icon(
-                        Icons.save_rounded,
-                        size: 20,
-                        color: Colors.white,
-                      )
-                    else
-                      const Icon(
-                        Icons.arrow_forward_ios,
-                        size: 16,
-                        color: Colors.white,
-                      ),
-                    const SizedBox(width: 8),
-                    Text(
-                      _currentStep == _totalSteps - 1 ? 'Guardar Reflexión' : 'Continuar',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   // ============================================================================
   // LÓGICA DE NEGOCIO
@@ -3527,19 +3435,6 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     );
   }
 
-  Widget _buildSmartEmoji() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const Text(
-        '🧠',
-        style: TextStyle(fontSize: 32),
-      ),
-    );
-  }
 
   Widget _buildProgressBar() {
     return Container(

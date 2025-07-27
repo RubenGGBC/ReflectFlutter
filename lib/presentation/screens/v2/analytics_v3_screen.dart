@@ -365,6 +365,11 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
+                  // Insufficient data warning if needed
+                  if (!provider.hasSufficientData)
+                    _buildInsufficientDataWarning(provider, themeProvider),
+                  if (!provider.hasSufficientData)
+                    const SizedBox(height: 20),
                   _buildWellnessScoreCard(provider, themeProvider),
                   const SizedBox(height: 20),
                   _buildQuickStatsRow(provider, themeProvider),
@@ -402,6 +407,9 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
   Widget _buildWellnessScoreCard(AnalyticsV3Provider provider, ThemeProvider themeProvider) {
     final wellness = provider.wellnessScore;
     if (wellness == null) return const SizedBox();
+
+    // Check if this specific metric has insufficient data
+    final hasInsufficientData = provider.hasInsufficientWellnessData;
 
     return SlideTransition(
       position: _slideAnimation,
@@ -446,19 +454,36 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Score de Bienestar',
-                        style: TextStyle(
-                          color: themeProvider.textPrimary,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            'Score de Bienestar',
+                            style: TextStyle(
+                              color: themeProvider.textPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          if (hasInsufficientData) ...[
+                            const SizedBox(width: 8),
+                            Icon(
+                              Icons.info_outline,
+                              size: 16,
+                              color: Colors.amber.shade600,
+                            ),
+                          ],
+                        ],
                       ),
                       Text(
                         provider.wellnessLevelDisplay,
                         style: TextStyle(
-                          color: themeProvider.textSecondary,
+                          color: hasInsufficientData 
+                            ? Colors.amber.shade700 
+                            : themeProvider.textSecondary,
                           fontSize: 14,
+                          fontWeight: hasInsufficientData 
+                            ? FontWeight.w500 
+                            : FontWeight.normal,
                         ),
                       ),
                     ],
@@ -1403,6 +1428,76 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
     );
   }
 
+  Widget _buildInsufficientDataWarning(AnalyticsV3Provider provider, ThemeProvider themeProvider) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.amber.withValues(alpha: 0.1),
+            Colors.orange.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.amber.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.info_outline,
+                color: Colors.amber.shade700,
+                size: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Datos Insuficientes para Análisis Completo',
+                  style: TextStyle(
+                    color: themeProvider.textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: themeProvider.surface.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              provider.motivationalMessage,
+              style: TextStyle(
+                color: themeProvider.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            provider.insufficientDataMessage,
+            style: TextStyle(
+              color: themeProvider.textSecondary,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyState(ThemeProvider themeProvider) {
     return Center(
       child: Container(
@@ -1424,14 +1519,39 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                 fontWeight: FontWeight.bold,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Registra tus datos diarios para ver análisis detallados de tu bienestar',
-              style: TextStyle(
-                color: themeProvider.textSecondary,
-                fontSize: 16,
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: themeProvider.surface.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: themeProvider.borderColor,
+                  width: 1,
+                ),
               ),
-              textAlign: TextAlign.center,
+              child: Column(
+                children: [
+                  Text(
+                    '🌱 ¡Excelente inicio! Cada día que registras datos mejora la precisión de tus insights.',
+                    style: TextStyle(
+                      color: themeProvider.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Registra tus datos diarios para ver análisis detallados de tu bienestar',
+                    style: TextStyle(
+                      color: themeProvider.textSecondary,
+                      fontSize: 14,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
             ),
           ],
         ),

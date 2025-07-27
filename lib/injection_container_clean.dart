@@ -202,6 +202,11 @@ Future<void> initCriticalServices() async {
     await notificationService.setupDefaultReminders();
     logger.i('✅ Servicio de notificaciones inicializado');
 
+    // Inicializar servicio de grabación de voz
+    final voiceService = sl<VoiceRecordingService>();
+    await voiceService.initialize();
+    logger.i('✅ Servicio de grabación de voz inicializado');
+
     // Inicializar otros servicios críticos aquí si es necesario
 
   } catch (e) {
@@ -223,6 +228,7 @@ bool areCleanServicesRegistered() {
     sl<ImagePickerService>();
     // AI service removed
     sl<NotificationService>();
+    sl<VoiceRecordingService>();
 
     // Verificar providers
     sl<OptimizedAuthProvider>();

@@ -28,6 +28,7 @@ import '../../widgets/hopecore_quotes_carousel.dart';
 // Componentes
 import 'components/minimal_colors.dart';
 import 'recommended_activities_screen.dart';
+import 'daily_review_screen_v2.dart';
 
 class HomeScreenV2 extends StatefulWidget {
   const HomeScreenV2({super.key});
@@ -50,6 +51,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
   late Animation<double> _pulseAnimation;
   late Animation<double> _shimmerAnimation;
   late Animation<double> _floatingAnimation;
+
+  // State for expandable moments widget
+  bool _isMomentsExpanded = false;
 
   @override
   void initState() {
@@ -663,6 +667,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       final score = dayData['score'] as double;
       final isToday = dayData['isToday'] as bool;
       final hasData = dayData['hasData'] as bool; // ✅ FIX: Use hasData flag
+      final date = dayData['date'] as DateTime;
 
       // ✅ FIX: Altura mínima y máxima para mejor visualización
       double height;
@@ -676,53 +681,56 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       return AnimatedBuilder(
         animation: _fadeController,
         builder: (context, child) {
-          return AnimatedContainer(
-            duration: Duration(milliseconds: 500 + (index * 100)),
-            curve: Curves.elasticOut,
-            width: 24,
-            height: height * _fadeAnimation.value,
-            decoration: BoxDecoration(
-              gradient: hasData
-                  ? LinearGradient(
-                colors: isToday
-                    ? [const Color(0xFF10B981), const Color(0xFF34D399)] // Verde para hoy
-                    : MinimalColors.accentGradient(context),
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
+          return GestureDetector(
+            onTap: () => _navigateToDailyReview(date),
+            child: AnimatedContainer(
+              duration: Duration(milliseconds: 500 + (index * 100)),
+              curve: Curves.elasticOut,
+              width: 24,
+              height: height * _fadeAnimation.value,
+              decoration: BoxDecoration(
+                gradient: hasData
+                    ? LinearGradient(
+                  colors: isToday
+                      ? [const Color(0xFF10B981), const Color(0xFF34D399)] // Verde para hoy
+                      : MinimalColors.accentGradient(context),
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                )
+                    : LinearGradient(
+                  colors: [
+                    MinimalColors.textMuted(context).withValues(alpha: 0.3),
+                    MinimalColors.textMuted(context).withValues(alpha: 0.1),
+                  ],
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: hasData
+                    ? [
+                  BoxShadow(
+                    color: isToday
+                        ? const Color(0xFF10B981).withValues(alpha: 0.4)
+                        : MinimalColors.accentGradient(context)[1].withValues(alpha: 0.4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+                    : [],
+              ),
+              child: hasData && height > 30 // ✅ FIX: Solo mostrar texto si hay espacio
+                  ? Center(
+                child: Text(
+                  score.toStringAsFixed(1),
+                  style: TextStyle(
+                    fontSize: 8,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
               )
-                  : LinearGradient(
-                colors: [
-                  MinimalColors.textMuted(context).withValues(alpha: 0.3),
-                  MinimalColors.textMuted(context).withValues(alpha: 0.1),
-                ],
-                begin: Alignment.bottomCenter,
-                end: Alignment.topCenter,
-              ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: hasData
-                  ? [
-                BoxShadow(
-                  color: isToday
-                      ? const Color(0xFF10B981).withValues(alpha: 0.4)
-                      : MinimalColors.accentGradient(context)[1].withValues(alpha: 0.4),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ]
-                  : [],
+                  : Container(), // Vacío para días sin datos o barras muy pequeñas
             ),
-            child: hasData && height > 30 // ✅ FIX: Solo mostrar texto si hay espacio
-                ? Center(
-              child: Text(
-                score.toStringAsFixed(1),
-                style: TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            )
-                : Container(), // Vacío para días sin datos o barras muy pequeñas
           );
         },
       );
@@ -1261,56 +1269,342 @@ class _HomeScreenV2State extends State<HomeScreenV2>
       builder: (context, child) {
         return Transform.scale(
           scale: _fadeAnimation.value,
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: MinimalColors.backgroundCard(context),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
-                width: 1,
+          child: Column(
+            children: [
+              // Tappable counter widget
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _isMomentsExpanded = !_isMomentsExpanded;
+                  });
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: MinimalColors.backgroundCard(context),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(-5, 5),
+                      ),
+                      BoxShadow(
+                        color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
+                        blurRadius: 20,
+                        offset: const Offset(5, 5),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _buildMomentCounter(
+                        icon: Icons.sentiment_very_satisfied,
+                        count: positiveCount,
+                        label: 'Positivos',
+                        gradient: [const Color(0xFF10B981), const Color(0xFF34D399)],
+                      ),
+                      Container(
+                        width: 1,
+                        height: 60,
+                        color: MinimalColors.textMuted(context).withValues(alpha: 0.3),
+                      ),
+                      _buildMomentCounter(
+                        icon: Icons.sentiment_dissatisfied,
+                        count: negativeCount,
+                        label: 'Negativos',
+                        gradient: [const Color(0xFFb91c1c), const Color(0xFFef4444)],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              // 🎨 SOMBRA DEGRADADA AÑADIDA
-              boxShadow: [
-                BoxShadow(
-                  color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(-5, 5),
-                ),
-                BoxShadow(
-                  color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(5, 5),
-                ),
-              ],
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildMomentCounter(
-                  icon: Icons.sentiment_very_satisfied,
-                  count: positiveCount,
-                  label: 'Positivos',
-                  gradient: [const Color(0xFF10B981), const Color(0xFF34D399)],
-                ),
-                Container(
-                  width: 1,
-                  height: 60,
-                  color: MinimalColors.textMuted(context).withValues(alpha: 0.3),
-                ),
-                _buildMomentCounter(
-                  icon: Icons.sentiment_dissatisfied,
-                  count: negativeCount,
-                  label: 'Negativos',
-                  // 🔥 COLOR DE NEGATIVOS CAMBIADO A ROJO
-                  gradient: [const Color(0xFFb91c1c), const Color(0xFFef4444)],
-                ),
-              ],
-            ),
+              // Expandable moments detail widget
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                height: _isMomentsExpanded ? null : 0,
+                child: _isMomentsExpanded 
+                  ? _buildExpandedMomentsWidget(momentsProvider)
+                  : const SizedBox.shrink(),
+              ),
+            ],
           ),
         );
       },
     );
+  }
+
+  Widget _buildExpandedMomentsWidget(OptimizedMomentsProvider momentsProvider) {
+    final todayMoments = momentsProvider.todayMoments;
+    final positiveMoments = todayMoments.where((m) => m.type == 'positive').toList();
+    final negativeMoments = todayMoments.where((m) => m.type == 'negative').toList();
+
+    return AnimatedBuilder(
+      animation: _slideAnimation,
+      builder: (context, child) {
+        return Container(
+          margin: const EdgeInsets.only(top: 16),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: MinimalColors.backgroundCard(context),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
+              width: 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.1),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Icon(
+                    Icons.auto_awesome,
+                    color: MinimalColors.primaryGradient(context)[0],
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Momentos de Hoy',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: MinimalColors.textPrimary(context),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Two-column layout for good/bad moments
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Left column - Positive moments
+                  Expanded(
+                    child: _buildMomentsColumn(
+                      title: 'Momentos Buenos',
+                      moments: positiveMoments,
+                      gradient: [const Color(0xFF10B981), const Color(0xFF34D399)],
+                      icon: Icons.sentiment_very_satisfied,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  // Right column - Negative moments
+                  Expanded(
+                    child: _buildMomentsColumn(
+                      title: 'Momentos Malos',
+                      moments: negativeMoments,
+                      gradient: [const Color(0xFFb91c1c), const Color(0xFFef4444)],
+                      icon: Icons.sentiment_dissatisfied,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMomentsColumn({
+    required String title,
+    required List<OptimizedInteractiveMomentModel> moments,
+    required List<Color> gradient,
+    required IconData icon,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Column header
+        Row(
+          children: [
+            Container(
+              width: 20,
+              height: 20,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: gradient),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 12,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: MinimalColors.textPrimary(context),
+                ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: gradient),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '${moments.length}',
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        // Moments list
+        if (moments.isEmpty)
+          _buildEmptyMomentsState(gradient)
+        else
+          ...moments.map((moment) => _buildMomentCard(moment, gradient)),
+      ],
+    );
+  }
+
+  Widget _buildMomentCard(OptimizedInteractiveMomentModel moment, List<Color> gradient) {
+    return Consumer<ImageMomentsProvider>(
+      builder: (context, imageProvider, child) {
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: MinimalColors.backgroundSecondary(context),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: gradient[0].withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    moment.emoji ?? '📝',
+                    style: const TextStyle(fontSize: 20),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      moment.text,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: MinimalColors.textPrimary(context),
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              // Show image if available
+              FutureBuilder<String?>(
+                future: imageProvider.getImageForMoment(moment.id ?? 0),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData && snapshot.data != null) {
+                    return Container(
+                      margin: const EdgeInsets.only(top: 8),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          File(snapshot.data!),
+                          width: double.infinity,
+                          height: 80,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const SizedBox.shrink();
+                          },
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+              // Time stamp
+              const SizedBox(height: 4),
+              Text(
+                _formatMomentTime(moment.createdAt),
+                style: TextStyle(
+                  fontSize: 11,
+                  color: MinimalColors.textTertiary(context),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyMomentsState(List<Color> gradient) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: gradient[0].withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: gradient[0].withValues(alpha: 0.1),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            Icons.sentiment_neutral,
+            color: gradient[0].withValues(alpha: 0.5),
+            size: 24,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Sin momentos aún',
+            style: TextStyle(
+              fontSize: 12,
+              color: MinimalColors.textTertiary(context),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatMomentTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 60) {
+      return 'Hace ${difference.inMinutes}m';
+    } else if (difference.inHours < 24) {
+      return 'Hace ${difference.inHours}h';
+    } else {
+      return '${dateTime.day}/${dateTime.month}';
+    }
   }
 
   Widget _buildMomentCounter({
@@ -1934,6 +2228,18 @@ class _HomeScreenV2State extends State<HomeScreenV2>
             )).toList(),
           ],
         ),
+      ),
+    );
+  }
+
+  // ============================================================================
+  // NAVIGATION TO DAILY REVIEW
+  // ============================================================================
+  void _navigateToDailyReview(DateTime selectedDate) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DailyReviewScreenV2(),
       ),
     );
   }

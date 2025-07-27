@@ -37,7 +37,7 @@ class AnalyticsV3Provider extends ChangeNotifier {
   String _selectedMetric = 'wellness'; // wellness, sleep, stress, goals, correlations, temporal
   
   // Chart data cache
-  Map<String, List<Map<String, dynamic>>> _chartDataCache = {};
+  final Map<String, List<Map<String, dynamic>>> _chartDataCache = {};
   
   AnalyticsV3Provider(OptimizedDatabaseService databaseService) 
       : _analyticsExtension = AnalyticsV3Extension(databaseService);
@@ -660,6 +660,7 @@ class AnalyticsV3Provider extends ChangeNotifier {
       'good': 'Bueno',
       'average': 'Promedio',
       'poor': 'Necesita atención',
+      'insufficient_data': 'Datos insuficientes',
     };
     
     return translations[_wellnessScore!.wellnessLevel] ?? _wellnessScore!.wellnessLevel;
@@ -674,6 +675,8 @@ class AnalyticsV3Provider extends ChangeNotifier {
       'improving': 'Mejorando',
       'needs_attention': 'Necesita atención',
       'needs_data': 'Faltan datos',
+      'insufficient_data': 'Datos insuficientes',
+      'needs_more_data': 'Necesita más datos',
     };
     
     return translations[_sleepPattern!.sleepPattern] ?? _sleepPattern!.sleepPattern;
@@ -686,6 +689,7 @@ class AnalyticsV3Provider extends ChangeNotifier {
       'improving': 'Mejorando',
       'worsening': 'Empeorando',
       'stable': 'Estable',
+      'insufficient_data': 'Datos insuficientes',
     };
     
     return translations[_stressManagement!.stressTrend] ?? _stressManagement!.stressTrend;
@@ -698,6 +702,7 @@ class AnalyticsV3Provider extends ChangeNotifier {
       'improving': 'Mejorando',
       'declining': 'Declinando',
       'stable': 'Estable',
+      'insufficient_data': 'Datos insuficientes',
     };
     
     return translations[_goalAnalytics!.performanceTrend] ?? _goalAnalytics!.performanceTrend;
@@ -748,4 +753,63 @@ class AnalyticsV3Provider extends ChangeNotifier {
     };
     return labels[metric] ?? metric;
   }
+
+  // ============================================================================
+  // INSUFFICIENT DATA HELPERS
+  // ============================================================================
+  
+  /// Check if there's sufficient data for overall analytics
+  bool get hasSufficientData {
+    if (_wellnessScore?.wellnessLevel == 'insufficient_data') return false;
+    if (_sleepPattern?.sleepPattern == 'insufficient_data') return false;
+    if (_stressManagement?.stressTrend == 'insufficient_data') return false;
+    if (_goalAnalytics?.performanceTrend == 'insufficient_data') return false;
+    return hasData;
+  }
+  
+  /// Get insufficient data message based on current analytics state
+  String get insufficientDataMessage {
+    final messages = <String>[];
+    
+    if (_wellnessScore?.wellnessLevel == 'insufficient_data') {
+      messages.add('• Registra tu estado de ánimo y energía durante al menos 3 días');
+    }
+    
+    if (_sleepPattern?.sleepPattern == 'insufficient_data') {
+      messages.add('• Incluye tus horas de sueño durante al menos 5 días');
+    }
+    
+    if (_stressManagement?.stressTrend == 'insufficient_data') {
+      messages.add('• Registra tus niveles de estrés durante al menos 7 días');
+    }
+    
+    if (_goalAnalytics?.performanceTrend == 'insufficient_data') {
+      messages.add('• Crea al menos 3 metas para analizar tu progreso');
+    }
+    
+    if (messages.isEmpty) {
+      return 'Continúa usando la app regularmente para obtener insights más detallados.';
+    }
+    
+    return 'Para obtener análisis más precisos:\n\n${messages.join('\n')}';
+  }
+  
+  /// Get motivational message for continued app usage
+  String get motivationalMessage {
+    final daysSinceStart = _selectedPeriodDays;
+    
+    if (daysSinceStart < 7) {
+      return '🌱 ¡Excelente inicio! Cada día que registras datos mejora la precisión de tus insights.';
+    } else if (daysSinceStart < 30) {
+      return '💪 ¡Vas muy bien! Tus datos están generando insights cada vez más útiles.';
+    } else {
+      return '🎆 ¡Increíble dedicación! Tus insights son muy precisos gracias a tu consistencia.';
+    }
+  }
+  
+  /// Check if specific analytics have insufficient data
+  bool get hasInsufficientWellnessData => _wellnessScore?.wellnessLevel == 'insufficient_data';
+  bool get hasInsufficientSleepData => _sleepPattern?.sleepPattern == 'insufficient_data';
+  bool get hasInsufficientStressData => _stressManagement?.stressTrend == 'insufficient_data';
+  bool get hasInsufficientGoalData => _goalAnalytics?.performanceTrend == 'insufficient_data';
 }

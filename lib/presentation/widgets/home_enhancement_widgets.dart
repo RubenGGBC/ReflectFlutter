@@ -2,7 +2,6 @@
 // home_enhancement_widgets.dart - HIGH PRIORITY ENHANCEMENT WIDGETS
 // ============================================================================
 
-import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -12,41 +11,13 @@ import '../providers/challenges_provider.dart';
 import '../providers/streak_provider.dart';
 import '../providers/optimized_providers.dart';
 
-// Colors (matching home screen theme)
-class EnhancementColors {
-  static const Color backgroundPrimary = Color(0xFF000000);
-  static const Color backgroundCard = Color(0xFF0F0F0F);
-  static const Color backgroundSecondary = Color(0xFF1A1A1A);
-
-  static const List<Color> primaryGradient = [
-    Color(0xFF1e3a8a), // Azul oscuro
-    Color(0xFF581c87), // Morado oscuro
-  ];
-
-  static const List<Color> accentGradient = [
-    Color(0xFF3b82f6), // Azul
-    Color(0xFF8b5cf6), // Morado
-  ];
-
-  static const List<Color> lightGradient = [
-    Color(0xFF60a5fa), // Azul claro
-    Color(0xFFa855f7), // Morado claro
-  ];
-
-  static const Color textPrimary = Color(0xFFFFFFFF);
-  static const Color textSecondary = Color(0xFF9CA3AF);
-  static const Color textTertiary = Color(0xFF6B7280);
-
-  // Enhancement specific colors
-  static const Color positive = Color(0xFF10b981);
-  static const Color negative = Color(0xFFef4444);
-  static const Color neutral = Color(0xFFf59e0b);
-  static const Color empty = Color(0xFF374151);
-}
+// Import theme-aware colors
+import '../screens/v2/components/minimal_colors.dart';
 
 // ============================================================================
 // 1. PERSONALIZED CHALLENGES WIDGET
 // ============================================================================
+
 
 class PersonalizedChallengesWidget extends StatefulWidget {
   final AnimationController animationController;
@@ -107,20 +78,20 @@ class _PersonalizedChallengesWidgetState extends State<PersonalizedChallengesWid
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: EnhancementColors.backgroundCard,
+                    color: MinimalColors.backgroundCard(context),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: EnhancementColors.primaryGradient[0].withOpacity(0.3),
+                      color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                       width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: EnhancementColors.primaryGradient[0].withOpacity(0.3),
+                        color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(-5, 5),
                       ),
                       BoxShadow(
-                        color: EnhancementColors.primaryGradient[1].withOpacity(0.3),
+                        color: MinimalColors.coloredShadow(context, MinimalColors.primaryGradient(context)[1], alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(5, 5),
                       ),
@@ -134,39 +105,39 @@ class _PersonalizedChallengesWidgetState extends State<PersonalizedChallengesWid
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: EnhancementColors.accentGradient,
+                              gradient: LinearGradient(
+                                colors: MinimalColors.accentGradient(context),
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.emoji_events,
                               color: Colors.white,
                               size: 20,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          const Expanded(
+                          SizedBox(width: 12),
+                          Expanded(
                             child: Text(
                               'Desafíos Personales',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: EnhancementColors.textPrimary,
+                                color: MinimalColors.textPrimary(context),
                               ),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: EnhancementColors.lightGradient,
+                              gradient: LinearGradient(
+                                colors: MinimalColors.lightGradient(context),
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               '${challengesProvider.completedCount}/${challengesProvider.totalChallenges}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
@@ -180,7 +151,7 @@ class _PersonalizedChallengesWidgetState extends State<PersonalizedChallengesWid
                         final index = entry.key;
                         final challenge = entry.value;
                         return _buildChallengeCard(challenge, index);
-                      }).toList(),
+                      }),
                     ],
                   ),
                 ),
@@ -200,10 +171,10 @@ class _PersonalizedChallengesWidgetState extends State<PersonalizedChallengesWid
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: EnhancementColors.backgroundSecondary,
+            color: MinimalColors.backgroundSecondary(context),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: EnhancementColors.primaryGradient[0].withOpacity(0.2),
+              color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
               width: 1,
             ),
           ),
@@ -214,7 +185,7 @@ class _PersonalizedChallengesWidgetState extends State<PersonalizedChallengesWid
                 children: [
                   Text(
                     challenge.emoji,
-                    style: const TextStyle(fontSize: 24),
+                    style: TextStyle(fontSize: 24),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -223,18 +194,18 @@ class _PersonalizedChallengesWidgetState extends State<PersonalizedChallengesWid
                       children: [
                         Text(
                           challenge.title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: EnhancementColors.textPrimary,
+                            color: MinimalColors.textPrimary(context),
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           challenge.description,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: EnhancementColors.textSecondary,
+                            color: MinimalColors.textSecondary(context),
                           ),
                         ),
                       ],
@@ -242,10 +213,10 @@ class _PersonalizedChallengesWidgetState extends State<PersonalizedChallengesWid
                   ),
                   Text(
                     '${challenge.current}/${challenge.target}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: EnhancementColors.textSecondary,
+                      color: MinimalColors.textSecondary(context),
                     ),
                   ),
                 ],
@@ -257,7 +228,7 @@ class _PersonalizedChallengesWidgetState extends State<PersonalizedChallengesWid
                 child: Container(
                   height: 6,
                   width: double.infinity,
-                  color: EnhancementColors.backgroundPrimary,
+                  color: MinimalColors.backgroundPrimary(context),
                   child: FractionallySizedBox(
                     alignment: Alignment.centerLeft,
                     widthFactor: _progressAnimation.value * challenge.progress,
@@ -275,9 +246,9 @@ class _PersonalizedChallengesWidgetState extends State<PersonalizedChallengesWid
               const SizedBox(height: 8),
               Text(
                 challenge.reward,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
-                  color: EnhancementColors.textTertiary,
+                  color: MinimalColors.textTertiary(context),
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -299,7 +270,7 @@ class _PersonalizedChallengesWidgetState extends State<PersonalizedChallengesWid
       case 'wellbeing':
         return [const Color(0xFF3b82f6), const Color(0xFF2563eb)];
       default:
-        return EnhancementColors.accentGradient;
+        return MinimalColors.accentGradientStatic;
     }
   }
 
@@ -307,10 +278,10 @@ class _PersonalizedChallengesWidgetState extends State<PersonalizedChallengesWid
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: EnhancementColors.backgroundCard.withOpacity(0.7),
+        color: MinimalColors.backgroundCard(context).withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: EnhancementColors.primaryGradient[0].withOpacity(0.2),
+          color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -321,21 +292,21 @@ class _PersonalizedChallengesWidgetState extends State<PersonalizedChallengesWid
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: EnhancementColors.primaryGradient.map((c) => c.withOpacity(0.3)).toList(),
+                colors: MinimalColors.primaryGradient(context).map((c) => c.withValues(alpha: 0.3)).toList(),
               ),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.emoji_events_outlined,
-              color: EnhancementColors.textSecondary,
+              color: MinimalColors.textSecondary(context),
               size: 32,
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Desafíos llegando pronto',
             style: TextStyle(
               fontSize: 14,
-              color: EnhancementColors.textSecondary,
+              color: MinimalColors.textSecondary(context),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -412,20 +383,20 @@ class _MoodCalendarHeatmapWidgetState extends State<MoodCalendarHeatmapWidget>
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: EnhancementColors.backgroundCard,
+                    color: MinimalColors.backgroundCard(context),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: EnhancementColors.primaryGradient[0].withOpacity(0.3),
+                      color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                       width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: EnhancementColors.primaryGradient[0].withOpacity(0.3),
+                        color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(-5, 5),
                       ),
                       BoxShadow(
-                        color: EnhancementColors.primaryGradient[1].withOpacity(0.3),
+                        color: MinimalColors.coloredShadow(context, MinimalColors.primaryGradient(context)[1], alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(5, 5),
                       ),
@@ -439,33 +410,33 @@ class _MoodCalendarHeatmapWidgetState extends State<MoodCalendarHeatmapWidget>
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: EnhancementColors.accentGradient,
+                              gradient: LinearGradient(
+                                colors: MinimalColors.accentGradient(context),
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.calendar_view_month,
                               color: Colors.white,
                               size: 20,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          const Expanded(
+                          SizedBox(width: 12),
+                          Expanded(
                             child: Text(
                               'Mapa de Bienestar',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: EnhancementColors.textPrimary,
+                                color: MinimalColors.textPrimary(context),
                               ),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: EnhancementColors.lightGradient,
+                              gradient: LinearGradient(
+                                colors: MinimalColors.lightGradient(context),
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -550,8 +521,8 @@ class _MoodCalendarHeatmapWidgetState extends State<MoodCalendarHeatmapWidget>
                 fontSize: 12,
                 fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                 color: isToday
-                    ? EnhancementColors.accentGradient[0]
-                    : EnhancementColors.textSecondary,
+                    ? MinimalColors.accentGradient(context)[0]
+                    : MinimalColors.textSecondary(context),
               ),
             ),
           );
@@ -568,16 +539,16 @@ class _MoodCalendarHeatmapWidgetState extends State<MoodCalendarHeatmapWidget>
     Color cellColor;
     switch (type) {
       case 'positive':
-        cellColor = EnhancementColors.positive.withOpacity(0.3 + (intensity * 0.7));
+        cellColor = MinimalColors.positiveGradient(context)[0].withValues(alpha: 0.3 + (intensity * 0.7));
         break;
       case 'negative':
-        cellColor = EnhancementColors.negative.withOpacity(0.3 + (intensity * 0.7));
+        cellColor = MinimalColors.negativeGradient(context)[0].withValues(alpha: 0.3 + (intensity * 0.7));
         break;
       case 'neutral':
-        cellColor = EnhancementColors.neutral.withOpacity(0.3 + (intensity * 0.7));
+        cellColor = MinimalColors.neutralGradient(context)[0].withValues(alpha: 0.3 + (intensity * 0.7));
         break;
       default:
-        cellColor = EnhancementColors.empty.withOpacity(0.3);
+        cellColor = MinimalColors.textMuted(context).withValues(alpha: 0.3);
     }
 
     return Container(
@@ -601,11 +572,11 @@ class _MoodCalendarHeatmapWidgetState extends State<MoodCalendarHeatmapWidget>
   Widget _buildHeatmapLegend() {
     return Row(
       children: [
-        const Text(
+        Text(
           'Menos',
           style: TextStyle(
             fontSize: 12,
-            color: EnhancementColors.textTertiary,
+            color: MinimalColors.textTertiary(context),
           ),
         ),
         const SizedBox(width: 8),
@@ -616,17 +587,17 @@ class _MoodCalendarHeatmapWidgetState extends State<MoodCalendarHeatmapWidget>
             height: 12,
             margin: const EdgeInsets.only(right: 4),
             decoration: BoxDecoration(
-              color: EnhancementColors.positive.withOpacity(opacity),
+              color: MinimalColors.positiveGradient(context)[0].withValues(alpha: opacity),
               borderRadius: BorderRadius.circular(2),
             ),
           );
         }),
         const SizedBox(width: 8),
-        const Text(
+        Text(
           'Más',
           style: TextStyle(
             fontSize: 12,
-            color: EnhancementColors.textTertiary,
+            color: MinimalColors.textTertiary(context),
           ),
         ),
         const Spacer(),
@@ -635,15 +606,15 @@ class _MoodCalendarHeatmapWidgetState extends State<MoodCalendarHeatmapWidget>
           height: 12,
           margin: const EdgeInsets.only(right: 4),
           decoration: BoxDecoration(
-            color: EnhancementColors.positive.withOpacity(0.8),
+            color: MinimalColors.positiveGradient(context)[0].withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        const Text(
+        Text(
           'Positivo',
           style: TextStyle(
             fontSize: 10,
-            color: EnhancementColors.textTertiary,
+            color: MinimalColors.textTertiary(context),
           ),
         ),
         const SizedBox(width: 8),
@@ -652,15 +623,15 @@ class _MoodCalendarHeatmapWidgetState extends State<MoodCalendarHeatmapWidget>
           height: 12,
           margin: const EdgeInsets.only(right: 4),
           decoration: BoxDecoration(
-            color: EnhancementColors.negative.withOpacity(0.8),
+            color: MinimalColors.negativeGradient(context)[0].withValues(alpha: 0.8),
             borderRadius: BorderRadius.circular(2),
           ),
         ),
-        const Text(
+        Text(
           'Negativo',
           style: TextStyle(
             fontSize: 10,
-            color: EnhancementColors.textTertiary,
+            color: MinimalColors.textTertiary(context),
           ),
         ),
       ],
@@ -731,20 +702,20 @@ class _StreakTrackerWidgetState extends State<StreakTrackerWidget>
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: EnhancementColors.backgroundCard,
+                    color: MinimalColors.backgroundCard(context),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: EnhancementColors.primaryGradient[0].withOpacity(0.3),
+                      color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                       width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: EnhancementColors.primaryGradient[0].withOpacity(0.3),
+                        color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(-5, 5),
                       ),
                       BoxShadow(
-                        color: EnhancementColors.primaryGradient[1].withOpacity(0.3),
+                        color: MinimalColors.coloredShadow(context, MinimalColors.primaryGradient(context)[1], alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(5, 5),
                       ),
@@ -758,39 +729,39 @@ class _StreakTrackerWidgetState extends State<StreakTrackerWidget>
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
+                              gradient: LinearGradient(
                                 colors: [Color(0xFFf97316), Color(0xFFea580c)],
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.local_fire_department,
                               color: Colors.white,
                               size: 20,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          const Expanded(
+                          SizedBox(width: 12),
+                          Expanded(
                             child: Text(
                               'Racha de Constancia',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: EnhancementColors.textPrimary,
+                                color: MinimalColors.textPrimary(context),
                               ),
                             ),
                           ),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
+                              gradient: LinearGradient(
                                 colors: [Color(0xFFf97316), Color(0xFFea580c)],
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               streakProvider.streakLevel,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.white,
@@ -816,21 +787,21 @@ class _StreakTrackerWidgetState extends State<StreakTrackerWidget>
                                     gradient: RadialGradient(
                                       colors: streakData.isActive 
                                         ? [
-                                            const Color(0xFFfbbf24).withOpacity(0.8),
-                                            const Color(0xFFf97316).withOpacity(0.6),
-                                            const Color(0xFFea580c).withOpacity(0.4),
+                                            const Color(0xFFfbbf24).withValues(alpha: 0.8),
+                                            const Color(0xFFf97316).withValues(alpha: 0.6),
+                                            const Color(0xFFea580c).withValues(alpha: 0.4),
                                           ]
                                         : [
-                                            EnhancementColors.textTertiary.withOpacity(0.3),
-                                            EnhancementColors.textTertiary.withOpacity(0.2),
-                                            EnhancementColors.textTertiary.withOpacity(0.1),
+                                            MinimalColors.textTertiary(context).withValues(alpha: 0.3),
+                                            MinimalColors.textTertiary(context).withValues(alpha: 0.2),
+                                            MinimalColors.textTertiary(context).withValues(alpha: 0.1),
                                           ],
                                     ),
                                   ),
                                   child: Center(
                                     child: Text(
                                       streakData.isActive ? '🔥' : '💤',
-                                      style: const TextStyle(fontSize: 32),
+                                      style: TextStyle(fontSize: 32),
                                     ),
                                   ),
                                 ),
@@ -846,35 +817,35 @@ class _StreakTrackerWidgetState extends State<StreakTrackerWidget>
                                   children: [
                                     Text(
                                       '${streakData.currentStreak}',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontSize: 32,
                                         fontWeight: FontWeight.bold,
-                                        color: EnhancementColors.textPrimary,
+                                        color: MinimalColors.textPrimary(context),
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
-                                    const Text(
+                                    SizedBox(width: 8),
+                                    Text(
                                       'días',
                                       style: TextStyle(
                                         fontSize: 16,
-                                        color: EnhancementColors.textSecondary,
+                                        color: MinimalColors.textSecondary(context),
                                       ),
                                     ),
                                   ],
                                 ),
-                                const Text(
+                                Text(
                                   'Racha actual',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: EnhancementColors.textSecondary,
+                                    color: MinimalColors.textSecondary(context),
                                   ),
                                 ),
-                                const SizedBox(height: 8),
+                                SizedBox(height: 8),
                                 Text(
                                   'Récord: ${streakData.longestStreak} días',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12,
-                                    color: EnhancementColors.textTertiary,
+                                    color: MinimalColors.textTertiary(context),
                                   ),
                                 ),
                               ],
@@ -904,10 +875,10 @@ class _StreakTrackerWidgetState extends State<StreakTrackerWidget>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: EnhancementColors.backgroundSecondary,
+        color: MinimalColors.backgroundSecondary(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: EnhancementColors.primaryGradient[0].withOpacity(0.2),
+          color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -918,24 +889,24 @@ class _StreakTrackerWidgetState extends State<StreakTrackerWidget>
             children: [
               Text(
                 milestone.emoji,
-                style: const TextStyle(fontSize: 20),
+                style: TextStyle(fontSize: 20),
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: 8),
               Expanded(
                 child: Text(
                   'Próximo: ${milestone.title}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: EnhancementColors.textPrimary,
+                    color: MinimalColors.textPrimary(context),
                   ),
                 ),
               ),
               Text(
                 '$daysLeft días',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: EnhancementColors.textSecondary,
+                  color: MinimalColors.textSecondary(context),
                 ),
               ),
             ],
@@ -945,7 +916,7 @@ class _StreakTrackerWidgetState extends State<StreakTrackerWidget>
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: streakData.progressToNext,
-              backgroundColor: EnhancementColors.backgroundPrimary,
+              backgroundColor: MinimalColors.backgroundPrimary(context),
               valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFf97316)),
               minHeight: 4,
             ),
@@ -953,9 +924,9 @@ class _StreakTrackerWidgetState extends State<StreakTrackerWidget>
           const SizedBox(height: 4),
           Text(
             milestone.description,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 11,
-              color: EnhancementColors.textTertiary,
+              color: MinimalColors.textTertiary(context),
               fontStyle: FontStyle.italic,
             ),
           ),
@@ -968,10 +939,10 @@ class _StreakTrackerWidgetState extends State<StreakTrackerWidget>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: EnhancementColors.backgroundCard.withOpacity(0.7),
+        color: MinimalColors.backgroundCard(context).withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: EnhancementColors.primaryGradient[0].withOpacity(0.2),
+          color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -1047,20 +1018,20 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
                 child: Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: EnhancementColors.backgroundCard,
+                    color: MinimalColors.backgroundCard(context),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: EnhancementColors.primaryGradient[0].withOpacity(0.3),
+                      color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                       width: 1,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: EnhancementColors.primaryGradient[0].withOpacity(0.3),
+                        color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(-5, 5),
                       ),
                       BoxShadow(
-                        color: EnhancementColors.primaryGradient[1].withOpacity(0.3),
+                        color: MinimalColors.coloredShadow(context, MinimalColors.primaryGradient(context)[1], alpha: 0.3),
                         blurRadius: 20,
                         offset: const Offset(5, 5),
                       ),
@@ -1074,25 +1045,25 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: EnhancementColors.accentGradient,
+                              gradient: LinearGradient(
+                                colors: MinimalColors.accentGradient(context),
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.psychology,
                               color: Colors.white,
                               size: 20,
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          const Expanded(
+                          SizedBox(width: 12),
+                          Expanded(
                             child: Text(
                               'Predicciones IA',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: EnhancementColors.textPrimary,
+                                color: MinimalColors.textPrimary(context),
                               ),
                             ),
                           ),
@@ -1103,8 +1074,8 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
                                   gradient: LinearGradient(
-                                    colors: EnhancementColors.lightGradient.map(
-                                      (c) => c.withOpacity(0.7 + (_insightAnimation.value * 0.3))
+                                    colors: MinimalColors.lightGradient(context).map(
+                                      (c) => c.withValues(alpha: 0.7 + (_insightAnimation.value * 0.3))
                                     ).toList(),
                                   ),
                                   borderRadius: BorderRadius.circular(12),
@@ -1115,7 +1086,7 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
                                     Icon(
                                       Icons.auto_awesome,
                                       size: 12,
-                                      color: Colors.white.withOpacity(0.8 + (_insightAnimation.value * 0.2)),
+                                      color: Colors.white.withValues(alpha: 0.8 + (_insightAnimation.value * 0.2)),
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
@@ -1123,7 +1094,7 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
                                       style: TextStyle(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w600,
-                                        color: Colors.white.withOpacity(0.8 + (_insightAnimation.value * 0.2)),
+                                        color: Colors.white.withValues(alpha: 0.8 + (_insightAnimation.value * 0.2)),
                                       ),
                                     ),
                                   ],
@@ -1161,27 +1132,27 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
     switch (trend) {
       case 'improving':
         trendIcon = Icons.trending_up;
-        trendColor = EnhancementColors.positive;
+        trendColor = MinimalColors.positiveGradient(context)[0];
         trendText = 'Mejorando';
         break;
       case 'declining':
         trendIcon = Icons.trending_down;
-        trendColor = EnhancementColors.negative;
+        trendColor = MinimalColors.negativeGradient(context)[0];
         trendText = 'Desafiante';
         break;
       default:
         trendIcon = Icons.trending_flat;
-        trendColor = EnhancementColors.neutral;
+        trendColor = MinimalColors.neutralGradient(context)[0];
         trendText = 'Estable';
     }
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: trendColor.withOpacity(0.1),
+        color: trendColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: trendColor.withOpacity(0.3),
+          color: trendColor.withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -1207,9 +1178,9 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
                 ),
                 Text(
                   'Cambio: ${trendValue > 0 ? '+' : ''}${trendValue.toStringAsFixed(1)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: EnhancementColors.textSecondary,
+                    color: MinimalColors.textSecondary(context),
                   ),
                 ),
               ],
@@ -1224,10 +1195,10 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: EnhancementColors.backgroundSecondary,
+        color: MinimalColors.backgroundSecondary(context),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: EnhancementColors.primaryGradient[0].withOpacity(0.2),
+          color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -1236,18 +1207,18 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.lightbulb_outline,
-                color: EnhancementColors.textSecondary,
+                color: MinimalColors.textSecondary(context),
                 size: 16,
               ),
-              const SizedBox(width: 8),
-              const Text(
+              SizedBox(width: 8),
+              Text(
                 'Insight',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: EnhancementColors.textSecondary,
+                  color: MinimalColors.textSecondary(context),
                 ),
               ),
             ],
@@ -1255,9 +1226,9 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
           const SizedBox(height: 8),
           Text(
             insights['insight'] as String? ?? '',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: EnhancementColors.textPrimary,
+              color: MinimalColors.textPrimary(context),
               height: 1.4,
             ),
           ),
@@ -1271,11 +1242,11 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: EnhancementColors.primaryGradient.map((c) => c.withOpacity(0.1)).toList(),
+          colors: MinimalColors.primaryGradient(context).map((c) => c.withValues(alpha: 0.1)).toList(),
         ),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: EnhancementColors.primaryGradient[1].withOpacity(0.3),
+          color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.3),
           width: 1,
         ),
       ),
@@ -1284,18 +1255,18 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
         children: [
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.recommend,
-                color: EnhancementColors.textSecondary,
+                color: MinimalColors.textSecondary(context),
                 size: 16,
               ),
-              const SizedBox(width: 8),
-              const Text(
+              SizedBox(width: 8),
+              Text(
                 'Recomendación',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: EnhancementColors.textSecondary,
+                  color: MinimalColors.textSecondary(context),
                 ),
               ),
             ],
@@ -1303,9 +1274,9 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
           const SizedBox(height: 8),
           Text(
             insights['recommendation'] as String? ?? '',
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: EnhancementColors.textPrimary,
+              color: MinimalColors.textPrimary(context),
               height: 1.4,
             ),
           ),
@@ -1318,10 +1289,10 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: EnhancementColors.backgroundCard.withOpacity(0.7),
+        color: MinimalColors.backgroundCard(context).withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: EnhancementColors.primaryGradient[0].withOpacity(0.2),
+          color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -1332,21 +1303,21 @@ class _WellbeingPredictionWidgetState extends State<WellbeingPredictionWidget>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: EnhancementColors.primaryGradient.map((c) => c.withOpacity(0.3)).toList(),
+                colors: MinimalColors.primaryGradient(context).map((c) => c.withValues(alpha: 0.3)).toList(),
               ),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.psychology_outlined,
-              color: EnhancementColors.textSecondary,
+              color: MinimalColors.textSecondary(context),
               size: 32,
             ),
           ),
           const SizedBox(height: 12),
           Text(
             message,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: EnhancementColors.textSecondary,
+              color: MinimalColors.textSecondary(context),
               fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,

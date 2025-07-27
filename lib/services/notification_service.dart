@@ -26,24 +26,25 @@ class NotificationService {
   static const String _generalChannel = 'reflect_general';
 
   Future<void> init() async {
-    // Initialize timezone data
-    tz.initializeTimeZones();
-    tz.setLocalLocation(tz.getLocation('Europe/Madrid')); // Adjust to your timezone
-
-    // Request permissions first
-    await _requestPermissions();
+    try {
+      // Initialize timezone data
+      tz.initializeTimeZones();
+      tz.setLocalLocation(tz.getLocation('Europe/Madrid')); // Adjust to your timezone
+    } catch (e) {
+      _logger.w('⚠️ Could not set timezone, using local: $e');
+    }
 
     // Initialize notification settings
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const ios = DarwinInitializationSettings(
-      requestAlertPermission: false, // We handle this manually
-      requestBadgePermission: false,
-      requestSoundPermission: false,
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
     const macos = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
 
     const settings = InitializationSettings(
@@ -61,7 +62,23 @@ class NotificationService {
     // Create notification channels for Android
     await _createNotificationChannels();
 
+    // Request additional permissions if needed (for Android)
+    await _requestAdditionalPermissions();
+
     _logger.i('✅ Notification service initialized with system-level notifications');
+  }
+
+  // Request additional permissions after initialization
+  Future<void> _requestAdditionalPermissions() async {
+    // Android 13+ requires POST_NOTIFICATIONS permission
+    if (await Permission.notification.isDenied) {
+      final status = await Permission.notification.request();
+      if (status != PermissionStatus.granted) {
+        _logger.w('⚠️ Android notification permission denied');
+      } else {
+        _logger.i('✅ Android notification permission granted');
+      }
+    }
   }
 
   // Handle notification taps
@@ -459,10 +476,54 @@ class NotificationService {
 
   // Check if notifications are enabled
   Future<bool> areNotificationsEnabled() async {
+    // Check Android permissions
     if (await Permission.notification.isDenied) {
       return false;
     }
+
+    // Check iOS permissions
+    final iosPermissions = await _notifications
+        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+        ?.checkPermissions();
+    
+    if (iosPermissions != null) {
+      final hasPermissions = iosPermissions.isEnabled == true;
+      if (!hasPermissions) {
+        _logger.w('⚠️ iOS notification permissions not granted');
+        return false;
+      }
+    }
+
     return true;
+  }
+
+  // Get detailed permission status for debugging
+  Future<void> logPermissionStatus() async {
+    _logger.i('📋 Checking notification permissions...');
+
+    // Android
+    final androidStatus = await Permission.notification.status;
+    _logger.i('🤖 Android notification permission: $androidStatus');
+
+    // iOS
+    final iosPermissions = await _notifications
+        .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+        ?.checkPermissions();
+    
+    if (iosPermissions != null) {
+      _logger.i('🍎 iOS notification permissions:');
+      _logger.i('  - Enabled: ${iosPermissions.isEnabled}');
+    }
+
+    // macOS
+    final macosPermissions = await _notifications
+        .resolvePlatformSpecificImplementation<MacOSFlutterLocalNotificationsPlugin>()
+        ?.checkPermissions();
+    
+    if (macosPermissions != null) {
+      _logger.i('💻 macOS notification permissions:');
+      _logger.i('  - Enabled: ${macosPermissions.isEnabled}');
+    }
   }
 
   // Fallback method for inexact scheduling
