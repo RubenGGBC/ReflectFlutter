@@ -41,7 +41,10 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:docs.memobase.io)",
       "Bash(timeout 60 flutter build:*)",
-      "Bash(awk:*)"
+      "Bash(awk:*)",
+      "Bash(git remote set-url:*)",
+      "Bash(git config:*)",
+      "Bash(git push:*)"
     ],
     "deny": []
   }
