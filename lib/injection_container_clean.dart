@@ -26,6 +26,7 @@ import 'presentation/providers/recommended_activities_provider.dart'; // ✅ NUE
 import 'presentation/providers/daily_activities_provider.dart'; // ✅ NUEVO: Daily Activities
 import 'presentation/providers/daily_roadmap_provider.dart'; // ✅ NUEVO: Daily Roadmap
 import 'presentation/providers/enhanced_goals_provider.dart'; // ✅ NUEVO: Enhanced Goals
+import 'presentation/providers/hopecore_quotes_provider.dart'; // ✅ NUEVO: Hopecore Quotes
 // AI providers removed
 // Theme provider (reutilizado del original)
 import 'presentation/providers/theme_provider.dart';
@@ -172,6 +173,11 @@ Future<void> initCleanDependencies() async {
           () => DailyRoadmapProvider(
             databaseService: sl<OptimizedDatabaseService>(),
           ),
+    );
+
+    // ✅ NUEVO: HopecoreQuotesProvider
+    sl.registerFactory<HopecoreQuotesProvider>(
+          () => HopecoreQuotesProvider(),
     );
 
     logger.i('✅ Dependencias limpias inicializadas correctamente');

@@ -59,6 +59,13 @@ class ThemeProvider with ChangeNotifier {
   Color get shadowColor => _isDarkMode ? darkShadowColor : lightShadowColor;
   List<Color> get gradientHeader => _isDarkMode ? darkGradientHeader : lightGradientHeader;
   
+  // Additional getters for compatibility
+  Color get secondaryBg => _isDarkMode ? darkSurface : lightSurface;
+  Color get positiveLight => _isDarkMode ? darkPositiveMain.withValues(alpha: 0.3) : lightPositiveMain.withValues(alpha: 0.3);
+  Color get negativeLight => _isDarkMode ? darkNegativeMain.withValues(alpha: 0.3) : lightNegativeMain.withValues(alpha: 0.3);
+  List<Color> get gradientButton => gradientHeader; // Use same as header for simplicity
+  bool get isDark => _isDarkMode;
+  
   // Legacy getters
   Color get primaryBgColor => primaryBg;
   Color get surfaceColor => surface;
@@ -75,6 +82,7 @@ class ThemeProvider with ChangeNotifier {
   // Objeto de colores actuales para compatibilidad
   AppColors get currentColors => AppColors(
     primaryBg: primaryBg,
+    secondaryBg: _isDarkMode ? darkSurface : lightSurface, // Secondary background
     surface: surface,
     surfaceVariant: surfaceVariant,
     accentPrimary: accentPrimary,
@@ -83,7 +91,9 @@ class ThemeProvider with ChangeNotifier {
     textSecondary: textSecondary,
     textHint: textHint,
     positiveMain: positiveMain,
+    positiveLight: _isDarkMode ? darkPositiveMain.withValues(alpha: 0.3) : lightPositiveMain.withValues(alpha: 0.3),
     negativeMain: negativeMain,
+    negativeLight: _isDarkMode ? darkNegativeMain.withValues(alpha: 0.3) : lightNegativeMain.withValues(alpha: 0.3),
     borderColor: borderColor,
     shadowColor: shadowColor,
     gradientHeader: gradientHeader,
@@ -180,6 +190,7 @@ class ThemeProvider with ChangeNotifier {
 // Clase de colores para compatibilidad - SOLO AQUÍ
 class AppColors {
   final Color primaryBg;
+  final Color secondaryBg;
   final Color surface;
   final Color surfaceVariant;
   final Color accentPrimary;
@@ -188,13 +199,16 @@ class AppColors {
   final Color textSecondary;
   final Color textHint;
   final Color positiveMain;
+  final Color positiveLight;
   final Color negativeMain;
+  final Color negativeLight;
   final Color borderColor;
   final Color shadowColor;
   final List<Color> gradientHeader;
 
   const AppColors({
     required this.primaryBg,
+    required this.secondaryBg,
     required this.surface,
     required this.surfaceVariant,
     required this.accentPrimary,
@@ -203,7 +217,9 @@ class AppColors {
     required this.textSecondary,
     required this.textHint,
     required this.positiveMain,
+    required this.positiveLight,
     required this.negativeMain,
+    required this.negativeLight,
     required this.borderColor,
     required this.shadowColor,
     required this.gradientHeader,

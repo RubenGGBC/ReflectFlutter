@@ -23,6 +23,7 @@ import 'presentation/providers/recommended_activities_provider.dart'; // ✅ NUE
 import 'presentation/providers/daily_activities_provider.dart'; // ✅ NUEVO: Daily Activities
 import 'presentation/providers/daily_roadmap_provider.dart'; // ✅ NUEVO: Daily Roadmap
 import 'presentation/providers/enhanced_goals_provider.dart'; // ✅ NUEVO: Enhanced Goals
+import 'presentation/providers/hopecore_quotes_provider.dart'; // ✅ NUEVO: Hopecore Quotes
 
 // Screens
 import 'presentation/screens/v2/login_screen_v2.dart';
@@ -67,6 +68,11 @@ class OptimizedReflectApp extends StatelessWidget {
         // ✅ NUEVO: ImageMomentsProvider
         ChangeNotifierProvider<ImageMomentsProvider>(
           create: (_) => clean_di.sl<ImageMomentsProvider>(),
+        ),
+
+        // ✅ NUEVO: HopecoreQuotesProvider (independiente del usuario)
+        ChangeNotifierProvider<HopecoreQuotesProvider>(
+          create: (_) => clean_di.sl<HopecoreQuotesProvider>(),
         ),
 
         // ============================================================================

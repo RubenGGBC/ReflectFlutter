@@ -468,7 +468,8 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
 
   Widget _buildEmptyState(BuildContext context, EnhancedGoalsProvider goalsProvider) {
     return Center(
-      child: Column(
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
@@ -530,6 +531,7 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
             ),
           ),
         ],
+        ),
       ),
     );
   }

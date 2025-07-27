@@ -377,17 +377,17 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                   const SizedBox(height: 20),
                   _buildGoalAnalyticsCard(provider, themeProvider),
                   const SizedBox(height: 20),
-                  _buildProductivityPatternsCard(provider),
+                  _buildProductivityPatternsCard(provider, themeProvider),
                   const SizedBox(height: 20),
-                  _buildMoodStabilityCard(provider),
+                  _buildMoodStabilityCard(provider, themeProvider),
                   const SizedBox(height: 20),
-                  _buildLifestyleBalanceCard(provider),
+                  _buildLifestyleBalanceCard(provider, themeProvider),
                   const SizedBox(height: 20),
-                  _buildEnergyPatternsCard(provider),
+                  _buildEnergyPatternsCard(provider, themeProvider),
                   const SizedBox(height: 20),
-                  _buildSocialWellnessCard(provider),
+                  _buildSocialWellnessCard(provider, themeProvider),
                   const SizedBox(height: 20),
-                  _buildHabitConsistencyCard(provider),
+                  _buildHabitConsistencyCard(provider, themeProvider),
                   const SizedBox(height: 20),
                   _buildInsightsCard(provider, themeProvider),
                 ],
@@ -813,9 +813,9 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                     ),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.bedtime,
-                    color: Colors.white,
+                    color: themeProvider.surface,
                     size: 20,
                   ),
                 ),
@@ -824,10 +824,10 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Patrones de Sueño',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: themeProvider.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -835,7 +835,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       Text(
                         provider.sleepPatternDisplay,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: themeProvider.textSecondary,
                           fontSize: 12,
                         ),
                       ),
@@ -844,8 +844,8 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                 ),
                 Text(
                   '${sleep.averageSleepHours.toStringAsFixed(1)}h',
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: themeProvider.textPrimary,
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
@@ -973,9 +973,9 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                     ),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.psychology,
-                    color: Colors.white,
+                    color: themeProvider.surface,
                     size: 20,
                   ),
                 ),
@@ -984,10 +984,10 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Análisis de Estrés',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: themeProvider.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -995,7 +995,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       Text(
                         provider.stressTrendDisplay,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: themeProvider.textSecondary,
                           fontSize: 12,
                         ),
                       ),
@@ -1007,8 +1007,8 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                   children: [
                     Text(
                       '${stress.averageStressLevel.toStringAsFixed(1)}/10',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: themeProvider.textPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1016,7 +1016,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                     Text(
                       '${stress.highStressDaysCount} días altos',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
+                        color: themeProvider.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -1029,7 +1029,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: themeProvider.surface.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -1038,7 +1038,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                     Text(
                       'Recomendaciones:',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
+                        color: themeProvider.textPrimary,
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
                       ),
@@ -1052,7 +1052,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                           Text(
                             '• ',
                             style: TextStyle(
-                              color: MinimalColors.accent,
+                              color: themeProvider.accentPrimary,
                               fontSize: 14,
                             ),
                           ),
@@ -1060,7 +1060,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                             child: Text(
                               rec,
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
+                                color: themeProvider.textSecondary,
                                 fontSize: 13,
                               ),
                             ),
@@ -1114,9 +1114,9 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                     ),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.flag,
-                    color: Colors.white,
+                    color: themeProvider.surface,
                     size: 20,
                   ),
                 ),
@@ -1125,10 +1125,10 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Análisis de Metas',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: themeProvider.textPrimary,
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1136,7 +1136,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       Text(
                         provider.goalPerformanceDisplay,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: themeProvider.textSecondary,
                           fontSize: 12,
                         ),
                       ),
@@ -1148,8 +1148,8 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                   children: [
                     Text(
                       '${(goals.completionRate * 100).toStringAsFixed(0)}%',
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: themeProvider.textPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                       ),
@@ -1157,7 +1157,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                     Text(
                       '${goals.completedGoals}/${goals.totalGoals} completadas',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
+                        color: themeProvider.textSecondary,
                         fontSize: 12,
                       ),
                     ),
@@ -1169,11 +1169,11 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
             Row(
               children: [
                 Expanded(
-                  child: _buildGoalStat('En Progreso', goals.inProgressGoals.toString(), Icons.schedule),
+                  child: _buildGoalStat('En Progreso', goals.inProgressGoals.toString(), Icons.schedule, themeProvider),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildGoalStat('Tiempo Promedio', '${goals.averageCompletionTime.toStringAsFixed(0)} días', Icons.timer),
+                  child: _buildGoalStat('Tiempo Promedio', '${goals.averageCompletionTime.toStringAsFixed(0)} días', Icons.timer, themeProvider),
                 ),
               ],
             ),
@@ -1183,25 +1183,25 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
     );
   }
 
-  Widget _buildGoalStat(String title, String value, IconData icon) {
+  Widget _buildGoalStat(String title, String value, IconData icon, ThemeProvider themeProvider) {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: themeProvider.surface.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
           Icon(
             icon,
-            color: MinimalColors.accent,
+            color: themeProvider.accentPrimary,
             size: 20,
           ),
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: themeProvider.textPrimary,
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
@@ -1210,7 +1210,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
           Text(
             title,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: themeProvider.textSecondary,
               fontSize: 12,
             ),
             textAlign: TextAlign.center,
@@ -1461,7 +1461,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
   // NEW ANALYTICS CARD WIDGETS
   // ============================================================================
 
-  Widget _buildProductivityPatternsCard(AnalyticsV3Provider provider) {
+  Widget _buildProductivityPatternsCard(AnalyticsV3Provider provider, ThemeProvider themeProvider) {
     final productivity = provider.productivityPatterns;
     if (productivity == null) return const SizedBox();
     
@@ -1499,10 +1499,10 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Patrones de Productividad',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: themeProvider.textPrimary,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1510,7 +1510,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       Text(
                         'Análisis de rendimiento y horas pico',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: themeProvider.textSecondary,
                           fontSize: 14,
                         ),
                       ),
@@ -1521,15 +1521,15 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
             ),
             const SizedBox(height: 16),
             if (productivity['peak_hours'] != null)
-              _buildDataRow('Hora Pico', '${productivity['peak_hours']}:00', Icons.schedule),
+              _buildDataRow('Hora Pico', '${productivity['peak_hours']}:00', Icons.schedule, themeProvider),
             if (productivity['productivity_score'] != null)
-              _buildDataRow('Score Productividad', '${productivity['productivity_score']?.toStringAsFixed(1)}/10', Icons.assessment),
+              _buildDataRow('Score Productividad', '${productivity['productivity_score']?.toStringAsFixed(1)}/10', Icons.assessment, themeProvider),
             if (productivity['recommendations'] != null && productivity['recommendations'].isNotEmpty)
               Container(
                 margin: const EdgeInsets.only(top: 12),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: themeProvider.surface.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -1540,7 +1540,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       child: Text(
                         productivity['recommendations'][0] ?? '',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
+                          color: themeProvider.textPrimary,
                           fontSize: 12,
                         ),
                       ),
@@ -1554,7 +1554,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
     );
   }
 
-  Widget _buildMoodStabilityCard(AnalyticsV3Provider provider) {
+  Widget _buildMoodStabilityCard(AnalyticsV3Provider provider, ThemeProvider themeProvider) {
     final mood = provider.moodStability;
     if (mood == null) return const SizedBox();
     
@@ -1592,10 +1592,10 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Estabilidad del Ánimo',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: themeProvider.textPrimary,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1603,7 +1603,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       Text(
                         'Variabilidad y patrones emocionales',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: themeProvider.textSecondary,
                           fontSize: 14,
                         ),
                       ),
@@ -1614,15 +1614,15 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
             ),
             const SizedBox(height: 16),
             if (mood['stability_score'] != null)
-              _buildDataRow('Estabilidad', '${mood['stability_score']?.toStringAsFixed(1)}/10', Icons.psychology),
+              _buildDataRow('Estabilidad', '${mood['stability_score']?.toStringAsFixed(1)}/10', Icons.psychology, themeProvider),
             if (mood['mood_variance'] != null)
-              _buildDataRow('Variabilidad', '${mood['mood_variance']?.toStringAsFixed(2)}', Icons.show_chart),
+              _buildDataRow('Variabilidad', '${mood['mood_variance']?.toStringAsFixed(2)}', Icons.show_chart, themeProvider),
             if (mood['triggers'] != null && mood['triggers'].isNotEmpty)
               Container(
                 margin: const EdgeInsets.only(top: 12),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: themeProvider.surface.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -1635,7 +1635,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                         Text(
                           'Posibles Desencadenantes:',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
+                            color: themeProvider.textPrimary,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1647,7 +1647,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       Text(
                         '• $trigger',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: themeProvider.textSecondary,
                           fontSize: 11,
                         ),
                       ),
@@ -1661,7 +1661,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
     );
   }
 
-  Widget _buildLifestyleBalanceCard(AnalyticsV3Provider provider) {
+  Widget _buildLifestyleBalanceCard(AnalyticsV3Provider provider, ThemeProvider themeProvider) {
     final lifestyle = provider.lifestyleBalance;
     if (lifestyle == null) return const SizedBox();
     
@@ -1699,10 +1699,10 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Balance de Vida',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: themeProvider.textPrimary,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1710,7 +1710,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       Text(
                         'Equilibrio entre áreas de vida',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: themeProvider.textSecondary,
                           fontSize: 14,
                         ),
                       ),
@@ -1721,7 +1721,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
             ),
             const SizedBox(height: 16),
             if (lifestyle['balance_score'] != null)
-              _buildDataRow('Score Balance', '${lifestyle['balance_score']?.toStringAsFixed(1)}/10', Icons.balance),
+              _buildDataRow('Score Balance', '${lifestyle['balance_score']?.toStringAsFixed(1)}/10', Icons.balance, themeProvider),
             if (lifestyle['life_areas'] != null)
               Container(
                 margin: const EdgeInsets.only(top: 12),
@@ -1735,7 +1735,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                             child: Text(
                               entry.key.toString().replaceAll('_', ' ').toUpperCase(),
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
+                                color: themeProvider.textSecondary,
                                 fontSize: 12,
                               ),
                             ),
@@ -1744,7 +1744,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                             width: 40,
                             height: 8,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.1),
+                              color: themeProvider.surface.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: FractionallySizedBox(
@@ -1762,7 +1762,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                           Text(
                             '${(entry.value as num).toStringAsFixed(1)}',
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
+                              color: themeProvider.textPrimary,
                               fontSize: 12,
                             ),
                           ),
@@ -1778,7 +1778,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
     );
   }
 
-  Widget _buildEnergyPatternsCard(AnalyticsV3Provider provider) {
+  Widget _buildEnergyPatternsCard(AnalyticsV3Provider provider, ThemeProvider themeProvider) {
     final energy = provider.energyPatterns;
     if (energy == null) return const SizedBox();
     
@@ -1816,10 +1816,10 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Patrones de Energía',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: themeProvider.textPrimary,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1827,7 +1827,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       Text(
                         'Cronotipos y potenciadores de energía',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: themeProvider.textSecondary,
                           fontSize: 14,
                         ),
                       ),
@@ -1838,15 +1838,15 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
             ),
             const SizedBox(height: 16),
             if (energy['chronotype'] != null)
-              _buildDataRow('Cronotipo', energy['chronotype'].toString(), Icons.schedule),
+              _buildDataRow('Cronotipo', energy['chronotype'].toString(), Icons.schedule, themeProvider),
             if (energy['peak_energy_time'] != null)
-              _buildDataRow('Pico de Energía', '${energy['peak_energy_time']}:00', Icons.battery_full),
+              _buildDataRow('Pico de Energía', '${energy['peak_energy_time']}:00', Icons.battery_full, themeProvider),
             if (energy['energy_boosters'] != null && energy['energy_boosters'].isNotEmpty)
               Container(
                 margin: const EdgeInsets.only(top: 12),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: themeProvider.surface.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -1859,7 +1859,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                         Text(
                           'Potenciadores de Energía:',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
+                            color: themeProvider.textPrimary,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1871,7 +1871,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       Text(
                         '• ${booster['factor']} (${(booster['correlation'] * 100).toStringAsFixed(0)}%)',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: themeProvider.textSecondary,
                           fontSize: 11,
                         ),
                       ),
@@ -1885,7 +1885,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
     );
   }
 
-  Widget _buildSocialWellnessCard(AnalyticsV3Provider provider) {
+  Widget _buildSocialWellnessCard(AnalyticsV3Provider provider, ThemeProvider themeProvider) {
     final social = provider.socialWellness;
     if (social == null) return const SizedBox();
     
@@ -1923,10 +1923,10 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Bienestar Social',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: themeProvider.textPrimary,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -1934,7 +1934,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       Text(
                         'Impacto de las interacciones sociales',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: themeProvider.textSecondary,
                           fontSize: 14,
                         ),
                       ),
@@ -1945,15 +1945,15 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
             ),
             const SizedBox(height: 16),
             if (social['social_wellness_score'] != null)
-              _buildDataRow('Score Social', '${social['social_wellness_score']?.toStringAsFixed(1)}/10', Icons.people),
+              _buildDataRow('Score Social', '${social['social_wellness_score']?.toStringAsFixed(1)}/10', Icons.people, themeProvider),
             if (social['social_battery_pattern'] != null)
-              _buildDataRow('Patrón Batería Social', social['social_battery_pattern'].toString(), Icons.battery_3_bar),
+              _buildDataRow('Patrón Batería Social', social['social_battery_pattern'].toString(), Icons.battery_3_bar, themeProvider),
             if (social['recommendations'] != null && social['recommendations'].isNotEmpty)
               Container(
                 margin: const EdgeInsets.only(top: 12),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: themeProvider.surface.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -1964,7 +1964,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       child: Text(
                         social['recommendations'][0] ?? '',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
+                          color: themeProvider.textPrimary,
                           fontSize: 12,
                         ),
                       ),
@@ -1978,7 +1978,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
     );
   }
 
-  Widget _buildHabitConsistencyCard(AnalyticsV3Provider provider) {
+  Widget _buildHabitConsistencyCard(AnalyticsV3Provider provider, ThemeProvider themeProvider) {
     final habits = provider.habitConsistency;
     if (habits == null) return const SizedBox();
     
@@ -2016,10 +2016,10 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'Consistencia de Hábitos',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: themeProvider.textPrimary,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -2027,7 +2027,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       Text(
                         'Seguimiento y efectividad de hábitos',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: themeProvider.textSecondary,
                           fontSize: 14,
                         ),
                       ),
@@ -2038,15 +2038,15 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
             ),
             const SizedBox(height: 16),
             if (habits['consistency_score'] != null)
-              _buildDataRow('Score Consistencia', '${habits['consistency_score']?.toStringAsFixed(1)}/10', Icons.track_changes),
+              _buildDataRow('Score Consistencia', '${habits['consistency_score']?.toStringAsFixed(1)}/10', Icons.track_changes, themeProvider),
             if (habits['longest_streak'] != null)
-              _buildDataRow('Racha Más Larga', '${habits['longest_streak']} días', Icons.local_fire_department),
+              _buildDataRow('Racha Más Larga', '${habits['longest_streak']} días', Icons.local_fire_department, themeProvider),
             if (habits['most_effective_habits'] != null && habits['most_effective_habits'].isNotEmpty)
               Container(
                 margin: const EdgeInsets.only(top: 12),
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  color: themeProvider.surface.withValues(alpha: 0.05),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -2059,7 +2059,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                         Text(
                           'Hábitos Más Efectivos:',
                           style: TextStyle(
-                            color: Colors.white.withOpacity(0.8),
+                            color: themeProvider.textPrimary,
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                           ),
@@ -2071,7 +2071,7 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
                       Text(
                         '• ${habit['habit']} (${(habit['effectiveness'] * 100).toStringAsFixed(0)}%)',
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.7),
+                          color: themeProvider.textSecondary,
                           fontSize: 11,
                         ),
                       ),
@@ -2085,25 +2085,25 @@ class _AnalyticsV3ScreenState extends State<AnalyticsV3Screen>
     );
   }
 
-  Widget _buildDataRow(String label, String value, IconData icon) {
+  Widget _buildDataRow(String label, String value, IconData icon, ThemeProvider themeProvider) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, color: Colors.white.withOpacity(0.6), size: 16),
+          Icon(icon, color: themeProvider.textSecondary, size: 16),
           const SizedBox(width: 8),
           Text(
             label,
             style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
+              color: themeProvider.textSecondary,
               fontSize: 14,
             ),
           ),
           const Spacer(),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: themeProvider.textPrimary,
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),

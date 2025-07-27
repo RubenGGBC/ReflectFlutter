@@ -8,39 +8,91 @@ import '../../../providers/theme_provider.dart';
 
 class MinimalColors {
   // ============================================================================
-  // COLORES DINÁMICOS (DEPENDEN DEL CONTEXTO)
+  // COLORES DINÁMICOS CORREGIDOS (DEPENDEN DEL CONTEXTO)
   // ============================================================================
   
-  // Backgrounds
-  static Color backgroundPrimary(BuildContext context) => 
-    Provider.of<ThemeProvider>(context, listen: false).primaryBg;
+  // Backgrounds - CORREGIDO para modo claro
+  static Color backgroundPrimary(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return themeProvider.isDarkMode 
+        ? themeProvider.primaryBg
+        : const Color(0xFFFFFFFF); // Blanco puro para modo claro
+  }
   
-  static Color backgroundCard(BuildContext context) => 
-    Provider.of<ThemeProvider>(context, listen: false).surface;
+  static Color backgroundCard(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return themeProvider.isDarkMode 
+        ? themeProvider.surface
+        : const Color(0xFFFFFFFF); // Blanco puro para modo claro
+  }
   
-  static Color backgroundSecondary(BuildContext context) => 
-    Provider.of<ThemeProvider>(context, listen: false).surfaceVariant;
+  static Color backgroundSecondary(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return themeProvider.isDarkMode 
+        ? themeProvider.surfaceVariant
+        : const Color(0xFFF8F9FA); // Gris muy claro para modo claro
+  }
 
-  // Textos
-  static Color textPrimary(BuildContext context) => 
-    Provider.of<ThemeProvider>(context, listen: false).textPrimary;
+  // Textos - CORREGIDO para contraste apropiado
+  static Color textPrimary(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return themeProvider.isDarkMode 
+        ? themeProvider.textPrimary
+        : const Color(0xFF1F2937); // Negro para modo claro
+  }
   
-  static Color textSecondary(BuildContext context) => 
-    Provider.of<ThemeProvider>(context, listen: false).textSecondary;
+  static Color textSecondary(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return themeProvider.isDarkMode 
+        ? themeProvider.textSecondary
+        : const Color(0xFF4B5563); // Gris oscuro para modo claro
+  }
   
-  static Color textTertiary(BuildContext context) => 
-    Provider.of<ThemeProvider>(context, listen: false).textSecondary;
+  static Color textTertiary(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return themeProvider.isDarkMode 
+        ? themeProvider.textSecondary
+        : const Color(0xFF6B7280); // Gris medio para modo claro
+  }
   
-  static Color textMuted(BuildContext context) => 
-    Provider.of<ThemeProvider>(context, listen: false).textHint;
+  static Color textMuted(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return themeProvider.isDarkMode 
+        ? themeProvider.textHint
+        : const Color(0xFF9CA3AF); // Gris claro para modo claro
+  }
 
-  // Sombras
-  static Color shadow(BuildContext context) => 
-    Provider.of<ThemeProvider>(context, listen: false).isDarkMode
-        ? Colors.black.withValues(alpha: 0.3)
-        : Colors.grey.withValues(alpha: 0.2);
+  // Sombras - CORREGIDO para ambos modos
+  static Color shadow(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    return themeProvider.isDarkMode
+        ? Colors.black.withValues(alpha: 0.4)
+        : Colors.black.withValues(alpha: 0.05); // Sombra MUY sutil para modo claro
+  }
 
-  // Gradientes
+  // Sombras de gradiente - theme-aware para efectos visuales
+  static Color gradientShadow(BuildContext context, {double alpha = 0.2}) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    if (themeProvider.isDarkMode) {
+      return themeProvider.gradientHeader[1].withValues(alpha: alpha);
+    } else {
+      // En modo claro, usar sombras MUCHO más sutiles
+      return Colors.black.withValues(alpha: alpha * 0.1);
+    }
+  }
+
+  // Sombras de color específico - theme-aware
+  static Color coloredShadow(BuildContext context, Color baseColor, {double alpha = 0.2}) {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    if (themeProvider.isDarkMode) {
+      return baseColor.withValues(alpha: alpha);
+    } else {
+      // En modo claro, usar versiones MUCHO más sutiles de las sombras de color
+      return Colors.black.withValues(alpha: alpha * 0.1);
+    }
+  }
+
+  // Gradientes - MANTIENEN LOS COLORES DE LA APP
   static List<Color> primaryGradient(BuildContext context) => 
     Provider.of<ThemeProvider>(context, listen: false).gradientHeader;
   

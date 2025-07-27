@@ -21,7 +21,7 @@ import '../models/roadmap_activity_model.dart';
 
 class OptimizedDatabaseService {
   static const String _databaseName = 'reflect_optimized_v2.db';
-  static const int _databaseVersion = 11;
+  static const int _databaseVersion = 12;
 
   static Database? _database;
   static final OptimizedDatabaseService _instance = OptimizedDatabaseService
@@ -533,6 +533,9 @@ class OptimizedDatabaseService {
       if (oldVersion < 11) {
         await _migrateToV11(db);
       }
+      if (oldVersion < 12) {
+        await _migrateToV12(db);
+      }
     } catch (e) {
       _logger.e('❌ Error en migración: $e');
       // En APK, mejor recrear la BD si hay errores críticos
@@ -839,6 +842,46 @@ class OptimizedDatabaseService {
       _logger.i('✅ Migración v11 completada - Columnas de daily_roadmaps actualizadas');
     } catch (e) {
       _logger.e('❌ Error en migración v11: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> _migrateToV12(Database db) async {
+    try {
+      _logger.i('📦 Actualizando constraintos de user_goals en migración v12');
+      
+      // SQLite doesn't support ALTER TABLE to modify constraints, so we need to recreate the table
+      await db.execute('''
+        CREATE TABLE user_goals_new (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT NOT NULL,
+          type TEXT NOT NULL CHECK (type IN ('consistency', 'mood', 'positiveMoments', 'stressReduction', 'habits')),
+          status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'completed', 'paused', 'cancelled')),
+          target_value REAL NOT NULL CHECK (target_value > 0),
+          current_value REAL NOT NULL DEFAULT 0.0 CHECK (current_value >= 0),
+          progress_notes TEXT,
+          created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now')),
+          completed_at INTEGER,
+          FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        )
+      ''');
+      
+      // Copy data from old table
+      await db.execute('''
+        INSERT INTO user_goals_new (id, user_id, title, description, type, status, target_value, current_value, created_at, completed_at)
+        SELECT id, user_id, title, description, type, status, target_value, current_value, created_at, completed_at
+        FROM user_goals
+      ''');
+      
+      // Drop old table and rename new one
+      await db.execute('DROP TABLE user_goals');
+      await db.execute('ALTER TABLE user_goals_new RENAME TO user_goals');
+      
+      _logger.i('✅ Migración v12 completada - Constraintos de user_goals actualizados');
+    } catch (e) {
+      _logger.e('❌ Error en migración v12: $e');
       rethrow;
     }
   }

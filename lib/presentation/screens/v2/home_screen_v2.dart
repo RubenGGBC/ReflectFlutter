@@ -16,12 +16,14 @@ import '../../providers/image_moments_provider.dart';
 import '../../providers/streak_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/recommended_activities_provider.dart';
+import '../../providers/hopecore_quotes_provider.dart';
 
 // Modelos
 import '../../../data/models/optimized_models.dart';
 
 // Enhancement widgets
 import '../../widgets/home_enhancement_widgets.dart';
+import '../../widgets/hopecore_quotes_carousel.dart';
 
 // Componentes
 import 'components/minimal_colors.dart';
@@ -142,6 +144,7 @@ class _HomeScreenV2State extends State<HomeScreenV2>
         secondaryFutures.add(Provider.of<OptimizedAnalyticsProvider>(context, listen: false).loadCompleteAnalytics(user.id, days: 30));
         secondaryFutures.add(Provider.of<GoalsProvider>(context, listen: false).loadUserGoals(user.id));
         secondaryFutures.add(Provider.of<StreakProvider>(context, listen: false).loadStreakData(user.id));
+        secondaryFutures.add(Provider.of<HopecoreQuotesProvider>(context, listen: false).initialize());
         
         // Load secondary data with timeout
         await Future.wait(secondaryFutures).timeout(
@@ -205,10 +208,12 @@ class _HomeScreenV2State extends State<HomeScreenV2>
         child: SafeArea(
           child: Consumer<StreakProvider>(
             builder: (context, streakProvider, _) {
-              return Consumer6<OptimizedAuthProvider, OptimizedMomentsProvider,
-                  OptimizedAnalyticsProvider, GoalsProvider, ImageMomentsProvider, RecommendedActivitiesProvider>(
-                builder: (context, authProvider, momentsProvider,
-                    analyticsProvider, goalsProvider, imageProvider, activitiesProvider, child) {
+              return Consumer<HopecoreQuotesProvider>(
+                builder: (context, quotesProvider, _) {
+                  return Consumer6<OptimizedAuthProvider, OptimizedMomentsProvider,
+                      OptimizedAnalyticsProvider, GoalsProvider, ImageMomentsProvider, RecommendedActivitiesProvider>(
+                    builder: (context, authProvider, momentsProvider,
+                        analyticsProvider, goalsProvider, imageProvider, activitiesProvider, child) {
 
             final user = authProvider.currentUser;
             if (user == null) {
@@ -259,6 +264,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     // 🆕 THEME TOGGLE BUTTON
                     _buildThemeToggleButton(),
                     const SizedBox(height: 24),
+                    // 🆕 HOPECORE QUOTES CAROUSEL
+                    HopecoreQuotesCarousel(animationController: _fadeController),
+                    const SizedBox(height: 24),
                     // 🆕 WELLBEING SCORE DE HOY
                     _buildTodaysWellbeingScore(analyticsProvider),
                     const SizedBox(height: 24),
@@ -292,6 +300,8 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                 ),
               ],
             );
+                    },
+                  );
                 },
               );
             },
@@ -1712,11 +1722,9 @@ class _HomeScreenV2State extends State<HomeScreenV2>
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: themeProvider.isDarkMode
-                            ? const Color(0xFFfbbf24).withValues(alpha: 0.3)
-                            : const Color(0xFF1e3a8a).withValues(alpha: 0.3),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
+                        color: MinimalColors.gradientShadow(context, alpha: 0.15),
+                        blurRadius: 8,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),

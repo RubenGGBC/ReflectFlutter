@@ -1815,17 +1815,17 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     final now = DateTime.now();
     final List<Map<String, dynamic>> calendarData = [];
     
-    // Generate 30 days of data (5 weeks)
-    for (int i = 29; i >= 0; i--) {
+    // Generate 7 days of data (last week)
+    for (int i = 6; i >= 0; i--) {
       final date = now.subtract(Duration(days: i));
       final dateStr = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       
-      // Try to find mood data for this date
+      // ✅ FIX: Look for mood data with correct field name 'entry_date'
       final moodData = _analytics['mood_trends'] as List<dynamic>? ?? [];
       dynamic dayMood;
       try {
         dayMood = moodData.firstWhere(
-          (m) => m != null && m['date'] == dateStr,
+          (m) => m != null && m['entry_date'] == dateStr,
           orElse: () => <String, dynamic>{},
         );
         if (dayMood.isEmpty) dayMood = null;
@@ -1837,7 +1837,8 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
       String type = 'empty';
       
       if (dayMood != null) {
-        final mood = (dayMood['mood'] as num?)?.toDouble() ?? 5.0;
+        // ✅ FIX: Use correct field name 'mood_score' instead of 'mood'
+        final mood = (dayMood['mood_score'] as num?)?.toDouble() ?? 5.0;
         if (mood >= 7.0) {
           type = 'positive';
           intensity = ((mood - 7.0) / 3.0).clamp(0.0, 1.0);
@@ -1854,9 +1855,9 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
         'date': date,
         'dateStr': dateStr,
         'type': type,
-        'intensity': intensity,
-        'mood': dayMood?['mood'],
-        'isToday': date.day == now.day && date.month == now.month,
+        'intensity': intensity ?? 0.0,
+        'mood': dayMood?['mood_score'],
+        'isToday': date.day == now.day && date.month == now.month && date.year == now.year,
         'dayOfWeek': date.weekday,
       });
     }
@@ -1876,10 +1877,10 @@ class OptimizedAnalyticsProvider with ChangeNotifier {
     }
     
     // Simple trend analysis
-    final recentMoods = moodTrends.take(7).map((m) => (m['mood'] as num?)?.toDouble() ?? 5.0).toList();
+    final recentMoods = moodTrends.take(7).map((m) => (m['mood_score'] as num?)?.toDouble() ?? 5.0).toList();
     final avgRecent = recentMoods.reduce((a, b) => a + b) / recentMoods.length;
     
-    final olderMoods = moodTrends.skip(7).take(7).map((m) => (m['mood'] as num?)?.toDouble() ?? 5.0).toList();
+    final olderMoods = moodTrends.skip(7).take(7).map((m) => (m['mood_score'] as num?)?.toDouble() ?? 5.0).toList();
     final avgOlder = olderMoods.isNotEmpty ? olderMoods.reduce((a, b) => a + b) / olderMoods.length : avgRecent;
     
     final trend = avgRecent - avgOlder;

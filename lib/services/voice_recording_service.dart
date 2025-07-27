@@ -90,6 +90,12 @@ class VoiceRecordingService extends ChangeNotifier {
       final status = await Permission.microphone.request();
       return status == PermissionStatus.granted;
     } catch (e) {
+      debugPrint('Permission handler error (platform may not support): $e');
+      // Try to continue without explicit permission check on unsupported platforms
+      // Most desktop platforms don't need explicit permission requests
+      if (Platform.isMacOS || Platform.isWindows || Platform.isLinux) {
+        return true; // Assume permission is granted on desktop
+      }
       _setError('Error verificando permisos: $e');
       return false;
     }

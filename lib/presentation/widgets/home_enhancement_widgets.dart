@@ -375,9 +375,9 @@ class _MoodCalendarHeatmapWidgetState extends State<MoodCalendarHeatmapWidget>
       vsync: this,
     );
 
-    // Create staggered animations for each cell
-    _cellAnimations = List.generate(30, (index) {
-      final start = (index * 0.02).clamp(0.0, 0.6);
+    // Create staggered animations for each cell (7 days)
+    _cellAnimations = List.generate(7, (index) {
+      final start = (index * 0.1).clamp(0.0, 0.6);
       final end = (start + 0.4).clamp(0.0, 1.0);
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
@@ -470,7 +470,7 @@ class _MoodCalendarHeatmapWidgetState extends State<MoodCalendarHeatmapWidget>
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: const Text(
-                              '30 días',
+                              '7 días',
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w600,
@@ -482,6 +482,8 @@ class _MoodCalendarHeatmapWidgetState extends State<MoodCalendarHeatmapWidget>
                       ),
                       const SizedBox(height: 20),
                       _buildHeatmapGrid(calendarData),
+                      const SizedBox(height: 12),
+                      _buildDayLabels(calendarData),
                       const SizedBox(height: 16),
                       _buildHeatmapLegend(),
                     ],
@@ -496,30 +498,62 @@ class _MoodCalendarHeatmapWidgetState extends State<MoodCalendarHeatmapWidget>
   }
 
   Widget _buildHeatmapGrid(List<Map<String, dynamic>> calendarData) {
-    // Create 6 rows x 5 columns grid (30 days)
+    // Create single row for 7 days
     return SizedBox(
-      height: 120,
-      child: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 6,
-          crossAxisSpacing: 4,
-          mainAxisSpacing: 4,
-          childAspectRatio: 1,
+      height: 60,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(
+          math.min(calendarData.length, 7),
+          (index) {
+            if (index >= _cellAnimations.length) return const SizedBox();
+            
+            final dayData = calendarData[index];
+            return Expanded(
+              child: AnimatedBuilder(
+                animation: _cellAnimations[index],
+                builder: (context, child) {
+                  return Transform.scale(
+                    scale: _cellAnimations[index].value,
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      child: _buildHeatmapCell(dayData),
+                    ),
+                  );
+                },
+              ),
+            );
+          },
         ),
-        itemCount: math.min(calendarData.length, 30),
-        itemBuilder: (context, index) {
-          if (index >= _cellAnimations.length) return const SizedBox();
-          
+      ),
+    );
+  }
+
+  Widget _buildDayLabels(List<Map<String, dynamic>> calendarData) {
+    const dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: List.generate(
+        math.min(calendarData.length, 7),
+        (index) {
           final dayData = calendarData[index];
-          return AnimatedBuilder(
-            animation: _cellAnimations[index],
-            builder: (context, child) {
-              return Transform.scale(
-                scale: _cellAnimations[index].value,
-                child: _buildHeatmapCell(dayData),
-              );
-            },
+          final date = dayData['date'] as DateTime;
+          final isToday = dayData['isToday'] as bool? ?? false;
+          final dayName = dayNames[date.weekday - 1];
+          
+          return Expanded(
+            child: Text(
+              dayName,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                color: isToday
+                    ? EnhancementColors.accentGradient[0]
+                    : EnhancementColors.textSecondary,
+              ),
+            ),
           );
         },
       ),

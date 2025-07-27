@@ -35,6 +35,9 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
   late AnimationController _headerController;
   late AnimationController _calendarController;
   late AnimationController _statsController;
+  late AnimationController _pulseController;
+  
+  late Animation<double> _pulseAnimation;
 
   // Estado de vista
   bool _showYearView = false;
@@ -52,6 +55,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
     _headerController.dispose();
     _calendarController.dispose();
     _statsController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -75,6 +79,16 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
       vsync: this,
     );
 
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+
+    _pulseAnimation = Tween<double>(
+      begin: 0.95,
+      end: 1.05,
+    ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+
     // Iniciar animaciones
     _headerController.forward();
     Future.delayed(const Duration(milliseconds: 200), () {
@@ -83,6 +97,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
     Future.delayed(const Duration(milliseconds: 400), () {
       _statsController.forward();
     });
+    _pulseController.repeat(reverse: true);
   }
 
   void _loadData() {
@@ -102,11 +117,12 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: MinimalColors.backgroundPrimary(context),
       body: SafeArea(
         child: Column(
           children: [
             _buildHeader(),
+            _buildNavigationControls(),
             Expanded(
               child: _showYearView ? _buildYearView() : _buildMonthView(),
             ),
@@ -122,140 +138,159 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
   // ============================================================================
 
   Widget _buildHeader() {
-    return SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(0, -1),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(parent: _headerController, curve: Curves.easeOutCubic)),
+    return FadeTransition(
+      opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+        CurvedAnimation(parent: _headerController, curve: Curves.easeInOut),
+      ),
       child: Container(
         padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: MinimalColors.primaryGradient(context),
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Column(
+        child: Row(
           children: [
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ShaderMask(
-                        shaderCallback: (bounds) => LinearGradient(
-                          colors: MinimalColors.accentGradient(context),
-                        ).createShader(bounds),
-                        child: const Text(
-                          'Mi Calendario',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        _showYearView
-                            ? 'Año $_selectedYear'
-                            : _getMonthYearText(_focusedMonth),
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
+            GestureDetector(
+              onTap: () => Navigator.of(context).pop(),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: MinimalColors.backgroundCard(context).withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: MinimalColors.textMuted(context).withValues(alpha: 0.2),
+                    width: 1,
                   ),
                 ),
-                _buildViewToggle(),
-              ],
-            ),
-
-            const SizedBox(height: 16),
-
-            // Navegación de mes/año
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                IconButton(
-                  onPressed: _previousPeriod,
-                  icon: const Icon(Icons.chevron_left, color: Colors.black, size: 32),
+                child: Icon(
+                  Icons.arrow_back_ios_new,
+                  color: MinimalColors.textPrimary(context),
+                  size: 18,
                 ),
-
-                GestureDetector(
-                  onTap: _showDatePicker,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ShaderMask(
+                    shaderCallback: (bounds) => LinearGradient(
+                      colors: MinimalColors.accentGradient(context),
+                    ).createShader(bounds),
                     child: Text(
-                      _showYearView
-                          ? '$_selectedYear'
-                          : _getMonthYearText(_focusedMonth),
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+                      'Mi Calendario',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: MinimalColors.textPrimary(context),
                       ),
                     ),
                   ),
-                ),
-
-                IconButton(
-                  onPressed: _nextPeriod,
-                  icon: const Icon(Icons.chevron_right, color: Colors.black, size: 32),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Text(
+                    _showYearView
+                        ? 'Año $_selectedYear'
+                        : _getMonthYearText(_focusedMonth),
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: MinimalColors.textSecondary(context),
+                    ),
+                  ),
+                ],
+              ),
             ),
+            _buildViewToggle(),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildViewToggle() {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _showYearView = !_showYearView;
-        });
-        HapticFeedback.lightImpact();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              _showYearView ? Icons.calendar_month : Icons.calendar_view_month,
-              color: Colors.black,
-              size: 18,
+  Widget _buildNavigationControls() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          IconButton(
+            onPressed: _previousPeriod,
+            icon: Icon(
+              Icons.chevron_left, 
+              color: MinimalColors.textPrimary(context), 
+              size: 32
             ),
-            const SizedBox(width: 6),
-            Text(
-              _showYearView ? 'Mes' : 'Año',
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+          ),
+          GestureDetector(
+            onTap: _showDatePicker,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              decoration: BoxDecoration(
+                color: MinimalColors.backgroundCard(context).withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: MinimalColors.textMuted(context).withValues(alpha: 0.2),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                _showYearView
+                    ? '$_selectedYear'
+                    : _getMonthYearText(_focusedMonth),
+                style: TextStyle(
+                  color: MinimalColors.textPrimary(context),
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+          IconButton(
+            onPressed: _nextPeriod,
+            icon: Icon(
+              Icons.chevron_right, 
+              color: MinimalColors.textPrimary(context), 
+              size: 32
+            ),
+          ),
+        ],
       ),
+    );
+  }
+
+  Widget _buildViewToggle() {
+    return AnimatedBuilder(
+      animation: _pulseAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: 1.0 + (_pulseAnimation.value * 0.02),
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _showYearView = !_showYearView;
+              });
+              HapticFeedback.lightImpact();
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: MinimalColors.accentGradient(context),
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.3),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Icon(
+                _showYearView ? Icons.calendar_month : Icons.calendar_view_month,
+                color: MinimalColors.textPrimary(context),
+                size: 24,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -308,10 +343,10 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
         decoration: BoxDecoration(
           color: MinimalColors.backgroundCard(context),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          border: Border.all(color: MinimalColors.textMuted(context).withValues(alpha: 0.2)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
+              color: MinimalColors.gradientShadow(context, alpha: 0.15),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -321,8 +356,8 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
           children: [
             Text(
               'Estadísticas del Mes',
-              style: const TextStyle(
-                color: Colors.black,
+              style: TextStyle(
+                color: MinimalColors.textPrimary(context),
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -359,16 +394,16 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
           const SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.black,
+            style: TextStyle(
+              color: MinimalColors.textPrimary(context),
               fontSize: 16,
               fontWeight: FontWeight.bold,
             ),
           ),
           Text(
             label,
-            style: const TextStyle(
-              color: Colors.black54,
+            style: TextStyle(
+              color: MinimalColors.textSecondary(context),
               fontSize: 10,
             ),
           ),
@@ -387,7 +422,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
       decoration: BoxDecoration(
         color: MinimalColors.backgroundCard(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: MinimalColors.textMuted(context).withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -405,8 +440,8 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
               child: Center(
                 child: Text(
                   day,
-                  style: const TextStyle(
-                    color: Colors.black,
+                  style: TextStyle(
+                    color: MinimalColors.textPrimary(context),
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),
@@ -451,13 +486,13 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
 
   Widget _buildDayCell(int dayNumber, dynamic entry, bool isSelected, bool isToday, DateTime dayDate) {
     Color backgroundColor = Colors.transparent;
-    Color borderColor = Colors.white24;
-    Color textColor = Colors.black54;
+    Color borderColor = MinimalColors.textMuted(context).withValues(alpha: 0.3);
+    Color textColor = MinimalColors.textSecondary(context);
 
     if (isSelected) {
       backgroundColor = MinimalColors.accentGradient(context)[0];
       borderColor = MinimalColors.accentGradient(context)[1];
-      textColor = Colors.black;
+      textColor = Colors.white;
     } else if (isToday) {
       borderColor = MinimalColors.lightGradient(context)[0];
       textColor = MinimalColors.lightGradient(context)[0];
@@ -465,7 +500,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
       final moodScore = entry.moodScore ?? 5;
       backgroundColor = _getMoodColor(moodScore).withValues(alpha: 0.3);
       borderColor = _getMoodColor(moodScore);
-      textColor = Colors.black;
+      textColor = MinimalColors.textPrimary(context);
     }
 
     return GestureDetector(
@@ -539,7 +574,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
         decoration: BoxDecoration(
           color: MinimalColors.backgroundCard(context),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          border: Border.all(color: MinimalColors.textMuted(context).withValues(alpha: 0.2)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -555,8 +590,8 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                 Expanded(
                   child: Text(
                     _formatSelectedDate(_selectedDate),
-                    style: const TextStyle(
-                      color: Colors.black,
+                    style: TextStyle(
+                      color: MinimalColors.textPrimary(context),
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
@@ -595,20 +630,20 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                 decoration: BoxDecoration(
                   color: Colors.grey.shade800.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                  border: Border.all(color: MinimalColors.textMuted(context).withValues(alpha: 0.2)),
                 ),
                 child: Column(
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.edit_note,
-                      color: Colors.black45,
+                      color: MinimalColors.textMuted(context),
                       size: 32,
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Sin reflexión registrada',
                       style: TextStyle(
-                        color: Colors.black54,
+                        color: MinimalColors.textSecondary(context),
                         fontSize: 14,
                       ),
                     ),
@@ -656,8 +691,8 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                 ),
                 child: Text(
                   '${moodScore}/10',
-                  style: const TextStyle(
-                    color: Colors.black,
+                  style: TextStyle(
+                    color: MinimalColors.textPrimary(context),
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -681,8 +716,8 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
             const SizedBox(height: 12),
             Text(
               entry.freeReflection,
-              style: const TextStyle(
-                color: Colors.black54,
+              style: TextStyle(
+                color: MinimalColors.textSecondary(context),
                 fontSize: 14,
                 height: 1.4,
               ),
@@ -711,12 +746,12 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.black, size: 16),
+            Icon(icon, color: MinimalColors.textPrimary(context), size: 16),
             const SizedBox(width: 6),
             Text(
               label,
-              style: const TextStyle(
-                color: Colors.black,
+              style: TextStyle(
+                color: MinimalColors.textPrimary(context),
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               ),
@@ -768,14 +803,14 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
       decoration: BoxDecoration(
         color: MinimalColors.backgroundCard(context),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        border: Border.all(color: MinimalColors.textMuted(context).withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
           Text(
             'Resumen del Año $_selectedYear',
-            style: const TextStyle(
-              color: Colors.black,
+            style: TextStyle(
+              color: MinimalColors.textPrimary(context),
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
@@ -837,7 +872,7 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
             decoration: BoxDecoration(
               color: MinimalColors.backgroundCard(context),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+              border: Border.all(color: MinimalColors.textMuted(context).withValues(alpha: 0.2)),
               gradient: monthEntries.isNotEmpty
                   ? LinearGradient(
                 colors: [
@@ -852,8 +887,8 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
               children: [
                 Text(
                   months[index],
-                  style: const TextStyle(
-                    color: Colors.black,
+                  style: TextStyle(
+                    color: MinimalColors.textPrimary(context),
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -873,21 +908,21 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
                   ),
                   Text(
                     '${monthEntries.length} días',
-                    style: const TextStyle(
-                      color: Colors.black54,
+                    style: TextStyle(
+                      color: MinimalColors.textSecondary(context),
                       fontSize: 10,
                     ),
                   ),
                 ] else ...[
-                  const Icon(
+                  Icon(
                     Icons.remove_circle_outline,
-                    color: Colors.white54,
+                    color: MinimalColors.textMuted(context),
                     size: 20,
                   ),
-                  const Text(
+                  Text(
                     'Sin datos',
                     style: TextStyle(
-                      color: Colors.black45,
+                      color: MinimalColors.textMuted(context),
                       fontSize: 10,
                     ),
                   ),
@@ -923,15 +958,15 @@ class _CalendarScreenV2State extends State<CalendarScreenV2>
           ],
         ),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-        child: const Row(
+        child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.add, color: Colors.black),
-            SizedBox(width: 8),
+            const Icon(Icons.add, color: Colors.black),
+            const SizedBox(width: 8),
             Text(
               'Nueva Reflexión',
               style: TextStyle(
-                color: Colors.black,
+                color: MinimalColors.textPrimary(context),
                 fontWeight: FontWeight.w600,
               ),
             ),

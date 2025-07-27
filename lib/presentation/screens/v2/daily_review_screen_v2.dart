@@ -371,13 +371,14 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           duration: const Duration(milliseconds: 300),
           data: themeProvider.currentThemeData,
           child: Scaffold(
-            backgroundColor: Colors.white,
+            backgroundColor: MinimalColors.backgroundPrimary(context),
             body: SafeArea(
               child: FadeTransition(
                 opacity: _fadeAnimation,
                 child: Column(
                   children: [
                     _buildHeader(),
+                    _buildProgressSection(),
                     Expanded(
                       child: Container(
                         decoration: BoxDecoration(
@@ -429,70 +430,75 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
   // ============================================================================
 
   Widget _buildHeader() {
-    final now = DateTime.now();
-    final dayNames = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-    final monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-    final dayName = dayNames[now.weekday - 1];
-    final monthName = monthNames[now.month - 1];
-
-    return SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(0, -1),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(parent: _cardController, curve: Curves.easeOutCubic)),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: MinimalColors.primaryGradient(context),
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.arrow_back_ios, color: Colors.black),
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: MinimalColors.backgroundCard(context).withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
+                  width: 1,
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      ShaderMask(
-                        shaderCallback: (bounds) => LinearGradient(
-                          colors: MinimalColors.accentGradient(context),
-                        ).createShader(bounds),
-                        child: const Text(
-                          'Reflexión Diaria',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        'Paso ${_currentStep + 1} de $_totalSteps',
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
+                boxShadow: [
+                  BoxShadow(
+                    color: MinimalColors.gradientShadow(context, alpha: 0.1),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.arrow_back_ios_new,
+                color: MinimalColors.textPrimary(context),
+                size: 18,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ShaderMask(
+                  shaderCallback: (bounds) => LinearGradient(
+                    colors: MinimalColors.primaryGradient(context),
+                  ).createShader(bounds),
+                  child: Text(
+                    'Reflexión Diaria',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: MinimalColors.textPrimary(context),
+                    ),
                   ),
                 ),
-                _buildSmartEmoji(),
+                const SizedBox(height: 4),
+                Text(
+                  'Paso ${_currentStep + 1} de $_totalSteps',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: MinimalColors.textSecondary(context),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            _buildProgressBar(),
-          ],
-        ),
+          ),
+          _buildSmartEmoji(),
+        ],
       ),
+    );
+  }
+
+  Widget _buildProgressSection() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: _buildProgressBar(),
     );
   }
 
@@ -550,13 +556,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             ),
             boxShadow: [
               BoxShadow(
-                color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.2),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
-              ),
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.4),
-                blurRadius: 10,
+                color: MinimalColors.gradientShadow(context, alpha: 0.1),
+                blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
             ],
@@ -648,9 +649,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 4),
+                    color: MinimalColors.gradientShadow(context, alpha: 0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -889,13 +890,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         ),
         boxShadow: [
           BoxShadow(
-            color: MinimalColors.positiveGradient(context)[1].withValues(alpha: 0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 10,
+            color: MinimalColors.coloredShadow(context, MinimalColors.positiveGradient(context)[1], alpha: 0.1),
+            blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],
@@ -988,9 +984,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+                  color: MinimalColors.gradientShadow(context, alpha: 0.08),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -1017,9 +1013,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+                  color: MinimalColors.gradientShadow(context, alpha: 0.08),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
@@ -1082,9 +1078,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             borderRadius: BorderRadius.circular(60),
             boxShadow: [
               BoxShadow(
-                color: _getMoodColor(_moodScore).withValues(alpha: 0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+                color: MinimalColors.coloredShadow(context, _getMoodColor(_moodScore), alpha: 0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
               ),
             ],
           ),
@@ -2038,7 +2034,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               child: Container(
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.6),
+                  color: MinimalColors.shadow(context).withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
@@ -2253,10 +2249,10 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           boxShadow: [
             BoxShadow(
               color: isCompleted
-                  ? Colors.green.withValues(alpha: 0.3)
-                  : MinimalColors.shadow(context).withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
+                  ? MinimalColors.coloredShadow(context, Colors.green, alpha: 0.1)
+                  : MinimalColors.gradientShadow(context, alpha: 0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
@@ -2358,7 +2354,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.green.withValues(alpha: 0.3),
+            color: MinimalColors.coloredShadow(context, Colors.green, alpha: 0.12),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -2509,13 +2505,8 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         ),
         boxShadow: [
           BoxShadow(
-            color: MinimalColors.accentGradient(context)[1].withValues(alpha: 0.2),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 10,
+            color: MinimalColors.gradientShadow(context, alpha: 0.1),
+            blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],
@@ -2725,9 +2716,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: _getMoodColor(overallScore.round()).withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: MinimalColors.coloredShadow(context, _getMoodColor(overallScore.round()), alpha: 0.15),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
@@ -2905,20 +2896,15 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
           ),
           boxShadow: [
             BoxShadow(
-              color: MinimalColors.primaryGradient(context)[1].withValues(alpha: 0.4),
+              color: MinimalColors.gradientShadow(context, alpha: 0.4),
               blurRadius: 30,
               offset: const Offset(0, 15),
               spreadRadius: 2,
             ),
             BoxShadow(
-              color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 15,
-              offset: const Offset(0, 4),
+              color: MinimalColors.gradientShadow(context, alpha: 0.12),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
@@ -3037,7 +3023,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
+            color: MinimalColors.shadow(context),
             blurRadius: 15,
             offset: const Offset(0, -5),
           ),
@@ -3056,9 +3042,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+                      color: MinimalColors.gradientShadow(context, alpha: 0.1),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     ),
                   ],
                 ),
@@ -3112,15 +3098,9 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                 boxShadow: _canContinue()
                     ? [
                         BoxShadow(
-                          color: MinimalColors.accentGradient(context)[0].withValues(alpha: 0.4),
-                          blurRadius: 15,
-                          offset: const Offset(0, 6),
-                          spreadRadius: 1,
-                        ),
-                        BoxShadow(
-                          color: MinimalColors.accentGradient(context)[1].withValues(alpha: 0.3),
-                          blurRadius: 25,
-                          offset: const Offset(0, 10),
+                          color: MinimalColors.gradientShadow(context, alpha: 0.2),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
                         ),
                       ]
                     : null,
