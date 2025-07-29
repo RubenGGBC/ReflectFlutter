@@ -5,6 +5,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
+import '../v3/daily_review_screen_v3.dart';
 
 // Providers optimizados
 import '../../providers/optimized_providers.dart';
@@ -36,7 +37,7 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
   // VARIABLES DE ESTADO MEJORADAS
   // ============================================================================
 
-  int _currentIndex =3 ;
+  int _currentIndex = 3;
   PageController? _pageController;
   late AnimationController _navAnimationController;
   late Animation<double> _navAnimation;
@@ -58,42 +59,49 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
       activeIcon: Icons.analytics,
       label: 'Analytics',
       color: const Color(0xFFF59E0B),
+      semanticLabel: 'Análisis y estadísticas',
     ),
     NavigationItem(
       icon: Icons.map_outlined,
       activeIcon: Icons.map,
       label: 'Roadmap',
       color: const Color(0xFF9333EA),
+      semanticLabel: 'Hoja de ruta diaria',
     ),
     NavigationItem(
       icon: Icons.camera_alt_outlined,
       activeIcon: Icons.camera_alt,
       label: 'Momentos',
       color: const Color(0xFF8B5CF6),
+      semanticLabel: 'Captura de momentos rápidos',
     ),
     NavigationItem(
       icon: Icons.home_outlined,
       activeIcon: Icons.home,
       label: 'Inicio',
       color: const Color(0xFF3B82F6),
+      semanticLabel: 'Pantalla de inicio',
     ),
     NavigationItem(
       icon: Icons.edit_note_outlined,
       activeIcon: Icons.edit_note,
       label: 'Reflexión',
       color: const Color(0xFF10B981),
+      semanticLabel: 'Reflexión diaria',
     ),
     NavigationItem(
       icon: Icons.flag_outlined,
       activeIcon: Icons.flag,
       label: 'Goals',
       color: const Color(0xFF4ECDC4),
+      semanticLabel: 'Gestión de metas',
     ),
     NavigationItem(
       icon: Icons.person_outline,
       activeIcon: Icons.person,
       label: 'Perfil',
       color: const Color(0xFFEF4444),
+      semanticLabel: 'Perfil de usuario',
     ),
   ];
 
@@ -375,15 +383,15 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
       height: MediaQuery.of(context).size.width > 600 ? 80 : 70,
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
       decoration: BoxDecoration(
-        color: themeProvider.surface.withValues(alpha: 0.95),
+        color: themeProvider.surface.withOpacity(0.95),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: themeProvider.borderColor.withValues(alpha: 0.3),
+          color: themeProvider.borderColor.withOpacity(0.3),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: themeProvider.shadowColor.withValues(alpha: 0.3),
+            color: themeProvider.shadowColor.withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -407,44 +415,86 @@ class _MainNavigationScreenV2State extends State<MainNavigationScreenV2>
   }
 
   Widget _buildNavigationItem(NavigationItem item, int index, bool isSelected, ThemeProvider themeProvider) {
-    return GestureDetector(
-      onTap: () => _onNavigationTap(index),
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? item.color.withValues(alpha: 0.2)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(12),
+    return Semantics(
+      label: item.semanticLabel,
+      selected: isSelected,
+      child: GestureDetector(
+        onTap: () => _onNavigationTap(index),
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            gradient: isSelected
+                ? LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      item.color.withOpacity(0.1),
+                      item.color.withOpacity(0.05),
+                    ],
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TweenAnimationBuilder<double>(
+                duration: const Duration(milliseconds: 200),
+                tween: Tween(begin: 0.0, end: isSelected ? 1.0 : 0.0),
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: 1.0 + (value * 0.1),
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: Color.lerp(
+                          Colors.transparent,
+                          item.color.withOpacity(0.2),
+                          value,
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: isSelected
+                            ? [
+                                BoxShadow(
+                                  color: item.color.withOpacity(0.3),
+                                  blurRadius: 8 * value,
+                                  offset: Offset(0, 2 * value),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Icon(
+                        isSelected ? item.activeIcon : item.icon,
+                        size: MediaQuery.of(context).size.width > 600 ? 22 : 18,
+                        color: Color.lerp(
+                          themeProvider.textSecondary,
+                          item.color,
+                          value,
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
-              child: Icon(
-                isSelected ? item.activeIcon : item.icon,
-                size: MediaQuery.of(context).size.width > 600 ? 22 : 18,
-                color: isSelected ? item.color : themeProvider.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Flexible(
-              child: Text(
-                item.label,
+              const SizedBox(height: 4),
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 150),
                 style: TextStyle(
                   fontSize: MediaQuery.of(context).size.width > 600 ? 11 : 9,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                   color: isSelected ? item.color : themeProvider.textSecondary,
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                textAlign: TextAlign.center,
+                child: Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -508,12 +558,14 @@ class NavigationItem {
   final IconData activeIcon;
   final String label;
   final Color color;
+  final String semanticLabel;
 
   NavigationItem({
     required this.icon,
     required this.activeIcon,
     required this.label,
     required this.color,
+    required this.semanticLabel,
   });
 }
 

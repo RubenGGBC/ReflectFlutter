@@ -20,8 +20,7 @@ import '../../widgets/enhanced_goal_card.dart';
 import '../../widgets/progress_entry_dialog.dart';
 import '../../widgets/enhanced_create_goal_dialog.dart';
 
-// New Advanced Screens
-import 'advanced_goal_creation_screen.dart';
+// New Advanced Screens  
 import 'advanced_goal_editing_screen.dart';
 
 class GoalsScreenEnhanced extends StatefulWidget {
@@ -403,7 +402,7 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
                 _getCategoryIcon(category),
                 size: 16,
                 color: isSelected 
-                    ? MinimalColors.textPrimary(context) 
+                    ? Colors.white 
                     : MinimalColors.textSecondary(context),
               ),
               const SizedBox(width: 6),
@@ -414,7 +413,7 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: isSelected 
-                    ? MinimalColors.textPrimary(context) 
+                    ? Colors.white 
                     : MinimalColors.textSecondary(context),
               ),
             ),
@@ -533,11 +532,11 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
                   borderRadius: BorderRadius.circular(16),
                 ),
               ),
-              icon: Icon(Icons.add, color: MinimalColors.textPrimary(context)),
+              icon: Icon(Icons.add, color: Colors.white),
               label: Text(
                 'Crear Objetivo',
                 style: TextStyle(
-                  color: MinimalColors.textPrimary(context),
+                  color: Colors.white,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -593,7 +592,7 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
           elevation: 0,
           child:  Icon(
             Icons.add,
-            color: MinimalColors.textPrimary(context),
+            color: Colors.white,
             size: 28,
           ),
         ),
@@ -713,7 +712,7 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
             style: ElevatedButton.styleFrom(
               backgroundColor: MinimalColors.primaryGradient(context)[0],
             ),
-            child: Text('Guardar', style: TextStyle(color: MinimalColors.textPrimary(context))),
+            child: Text('Guardar', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -721,16 +720,36 @@ class _GoalsScreenEnhancedState extends State<GoalsScreenEnhanced>
   }
 
   void _showCreateGoalDialog() {
-    // Navigate to the new advanced goal creation screen
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => const AdvancedGoalCreationScreen(),
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => EnhancedCreateGoalDialog(
+        onGoalCreated: (goal) async {
+          try {
+            final goalsProvider = context.read<EnhancedGoalsProvider>();
+            await goalsProvider.createGoal(goal);
+            _refreshGoals();
+            
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('¡Objetivo creado exitosamente!'),
+                  backgroundColor: MinimalColors.success,
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Error al crear objetivo: $e'),
+                  backgroundColor: MinimalColors.error,
+                ),
+              );
+            }
+          }
+        },
       ),
-    ).then((result) {
-      // Refresh goals if a goal was successfully created
-      if (result == true) {
-        _refreshGoals();
-      }
-    });
+    );
   }
 }

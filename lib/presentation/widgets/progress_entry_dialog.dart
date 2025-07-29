@@ -239,7 +239,7 @@ class _ProgressEntryDialogState extends State<ProgressEntryDialog>
         
         // Primary value input
         Text(
-          'Nuevo Valor (${widget.goal.suggestedUnit})',
+          'cuantos dias vas (${widget.goal.suggestedUnit})',
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,

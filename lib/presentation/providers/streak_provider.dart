@@ -115,10 +115,12 @@ class StreakProvider extends ChangeNotifier {
     _clearError();
 
     try {
-      final rawStreakData = <String, dynamic>{}; // TODO: Implement streak data calculation
+      // Get streak data from database service
+      final rawStreakData = await _databaseService.getUserAnalytics(userId);
+      final streakData = rawStreakData['streak_data'] as Map<String, dynamic>? ?? <String, dynamic>{};
       
-      final currentStreak = rawStreakData['current_streak'] as int? ?? 0;
-      final longestStreak = rawStreakData['longest_streak'] as int? ?? 0;
+      final currentStreak = streakData['current_streak'] as int? ?? 0;
+      final longestStreak = streakData['longest_streak'] as int? ?? 0;
 
       // Generate milestones based on current progress
       final milestones = _generateMilestones(currentStreak, longestStreak);

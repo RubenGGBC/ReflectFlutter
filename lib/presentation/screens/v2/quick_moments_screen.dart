@@ -417,8 +417,9 @@ class _QuickMomentsScreenState extends State<QuickMomentsScreen>
                     'Nuevo Momento',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
                     ),
                   ),
                 ),

@@ -99,13 +99,15 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
   }
 
   void _loadData() {
-    final authProvider = context.read<OptimizedAuthProvider>();
-    final user = authProvider.currentUser;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = context.read<OptimizedAuthProvider>();
+      final user = authProvider.currentUser;
 
-    if (user != null) {
-      context.read<OptimizedDailyEntriesProvider>().loadEntries(user.id);
-      context.read<OptimizedAnalyticsProvider>().loadCompleteAnalytics(user.id, days: 30);
-    }
+      if (user != null) {
+        context.read<OptimizedDailyEntriesProvider>().loadEntries(user.id);
+        context.read<OptimizedAnalyticsProvider>().loadCompleteAnalytics(user.id, days: 30);
+      }
+    });
   }
 
   // ============================================================================
@@ -2365,7 +2367,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
               ),
             ],
           ),
-          if (goal.notes != null && goal.notes.isNotEmpty) ...[
+          if (goal.progressNotes != null && goal.progressNotes!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(8),
@@ -2379,7 +2381,7 @@ class _DailyDetailScreenV2State extends State<DailyDetailScreenV2>
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      goal.notes,
+                      goal.progressNotes!,
                       style: TextStyle(
                         color: MinimalColors.textSecondary(context),
                         fontSize: 12,

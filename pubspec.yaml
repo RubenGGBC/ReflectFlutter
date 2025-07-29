@@ -38,6 +38,13 @@ dependencies:
   record: ^6.0.0
   audioplayers: ^5.2.1
   permission_handler: ^11.0.1
+  
+  # Enhanced UI/UX Dependencies
+  animations: ^2.0.11
+  shimmer: ^3.0.0
+  glass_kit: ^3.0.0
+  liquid_pull_to_refresh: ^3.0.1
+  flutter_staggered_animations: ^1.1.1
 
 
 dev_dependencies:

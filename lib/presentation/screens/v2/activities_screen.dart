@@ -118,21 +118,12 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
               );
             }
 
-            return Column(
+            return TabBarView(
+              controller: _tabController,
               children: [
-                // Progress Stats
-                _buildProgressStats(provider),
-                // Activity List
-                Expanded(
-                  child: TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildActivityList(provider.activities),
-                      _buildActivityList(provider.pendingActivities),
-                      _buildActivityList(provider.completedActivities),
-                    ],
-                  ),
-                ),
+                _buildCustomScrollView(provider, provider.activities),
+                _buildCustomScrollView(provider, provider.pendingActivities),
+                _buildCustomScrollView(provider, provider.completedActivities),
               ],
             );
           },
@@ -201,7 +192,7 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
     );
   }
 
-  Widget _buildActivityList(List<DailyActivity> activities) {
+  Widget _buildCustomScrollView(DailyActivitiesProvider provider, List<DailyActivity> activities) {
     if (activities.isEmpty) {
       return Center(
         child: Column(
@@ -225,13 +216,18 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: activities.length,
-      itemBuilder: (context, index) {
-        final activity = activities[index];
-        return _buildActivityCard(activity);
-      },
+    return ListView(
+      children: [
+        // Progress Stats - Now scrollable
+        _buildProgressStats(provider),
+        // Activity List
+        Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: activities.map((activity) => _buildActivityCard(activity)).toList(),
+          ),
+        ),
+      ],
     );
   }
 

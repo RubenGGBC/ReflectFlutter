@@ -215,7 +215,6 @@ class _DailyRoadmapScreenV3State extends State<DailyRoadmapScreenV3>
                     ),
                   ),
                 ),
-                _buildFloatingActionButton(provider, themeProvider),
               ],
             ),
           ),
@@ -725,110 +724,6 @@ class _DailyRoadmapScreenV3State extends State<DailyRoadmapScreenV3>
     );
   }
 
-  Widget _buildFloatingActionButton(DailyRoadmapProvider provider, ThemeProvider theme) {
-    return Positioned(
-      bottom: 20,
-      right: 20,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Mini FAB para agregar actividad rápida
-          AnimatedBuilder(
-            animation: _pulseAnimation,
-            builder: (context, child) {
-              return Transform.scale(
-                scale: 0.8 + (_pulseAnimation.value - 0.95) * 2,
-                child: FloatingActionButton(
-                  heroTag: "quick_add_fab",
-                  mini: true,
-                  onPressed: () => _showQuickAddModal(provider),
-                  backgroundColor: theme.accentSecondary,
-                  foregroundColor: Colors.white,
-                  child: const Icon(Icons.add, size: 20),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 8),
-          
-          // FAB principal mejorado
-          AnimatedBuilder(
-            animation: _pulseAnimation,
-            builder: (context, child) {
-              return Transform.scale(
-                scale: _pulseAnimation.value,
-                child: GestureDetector(
-                  onTapDown: (_) {
-                    _scaleController.forward();
-                    HapticFeedback.lightImpact();
-                  },
-                  onTapUp: (_) => _scaleController.reverse(),
-                  onTapCancel: () => _scaleController.reverse(),
-                  child: AnimatedBuilder(
-                    animation: _scaleAnimation,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _scaleAnimation.value,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(colors: theme.gradientButton),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: theme.gradientButton[0].withValues(alpha: 0.6),
-                                blurRadius: 20,
-                                offset: const Offset(0, 8),
-                              ),
-                              BoxShadow(
-                                color: theme.gradientButton[0].withValues(alpha: 0.3),
-                                blurRadius: 40,
-                                offset: const Offset(0, 12),
-                                spreadRadius: 4,
-                              ),
-                            ],
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () => _showEnhancedAddActivityModal(provider),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      Icons.event_available,
-                                      color: Colors.white,
-                                      size: 24,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      'Programar',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildOptionsButton(ThemeProvider theme) {
     return IconButton(
@@ -971,31 +866,6 @@ class _DailyRoadmapScreenV3State extends State<DailyRoadmapScreenV3>
     _showAddActivityModal(provider, now.hour, now.minute);
   }
 
-  void _showEnhancedAddActivityModal(DailyRoadmapProvider provider) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _EnhancedAddActivityModal(
-        provider: provider,
-        theme: Provider.of<ThemeProvider>(context, listen: false),
-      ),
-    );
-  }
-
-  void _showRoadmapAddActivityModal(DailyRoadmapProvider provider, int hour, int minute) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _RoadmapAddActivityModal(
-        provider: provider,
-        theme: Provider.of<ThemeProvider>(context, listen: false),
-        initialHour: hour,
-        initialMinute: minute,
-      ),
-    );
-  }
 
   // ============================================================================
   // FUNCIONES DE INTERACCIÓN
@@ -1004,17 +874,30 @@ class _DailyRoadmapScreenV3State extends State<DailyRoadmapScreenV3>
   void _handleHourTap(DailyRoadmapProvider provider, int hour) {
     final now = DateTime.now();
     final currentHour = now.hour;
+    final selectedDate = provider.selectedDate;
     final activities = provider.activitiesByTime
         .where((activity) => activity.hour == hour)
         .toList();
 
+    // Check if this hour is in the past
+    final isPastHour = selectedDate.isBefore(DateTime(now.year, now.month, now.day)) ||
+        (selectedDate.day == now.day && 
+         selectedDate.month == now.month && 
+         selectedDate.year == now.year && 
+         hour < currentHour);
+
     if (activities.isEmpty) {
-      // No hay actividades, mostrar modal para crear nueva desde roadmap
-      _showRoadmapAddActivityModal(provider, hour, 0);
+      if (isPastHour) {
+        // Hora pasada sin actividades - mostrar detalles
+        _showPastHourDetailsModal(hour);
+      } else {
+        // Hora futura sin actividades - mostrar modal para crear nueva
+        _showAddActivityModal(provider, hour, 0);
+      }
     } else if (activities.length == 1) {
       // Solo una actividad, mostrar modal apropiado
       final activity = activities.first;
-      if (hour < currentHour) {
+      if (isPastHour) {
         // Hora pasada - mostrar resumen
         _showActivitySummaryModal(provider, activity);
       } else {
@@ -1023,7 +906,7 @@ class _DailyRoadmapScreenV3State extends State<DailyRoadmapScreenV3>
       }
     } else {
       // Múltiples actividades, mostrar selector
-      _showActivitySelectorModal(provider, activities, hour < currentHour);
+      _showActivitySelectorModal(provider, activities, isPastHour);
     }
   }
 
@@ -1060,6 +943,106 @@ class _DailyRoadmapScreenV3State extends State<DailyRoadmapScreenV3>
         }
       });
     }
+  }
+
+  void _showPastHourDetailsModal(int hour) {
+    final provider = context.read<DailyRoadmapProvider>();
+    final selectedDate = provider.selectedDate;
+    final activities = provider.activitiesByTime
+        .where((activity) => activity.hour == hour)
+        .toList();
+    
+    showDialog(
+      context: context,
+      builder: (context) => Consumer<ThemeProvider>(
+        builder: (context, theme, _) => AlertDialog(
+          backgroundColor: theme.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Text(
+            'Hora ${hour.toString().padLeft(2, '0')}:00',
+            style: TextStyle(
+              color: theme.textPrimary, 
+              fontWeight: FontWeight.bold
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Fecha: ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+                style: TextStyle(color: theme.textSecondary, fontSize: 14),
+              ),
+              const SizedBox(height: 16),
+              if (activities.isEmpty)
+                Text(
+                  'No hubo actividades programadas para esta hora.',
+                  style: TextStyle(color: theme.textSecondary.withValues(alpha: 0.8)),
+                )
+              else ...[
+                Text(
+                  'Actividades en esta hora:',
+                  style: TextStyle(
+                    color: theme.textPrimary, 
+                    fontWeight: FontWeight.w500
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...activities.map((activity) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        activity.isCompleted ? Icons.check_circle : Icons.cancel,
+                        color: activity.isCompleted ? theme.positiveMain : Colors.orange,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              activity.title,
+                              style: TextStyle(
+                                color: theme.textPrimary,
+                                fontSize: 13,
+                                decoration: activity.isCompleted 
+                                    ? TextDecoration.lineThrough 
+                                    : null,
+                              ),
+                            ),
+                            if (activity.description?.isNotEmpty == true)
+                              Text(
+                                activity.description!,
+                                style: TextStyle(
+                                  color: theme.textSecondary,
+                                  fontSize: 11,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(
+                'Cerrar',
+                style: TextStyle(color: theme.accentPrimary),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   bool _isSameDay(DateTime date1, DateTime date2) {
@@ -1307,7 +1290,11 @@ class _DailyRoadmapScreenV3State extends State<DailyRoadmapScreenV3>
     return GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        _showRoadmapAddActivityModal(context.read<DailyRoadmapProvider>(), hour, 0);
+        if (isPastHour) {
+          _showPastHourDetailsModal(hour);
+        } else {
+          _showAddActivityModal(context.read<DailyRoadmapProvider>(), hour, 0);
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(right: 16, top: 16, bottom: 16),
@@ -2147,1219 +2134,5 @@ class _ActivitySelectorModal extends StatelessWidget {
         ),
       ),
     );
-  }
-}
-
-// ============================================================================
-// MODAL PARA AGREGAR ACTIVIDAD DESDE ROADMAP (ENFOCADO EN HORA ESPECÍFICA)
-// ============================================================================
-
-class _RoadmapAddActivityModal extends StatefulWidget {
-  final DailyRoadmapProvider provider;
-  final ThemeProvider theme;
-  final int initialHour;
-  final int initialMinute;
-
-  const _RoadmapAddActivityModal({
-    required this.provider,
-    required this.theme,
-    required this.initialHour,
-    required this.initialMinute,
-  });
-
-  @override
-  State<_RoadmapAddActivityModal> createState() => _RoadmapAddActivityModalState();
-}
-
-class _RoadmapAddActivityModalState extends State<_RoadmapAddActivityModal>
-    with TickerProviderStateMixin {
-  
-  late AnimationController _slideController;
-  late Animation<Offset> _slideAnimation;
-  
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _categoryController = TextEditingController();
-  
-  late int _selectedHour;
-  late int _selectedMinute;
-  int _estimatedDuration = 60;
-  ActivityPriority _selectedPriority = ActivityPriority.medium;
-  
-  final List<String> _quickTitles = [
-    'Reunión', 'Llamada', 'Ejercicio', 'Almuerzo', 'Descanso', 'Estudio', 'Revisar emails'
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedHour = widget.initialHour;
-    _selectedMinute = widget.initialMinute;
-    _setupAnimations();
-  }
-
-  @override
-  void dispose() {
-    _slideController.dispose();
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _categoryController.dispose();
-    super.dispose();
-  }
-
-  void _setupAnimations() {
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
-    ));
-
-    _slideController.forward();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: Container(
-        height: MediaQuery.of(context).size.height * 0.75,
-        decoration: BoxDecoration(
-          color: widget.theme.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border.all(
-            color: widget.theme.borderColor.withValues(alpha: 0.3),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: widget.theme.shadowColor.withValues(alpha: widget.theme.isDark ? 0.2 : 0.15),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Handle bar
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(top: 12),
-              decoration: BoxDecoration(
-                color: widget.theme.borderColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            
-            // Header - Específico para roadmap
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [
-                  widget.theme.accentPrimary,
-                  widget.theme.accentPrimary.withValues(alpha: 0.8),
-                ]),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.schedule,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Agregar a las ${_selectedHour.toString().padLeft(2, '0')}:${_selectedMinute.toString().padLeft(2, '0')}',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          'Nueva actividad en tu roadmap',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close, color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Quick titles
-                    _buildQuickSection(
-                      'Títulos Rápidos',
-                      Icons.flash_on,
-                      _quickTitles,
-                      (title) => _titleController.text = title,
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Title input
-                    _buildInputField(
-                      'Título de la actividad',
-                      _titleController,
-                      Icons.event,
-                      'ej. Reunión con equipo',
-                    ),
-                    
-                    const SizedBox(height: 20),
-                    
-                    // Description input
-                    _buildInputField(
-                      'Descripción (opcional)',
-                      _descriptionController,
-                      Icons.description,
-                      'ej. Revisar avances del proyecto',
-                      maxLines: 2,
-                    ),
-                    
-                    const SizedBox(height: 20),
-                    
-                    // Category input
-                    _buildInputField(
-                      'Categoría (opcional)',
-                      _categoryController,
-                      Icons.folder,
-                      'ej. Trabajo, Personal',
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Duration and priority
-                    Row(
-                      children: [
-                        Expanded(child: _buildDurationSection()),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildPrioritySection()),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
-            // Action buttons
-            Container(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: widget.theme.accentPrimary,
-                        side: BorderSide(color: widget.theme.accentPrimary, width: 2),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Cancelar',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: _canSave() ? _saveActivity : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: widget.theme.accentPrimary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Agregar a Roadmap',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickSection(String title, IconData icon, List<String> items, Function(String) onTap) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              icon,
-              color: widget.theme.accentPrimary,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: TextStyle(
-                color: widget.theme.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: items.map((item) => _buildQuickChip(item, onTap)).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickChip(String text, Function(String) onTap) {
-    return GestureDetector(
-      onTap: () {
-        onTap(text);
-        setState(() {});
-        HapticFeedback.lightImpact();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: widget.theme.isDark 
-              ? widget.theme.surfaceVariant
-              : widget.theme.surfaceVariant.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: widget.theme.borderColor.withValues(alpha: widget.theme.isDark ? 0.3 : 0.5),
-          ),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: widget.theme.textPrimary,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputField(String label, TextEditingController controller, IconData icon, String hint, {int maxLines = 1}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              icon,
-              color: widget.theme.accentPrimary,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: widget.theme.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          style: TextStyle(color: widget.theme.textPrimary),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: widget.theme.textHint),
-            filled: true,
-            fillColor: widget.theme.isDark 
-                ? widget.theme.surfaceVariant
-                : widget.theme.surfaceVariant.withValues(alpha: 0.6),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: widget.theme.borderColor),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: widget.theme.borderColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: widget.theme.accentPrimary, width: 2),
-            ),
-            contentPadding: const EdgeInsets.all(16),
-          ),
-          onChanged: (value) => setState(() {}),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDurationSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Duración (min)',
-          style: TextStyle(
-            color: widget.theme.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: widget.theme.surfaceVariant,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: widget.theme.borderColor.withValues(alpha: 0.3),
-            ),
-          ),
-          child: DropdownButton<int>(
-            value: _estimatedDuration,
-            underline: Container(),
-            isExpanded: true,
-            dropdownColor: widget.theme.surface,
-            style: TextStyle(color: widget.theme.textPrimary),
-            items: [15, 30, 45, 60, 90, 120].map((duration) {
-              return DropdownMenuItem<int>(
-                value: duration,
-                child: Text('$duration min'),
-              );
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _estimatedDuration = value;
-                });
-              }
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPrioritySection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Prioridad',
-          style: TextStyle(
-            color: widget.theme.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: widget.theme.surfaceVariant,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: widget.theme.borderColor.withValues(alpha: 0.3),
-            ),
-          ),
-          child: DropdownButton<ActivityPriority>(
-            value: _selectedPriority,
-            underline: Container(),
-            isExpanded: true,
-            dropdownColor: widget.theme.surface,
-            style: TextStyle(color: widget.theme.textPrimary),
-            items: ActivityPriority.values.map((priority) {
-              return DropdownMenuItem<ActivityPriority>(
-                value: priority,
-                child: Text(_getPriorityLabel(priority)),
-              );
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _selectedPriority = value;
-                });
-              }
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  bool _canSave() {
-    return _titleController.text.trim().isNotEmpty;
-  }
-
-  Future<void> _saveActivity() async {
-    if (!_canSave()) return;
-
-    final success = await widget.provider.addActivity(
-      title: _titleController.text.trim(),
-      hour: _selectedHour,
-      minute: _selectedMinute,
-      description: _descriptionController.text.trim().isEmpty 
-          ? null 
-          : _descriptionController.text.trim(),
-      priority: _selectedPriority,
-      category: _categoryController.text.trim().isEmpty 
-          ? null 
-          : _categoryController.text.trim(),
-      estimatedDuration: _estimatedDuration,
-    );
-
-    if (success && mounted) {
-      HapticFeedback.mediumImpact();
-      Navigator.pop(context);
-      
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Actividad agregada a las ${_selectedHour.toString().padLeft(2, '0')}:${_selectedMinute.toString().padLeft(2, '0')}'),
-          backgroundColor: widget.theme.positiveMain,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
-  String _getPriorityLabel(ActivityPriority priority) {
-    switch (priority) {
-      case ActivityPriority.low:
-        return 'Baja';
-      case ActivityPriority.medium:
-        return 'Media';
-      case ActivityPriority.high:
-        return 'Alta';
-      case ActivityPriority.urgent:
-        return 'Urgente';
-    }
-  }
-}
-
-// ============================================================================
-// MODAL MEJORADO PARA AGREGAR NUEVA ACTIVIDAD (DESDE BOTÓN PROGRAMAR)
-// ============================================================================
-
-class _EnhancedAddActivityModal extends StatefulWidget {
-  final DailyRoadmapProvider provider;
-  final ThemeProvider theme;
-
-  const _EnhancedAddActivityModal({
-    required this.provider,
-    required this.theme,
-  });
-
-  @override
-  State<_EnhancedAddActivityModal> createState() => _EnhancedAddActivityModalState();
-}
-
-class _EnhancedAddActivityModalState extends State<_EnhancedAddActivityModal>
-    with TickerProviderStateMixin {
-  
-  late AnimationController _slideController;
-  late Animation<Offset> _slideAnimation;
-  
-  final _titleController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _categoryController = TextEditingController();
-  
-  int _selectedHour = DateTime.now().hour;
-  int _selectedMinute = 0;
-  int _estimatedDuration = 60;
-  ActivityPriority _selectedPriority = ActivityPriority.medium;
-  
-  final List<String> _quickCategories = [
-    'Trabajo', 'Personal', 'Ejercicio', 'Comida', 'Descanso', 'Social', 'Estudio', 'Hogar'
-  ];
-  
-  final List<String> _quickTitles = [
-    'Reunión', 'Llamada', 'Ejercicio', 'Almuerzo', 'Descanso', 'Estudio', 'Revisar emails'
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _setupAnimations();
-  }
-
-  @override
-  void dispose() {
-    _slideController.dispose();
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _categoryController.dispose();
-    super.dispose();
-  }
-
-  void _setupAnimations() {
-    _slideController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 1),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
-    ));
-
-    _slideController.forward();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: Container(
-        height: MediaQuery.of(context).size.height * 0.85,
-        decoration: BoxDecoration(
-          color: widget.theme.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          border: Border.all(
-            color: widget.theme.borderColor.withValues(alpha: 0.3),
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: widget.theme.shadowColor.withValues(alpha: widget.theme.isDark ? 0.2 : 0.15),
-              blurRadius: 20,
-              offset: const Offset(0, -4),
-            ),
-            if (!widget.theme.isDark)
-              BoxShadow(
-                color: widget.theme.borderColor.withValues(alpha: 0.2),
-                blurRadius: 10,
-                offset: const Offset(0, -2),
-              ),
-          ],
-        ),
-        child: Column(
-          children: [
-            // Handle bar
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(top: 12),
-              decoration: BoxDecoration(
-                color: widget.theme.borderColor,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            
-            // Header
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(colors: widget.theme.gradientHeader),
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      Icons.event_available,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Nueva Actividad',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        Text(
-                          'Programa tu próxima actividad',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontSize: 14,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(Icons.close, color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-            
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Quick titles
-                    _buildQuickSection(
-                      'Títulos Rápidos',
-                      Icons.flash_on,
-                      _quickTitles,
-                      (title) => _titleController.text = title,
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Title input
-                    _buildInputField(
-                      'Título de la actividad',
-                      _titleController,
-                      Icons.event,
-                      'ej. Reunión con equipo',
-                    ),
-                    
-                    const SizedBox(height: 20),
-                    
-                    // Description input
-                    _buildInputField(
-                      'Descripción (opcional)',
-                      _descriptionController,
-                      Icons.description,
-                      'ej. Revisar avances del proyecto',
-                      maxLines: 3,
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Time picker
-                    _buildTimeSection(),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Quick categories
-                    _buildQuickSection(
-                      'Categorías',
-                      Icons.category,
-                      _quickCategories,
-                      (category) => _categoryController.text = category,
-                    ),
-                    
-                    const SizedBox(height: 20),
-                    
-                    // Category input
-                    _buildInputField(
-                      'Categoría (opcional)',
-                      _categoryController,
-                      Icons.folder,
-                      'ej. Trabajo, Personal',
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Duration and priority
-                    Row(
-                      children: [
-                        Expanded(child: _buildDurationSection()),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildPrioritySection()),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
-            // Action buttons
-            Container(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: widget.theme.accentPrimary,
-                        side: BorderSide(color: widget.theme.accentPrimary, width: 2),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Cancelar',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    flex: 2,
-                    child: ElevatedButton(
-                      onPressed: _canSave() ? _saveActivity : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: widget.theme.accentPrimary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: Text(
-                        'Programar Actividad',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickSection(String title, IconData icon, List<String> items, Function(String) onTap) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              icon,
-              color: widget.theme.accentPrimary,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              title,
-              style: TextStyle(
-                color: widget.theme.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: items.map((item) => _buildQuickChip(item, onTap)).toList(),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickChip(String text, Function(String) onTap) {
-    return GestureDetector(
-      onTap: () {
-        onTap(text);
-        setState(() {});
-        HapticFeedback.lightImpact();
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: widget.theme.isDark 
-              ? widget.theme.surfaceVariant
-              : widget.theme.surfaceVariant.withValues(alpha: 0.7),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: widget.theme.borderColor.withValues(alpha: widget.theme.isDark ? 0.3 : 0.5),
-          ),
-          boxShadow: widget.theme.isDark ? null : [
-            BoxShadow(
-              color: widget.theme.shadowColor.withValues(alpha: 0.05),
-              blurRadius: 2,
-              offset: const Offset(0, 1),
-            ),
-          ],
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            color: widget.theme.textPrimary,
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInputField(String label, TextEditingController controller, IconData icon, String hint, {int maxLines = 1}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              icon,
-              color: widget.theme.accentPrimary,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: widget.theme.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: controller,
-          maxLines: maxLines,
-          style: TextStyle(color: widget.theme.textPrimary),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: widget.theme.textHint),
-            filled: true,
-            fillColor: widget.theme.isDark 
-                ? widget.theme.surfaceVariant
-                : widget.theme.surfaceVariant.withValues(alpha: 0.6),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: widget.theme.borderColor),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: widget.theme.borderColor),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(color: widget.theme.accentPrimary, width: 2),
-            ),
-            contentPadding: const EdgeInsets.all(16),
-          ),
-          onChanged: (value) => setState(() {}),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimeSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(
-              Icons.access_time,
-              color: widget.theme.accentPrimary,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Hora programada',
-              style: TextStyle(
-                color: widget.theme.textPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildTimePickerButton(
-                'Hora',
-                '${_selectedHour.toString().padLeft(2, '0')}:${_selectedMinute.toString().padLeft(2, '0')}',
-                _showTimePicker,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTimePickerButton(String label, String value, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: widget.theme.isDark 
-              ? widget.theme.surfaceVariant
-              : widget.theme.surfaceVariant.withValues(alpha: 0.8),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: widget.theme.borderColor.withValues(alpha: widget.theme.isDark ? 0.3 : 0.6),
-          ),
-          boxShadow: widget.theme.isDark ? null : [
-            BoxShadow(
-              color: widget.theme.shadowColor.withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(
-                color: widget.theme.textSecondary,
-                fontSize: 12,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: TextStyle(
-                color: widget.theme.textPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDurationSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Duración (min)',
-          style: TextStyle(
-            color: widget.theme.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: widget.theme.surfaceVariant,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: widget.theme.borderColor.withValues(alpha: 0.3),
-            ),
-          ),
-          child: DropdownButton<int>(
-            value: _estimatedDuration,
-            underline: Container(),
-            isExpanded: true,
-            dropdownColor: widget.theme.surface,
-            style: TextStyle(color: widget.theme.textPrimary),
-            items: [15, 30, 45, 60, 90, 120, 180].map((duration) {
-              return DropdownMenuItem<int>(
-                value: duration,
-                child: Text('$duration min'),
-              );
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _estimatedDuration = value;
-                });
-              }
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPrioritySection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Prioridad',
-          style: TextStyle(
-            color: widget.theme.textPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: widget.theme.surfaceVariant,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: widget.theme.borderColor.withValues(alpha: 0.3),
-            ),
-          ),
-          child: DropdownButton<ActivityPriority>(
-            value: _selectedPriority,
-            underline: Container(),
-            isExpanded: true,
-            dropdownColor: widget.theme.surface,
-            style: TextStyle(color: widget.theme.textPrimary),
-            items: ActivityPriority.values.map((priority) {
-              return DropdownMenuItem<ActivityPriority>(
-                value: priority,
-                child: Text(_getPriorityLabel(priority)),
-              );
-            }).toList(),
-            onChanged: (value) {
-              if (value != null) {
-                setState(() {
-                  _selectedPriority = value;
-                });
-              }
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  void _showTimePicker() async {
-    final TimeOfDay? picked = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(hour: _selectedHour, minute: _selectedMinute),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: widget.theme.accentPrimary,
-              onPrimary: Colors.white,
-              surface: widget.theme.surface,
-              onSurface: widget.theme.textPrimary,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (picked != null) {
-      setState(() {
-        _selectedHour = picked.hour;
-        _selectedMinute = picked.minute;
-      });
-    }
-  }
-
-  bool _canSave() {
-    return _titleController.text.trim().isNotEmpty;
-  }
-
-  Future<void> _saveActivity() async {
-    if (!_canSave()) return;
-
-    final success = await widget.provider.addActivity(
-      title: _titleController.text.trim(),
-      hour: _selectedHour,
-      minute: _selectedMinute,
-      description: _descriptionController.text.trim().isEmpty 
-          ? null 
-          : _descriptionController.text.trim(),
-      priority: _selectedPriority,
-      category: _categoryController.text.trim().isEmpty 
-          ? null 
-          : _categoryController.text.trim(),
-      estimatedDuration: _estimatedDuration,
-    );
-
-    if (success && mounted) {
-      HapticFeedback.mediumImpact();
-      Navigator.pop(context);
-      
-      // Show success message
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Actividad programada para las ${_selectedHour.toString().padLeft(2, '0')}:${_selectedMinute.toString().padLeft(2, '0')}'),
-          backgroundColor: widget.theme.positiveMain,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
-  String _getPriorityLabel(ActivityPriority priority) {
-    switch (priority) {
-      case ActivityPriority.low:
-        return 'Baja';
-      case ActivityPriority.medium:
-        return 'Media';
-      case ActivityPriority.high:
-        return 'Alta';
-      case ActivityPriority.urgent:
-        return 'Urgente';
-    }
   }
 }

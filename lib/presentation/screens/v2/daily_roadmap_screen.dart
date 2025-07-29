@@ -210,7 +210,6 @@ class _DailyRoadmapScreenState extends State<DailyRoadmapScreen>
               ),
             ),
           ),
-          floatingActionButton: _buildFloatingActionButton(provider),
         );
       },
     );
@@ -606,66 +605,6 @@ class _DailyRoadmapScreenState extends State<DailyRoadmapScreen>
   }
 
 
-  Widget _buildFloatingActionButton(DailyRoadmapProvider provider) {
-    return AnimatedBuilder(
-      animation: _pulseAnimation,
-      builder: (context, child) {
-        return Transform.scale(
-          scale: _pulseAnimation.value,
-          child: GestureDetector(
-            onTapDown: (_) {
-              _scaleController.forward();
-              HapticFeedback.lightImpact();
-            },
-            onTapUp: (_) => _scaleController.reverse(),
-            onTapCancel: () => _scaleController.reverse(),
-            child: AnimatedBuilder(
-              animation: _scaleAnimation,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: _scaleAnimation.value,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: MinimalColors.primaryGradient(context)),
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        BoxShadow(
-                          color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.4),
-                          blurRadius: 20,
-                          offset: const Offset(0, 8),
-                        ),
-                        BoxShadow(
-                          color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
-                          blurRadius: 40,
-                          offset: const Offset(0, 12),
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                    child: FloatingActionButton.extended(
-                      onPressed: () => _showAddActivityModal(provider, DateTime.now().hour, 0),
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      heroTag: "add_activity_fab",
-                      icon: const Icon(Icons.add, size: 24),
-                      label: const Text(
-                        'Actividad',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   Widget _buildOptionsButton() {
     return IconButton(

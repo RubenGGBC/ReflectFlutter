@@ -1277,11 +1277,13 @@ class OptimizedDatabaseService {
         final roadmapData = roadmap.toDatabase();
         // Remove 'id' from roadmapData to avoid UNIQUE constraint violations
         roadmapData.remove('id');
+        // Ensure consistent date formatting
         final dateStr = roadmap.targetDate.toIso8601String().split('T')[0];
+        roadmapData['target_date'] = dateStr;
 
         final existingRoadmap = await txn.query(
           'daily_roadmaps',
-          where: 'user_id = ? AND target_date = ?',
+          where: 'user_id = ? AND DATE(target_date) = ?',
           whereArgs: [roadmap.userId, dateStr],
           limit: 1,
         );
@@ -1329,7 +1331,7 @@ class OptimizedDatabaseService {
 
       final results = await db.query(
         'daily_roadmaps',
-        where: 'user_id = ? AND target_date = ?',
+        where: 'user_id = ? AND DATE(target_date) = ?',
         whereArgs: [userId, dateStr],
         limit: 1,
       );
@@ -1391,7 +1393,7 @@ class OptimizedDatabaseService {
 
       final deletedRows = await db.delete(
         'daily_roadmaps',
-        where: 'user_id = ? AND target_date = ?',
+        where: 'user_id = ? AND DATE(target_date) = ?',
         whereArgs: [userId, dateStr],
       );
 

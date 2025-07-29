@@ -58,6 +58,10 @@ DailyEntryModel _$DailyEntryModelFromJson(Map<String, dynamic> json) =>
       focusLevel: (json['focusLevel'] as num?)?.toInt(),
       lifeSatisfaction: (json['lifeSatisfaction'] as num?)?.toInt(),
       voiceRecordingPath: json['voiceRecordingPath'] as String?,
+      imagePaths: (json['imagePaths'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
     );
 
 Map<String, dynamic> _$DailyEntryModelToJson(DailyEntryModel instance) =>
@@ -99,4 +103,5 @@ Map<String, dynamic> _$DailyEntryModelToJson(DailyEntryModel instance) =>
       'focusLevel': instance.focusLevel,
       'lifeSatisfaction': instance.lifeSatisfaction,
       'voiceRecordingPath': instance.voiceRecordingPath,
+      'imagePaths': instance.imagePaths,
     };

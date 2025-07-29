@@ -2,6 +2,7 @@
 // daily_review_screen_v2.dart - NUEVA VERSIÓN GUIADA E INTERACTIVA
 // ===========================================================================
 
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -1450,24 +1451,18 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       {'title': 'Productividad', 'value': _workProductivity, 'emoji': '💼', 'key': 'work'},
     ];
 
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 1.2,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemCount: metrics.length,
-      itemBuilder: (context, index) {
-        final metric = metrics[index];
-        return _buildMetricCard(metric);
-      },
+    return Column(
+      children: metrics.map((metric) => Column(
+        children: [
+          _buildMetricSlider(metric),
+          const SizedBox(height: 16),
+        ],
+      )).toList(),
     );
   }
 
-  Widget _buildMetricCard(Map<String, dynamic> metric) {
+  // Slider alargado para métricas del grid (similar al estilo numeric)
+  Widget _buildMetricSlider(Map<String, dynamic> metric) {
     final title = metric['title'] as String;
     final value = metric['value'] as int;
     final emoji = metric['emoji'] as String;
@@ -1477,31 +1472,75 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: MinimalColors.backgroundCard(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: MinimalColors.gradientShadow(context, alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(emoji, style: TextStyle(fontSize: 28)),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: TextStyle(
-              color: MinimalColors.textPrimary(context),
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: MinimalColors.primaryGradient(context),
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(emoji, style: const TextStyle(fontSize: 20)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: MinimalColors.textPrimary(context),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: MinimalColors.lightGradient(context)),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$value/10',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          // Slider for the metric
+          // Widget visual específico para cada métrica
+          Container(
+            height: 50,
+            child: _buildGridMetricVisualization(key, value.toDouble()),
+          ),
+          const SizedBox(height: 12),
           SliderTheme(
             data: SliderTheme.of(context).copyWith(
-              activeTrackColor: MinimalColors.primaryGradient(context)[0],
-              inactiveTrackColor: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.3),
-              thumbColor: MinimalColors.primaryGradient(context)[0],
-              overlayColor: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
+              activeTrackColor: MinimalColors.lightGradient(context)[0],
+              inactiveTrackColor: MinimalColors.lightGradient(context)[0].withValues(alpha: 0.3),
+              thumbColor: MinimalColors.lightGradient(context)[1],
+              overlayColor: MinimalColors.lightGradient(context)[0].withValues(alpha: 0.2),
+              trackHeight: 4,
               thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
               overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
             ),
@@ -1518,17 +1557,200 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
               },
             ),
           ),
-          const SizedBox(height: 8),
-          Text(
-            '$value/10',
-            style: TextStyle(
-              color: MinimalColors.textSecondary(context),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: 4),
         ],
+      ),
+    );
+  }
+
+
+  // Visualizaciones para métricas del grid
+  Widget _buildGridMetricVisualization(String key, double value) {
+    final Color baseColor = MinimalColors.primaryGradient(context)[0];
+    
+    switch (key) {
+      case 'physical':
+        return _buildPhysicalActivityVisualization(value, baseColor);
+      case 'anxiety':
+        return _buildAnxietyVisualization(value, baseColor);
+      case 'motivation':
+        return _buildMotivationVisualization(value, baseColor);
+      case 'social':
+        return _buildSocialVisualization(value, baseColor);
+      case 'sleep':
+        return _buildSleepQualityVisualization(value, baseColor);
+      case 'work':
+        return _buildProductivityVisualization(value, baseColor);
+      default:
+        return Container(
+          height: 40,
+          child: LinearProgressIndicator(
+            value: value / 10,
+            backgroundColor: baseColor.withValues(alpha: 0.2),
+            valueColor: AlwaysStoppedAnimation<Color>(baseColor),
+          ),
+        );
+    }
+  }
+
+  // Visualización para actividad física - figuras corriendo
+  Widget _buildPhysicalActivityVisualization(double value, Color color) {
+    int activeCount = (value / 2).ceil(); // 1-5 figuras activas
+    
+    return Container(
+      height: 40,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(5, (index) {
+          bool isActive = index < activeCount;
+          return AnimatedContainer(
+            duration: Duration(milliseconds: 300),
+            width: 8,
+            height: 30,
+            decoration: BoxDecoration(
+              color: isActive ? color : color.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(4),
+              boxShadow: isActive ? [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.3),
+                  blurRadius: 4,
+                  spreadRadius: 1,
+                )
+              ] : null,
+            ),
+            child: isActive ? Container(
+              margin: EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ) : null,
+          );
+        }),
+      ),
+    );
+  }
+
+  // Visualización para ansiedad - ondas de estrés
+  Widget _buildAnxietyVisualization(double value, Color color) {
+    // Invertir valor: menos ansiedad = mejor
+    double intensity = value / 10;
+    
+    return Container(
+      height: 40,
+      child: CustomPaint(
+        painter: AnxietyWavesPainter(
+          intensity: intensity,
+          color: intensity > 0.6 ? Colors.red : (intensity > 0.3 ? Colors.orange : Colors.green),
+        ),
+        size: Size.infinite,
+      ),
+    );
+  }
+
+  // Visualización para motivación - llama de energía
+  Widget _buildMotivationVisualization(double value, Color color) {
+    double intensity = value / 10;
+    
+    return Container(
+      height: 40,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(3, (index) {
+          double height = 15 + (intensity * 15) + (index * 5);
+          return AnimatedContainer(
+            duration: Duration(milliseconds: 500 + (index * 100)),
+            margin: EdgeInsets.symmetric(horizontal: 2),
+            width: 6,
+            height: height,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.bottomCenter,
+                end: Alignment.topCenter,
+                colors: [
+                  Colors.orange,
+                  Colors.red,
+                  Colors.yellow.withValues(alpha: 0.8),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(3),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // Visualización para interacción social - círculos conectados
+  Widget _buildSocialVisualization(double value, Color color) {
+    int connections = (value / 2).ceil();
+    
+    return Container(
+      height: 40,
+      child: CustomPaint(
+        painter: SocialConnectionsPainter(
+          connections: connections,
+          color: color,
+        ),
+        size: Size.infinite,
+      ),
+    );
+  }
+
+  // Visualización para calidad del sueño - lunas
+  Widget _buildSleepQualityVisualization(double value, Color color) {
+    double quality = value / 10;
+    
+    return Container(
+      height: 40,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(3, (index) {
+          double opacity = (quality > (index * 0.33)) ? 1.0 : 0.3;
+          return AnimatedOpacity(
+            duration: Duration(milliseconds: 300),
+            opacity: opacity,
+            child: Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: Colors.blue.withValues(alpha: opacity),
+                shape: BoxShape.circle,
+                boxShadow: opacity > 0.5 ? [
+                  BoxShadow(
+                    color: Colors.blue.withValues(alpha: 0.3),
+                    blurRadius: 4,
+                  )
+                ] : null,
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // Visualización para productividad - barras de progreso
+  Widget _buildProductivityVisualization(double value, Color color) {
+    double progress = value / 10;
+    
+    return Container(
+      height: 40,
+      child: Column(
+        children: List.generate(3, (index) {
+          double barProgress = (progress > (index * 0.33)) ? (progress - (index * 0.33)) * 3 : 0;
+          barProgress = barProgress.clamp(0.0, 1.0);
+          
+          return Expanded(
+            child: Container(
+              margin: EdgeInsets.symmetric(vertical: 1),
+              child: LinearProgressIndicator(
+                value: barProgress,
+                backgroundColor: color.withValues(alpha: 0.2),
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+              ),
+            ),
+          );
+        }),
       ),
     );
   }
@@ -1584,14 +1806,33 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: MinimalColors.backgroundCard(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: MinimalColors.primaryGradient(context)[0].withValues(alpha: 0.2),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: MinimalColors.gradientShadow(context, alpha: 0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         children: [
           Row(
             children: [
-              Text(emoji, style: TextStyle(fontSize: 20)),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: MinimalColors.primaryGradient(context),
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(emoji, style: const TextStyle(fontSize: 20)),
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -1599,28 +1840,34 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                   style: TextStyle(
                     color: MinimalColors.textPrimary(context),
                     fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(colors: MinimalColors.lightGradient(context)),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   isInteger
                       ? '${value.round()} $unit'
                       : '${value.toStringAsFixed(1)} $unit',
                   style: TextStyle(
-                    color: MinimalColors.textPrimary(context),
+                    color: Colors.white,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+          // Widget visual específico para cada métrica
+          Container(
+            height: 50,
+            child: _buildMetricVisualizationV2(title, value, MinimalColors.lightGradient(context)[0]),
           ),
           const SizedBox(height: 12),
           SliderTheme(
@@ -1681,7 +1928,7 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     return Consumer<GoalsProvider>(
       builder: (context, goalsProvider, child) {
         final activeGoals = goalsProvider.goals.where((goal) => goal.isActive).toList();
-        
+
         if (activeGoals.isEmpty) {
           return Container(
             padding: const EdgeInsets.all(16),
@@ -1891,14 +2138,44 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
   }
 
   Widget _buildDailyPhotosSection() {
-    return Consumer<OptimizedMomentsProvider>(
-      builder: (context, momentsProvider, child) {
-        // Mock photos for demonstration
-        final mockPhotos = [
-          {'time': '09:30', 'title': 'Momento matutino'},
-          {'time': '14:15', 'title': 'Almuerzo'},
-          {'time': '18:45', 'title': 'Atardecer'},
-        ];
+    return Consumer<OptimizedDailyEntriesProvider>(
+      builder: (context, entriesProvider, child) {
+        return Consumer<GoalsProvider>(
+          builder: (context, goalsProvider, child) {
+        // Get photos from today's daily entry
+        // For now, we'll implement this as a future enhancement since the current
+        // OptimizedDailyEntryModel doesn't include image paths
+        final dailyPhotos = <String>[];
+        
+        // In the future, this will get real photos from:
+        // 1. Today's daily entry images (entriesProvider.todayEntry.imagePaths)
+        // 2. Today's interactive moments with photos
+        // 3. Goal progress photos from today
+        
+        // Mock data for demonstration - replace with real data when image system is integrated
+        final mockPhotos = entriesProvider.todayEntry != null ? [
+          // Simulate some photos from today based on whether user has made entries
+          if (entriesProvider.todayEntry!.freeReflection.isNotEmpty)
+            '/path/to/reflection_photo.jpg',
+          if (entriesProvider.todayEntry!.positiveTags.isNotEmpty)
+            '/path/to/positive_moment.jpg',
+        ] : <String>[];
+        
+        // Combine all photos
+        final allPhotos = <String>[];
+        allPhotos.addAll(dailyPhotos);
+        allPhotos.addAll(mockPhotos);
+        
+        // Create photo data with timestamps
+        final photoData = allPhotos.asMap().entries.map((entry) {
+          final index = entry.key;
+          final photoPath = entry.value;
+          return {
+            'path': photoPath,
+            'time': '${8 + (index * 2)}:${30 + (index * 15) % 60}'.padLeft(2, '0'),
+            'title': index < dailyPhotos.length ? 'Momento personal' : 'Progreso de meta',
+          };
+        }).toList();
 
         return Container(
           decoration: BoxDecoration(
@@ -1945,31 +2222,24 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                         ),
                       ),
                     ),
-                    Text(
-                      '${mockPhotos.length}',
-                      style: TextStyle(
-                        color: MinimalColors.accentGradient(context)[0],
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ],
                 ),
               ),
-              if (mockPhotos.isNotEmpty) ...[
+              if (photoData.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 SizedBox(
                   height: 100,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemCount: mockPhotos.length,
+                    itemCount: photoData.length,
                     itemBuilder: (context, index) {
-                      final photo = mockPhotos[index];
+                      final photo = photoData[index];
                       return _buildPhotoThumbnail(photo);
                     },
                   ),
                 ),
+                const SizedBox(height: 16),
               ] else ...[
                 Padding(
                   padding: const EdgeInsets.all(16),
@@ -1995,11 +2265,15 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
             ],
           ),
         );
+          },
+        );
       },
     );
   }
 
   Widget _buildPhotoThumbnail(Map<String, String> photo) {
+    final photoPath = photo['path'];
+    
     return Container(
       width: 80,
       height: 80,
@@ -2017,16 +2291,38 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
         borderRadius: BorderRadius.circular(12),
         child: Stack(
           children: [
-            Container(
-              color: MinimalColors.backgroundCard(context),
-              child: Center(
-                child: Icon(
-                  Icons.photo_rounded,
-                  color: MinimalColors.textSecondary(context),
-                  size: 24,
+            // Show actual image if path exists, otherwise show placeholder
+            if (photoPath != null && photoPath.isNotEmpty)
+              Image.file(
+                File(photoPath),
+                width: 80,
+                height: 80,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: MinimalColors.backgroundCard(context),
+                    child: Center(
+                      child: Icon(
+                        Icons.broken_image_rounded,
+                        color: MinimalColors.textSecondary(context),
+                        size: 24,
+                      ),
+                    ),
+                  );
+                },
+              )
+            else
+              Container(
+                color: MinimalColors.backgroundCard(context),
+                child: Center(
+                  child: Icon(
+                    Icons.photo_rounded,
+                    color: MinimalColors.textSecondary(context),
+                    size: 24,
+                  ),
                 ),
               ),
-            ),
+            // Time and title overlay
             Positioned(
               bottom: 2,
               right: 2,
@@ -2046,6 +2342,28 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
                 ),
               ),
             ),
+            // Photo type indicator (top-left)
+            if (photo['title'] != null)
+              Positioned(
+                top: 2,
+                left: 2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: photo['title'] == 'Momento personal' 
+                        ? Colors.blue.withValues(alpha: 0.8)
+                        : Colors.green.withValues(alpha: 0.8),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    photo['title'] == 'Momento personal' 
+                        ? Icons.favorite_rounded
+                        : Icons.flag_rounded,
+                    color: Colors.white,
+                    size: 8,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -3435,7 +3753,6 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
     );
   }
 
-
   Widget _buildProgressBar() {
     return Container(
       height: 4,
@@ -3456,4 +3773,350 @@ class _DailyReviewScreenV2State extends State<DailyReviewScreenV2>
       ),
     );
   }
+
+  // ============================================================================
+  // MÉTODOS DE VISUALIZACIÓN PARA MÉTRICAS V2
+  // ============================================================================
+
+  Widget _buildMetricVisualizationV2(String title, double value, Color color) {
+    switch (title) {
+      case 'Vasos de agua':
+        return _buildWaterVisualizationV2(value.toInt(), color);
+      case 'Horas de sueño':
+        return _buildSleepVisualizationV2(value, color);
+      case 'Tiempo de pantalla':
+        return _buildScreenTimeVisualizationV2(value, color);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildWaterVisualizationV2(int glasses, Color color) {
+    final maxGlasses = 8;
+    final glassesToShow = glasses > maxGlasses ? maxGlasses : glasses;
+    final hasMore = glasses > maxGlasses;
+
+    return Container(
+      height: 32,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Vasos de agua
+          ...List.generate(glassesToShow, (index) {
+            return Padding(
+              padding: const EdgeInsets.only(right: 3),
+              child: Container(
+                width: 12,
+                height: 18,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(3),
+                  border: Border.all(
+                    color: color,
+                    width: 1,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.3),
+                          borderRadius: const BorderRadius.only(
+                            topLeft: Radius.circular(2),
+                            topRight: Radius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 3,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: color.withOpacity(0.7),
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(2),
+                            bottomRight: Radius.circular(2),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+          if (hasMore) ...[
+            const SizedBox(width: 4),
+            Text(
+              '+${glasses - maxGlasses}',
+              style: TextStyle(
+                color: color,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSleepVisualizationV2(double hours, Color color) {
+    final totalHours = 12;
+    final sleepHours = hours.clamp(0, totalHours.toDouble());
+    final progress = sleepHours / totalHours;
+
+    return Container(
+      height: 32,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Reloj de sueño con arco
+          SizedBox(
+            width: 32,
+            height: 32,
+            child: Stack(
+              children: [
+                // Círculo base
+                Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: color.withOpacity(0.2),
+                      width: 3,
+                    ),
+                  ),
+                ),
+                // Arco de progreso
+                CustomPaint(
+                  size: const Size(32, 32),
+                  painter: SleepArcPainterV2(
+                    progress: progress,
+                    color: color,
+                    strokeWidth: 3,
+                  ),
+                ),
+                // Ícono de luna en el centro
+                Center(
+                  child: Icon(
+                    Icons.bedtime,
+                    size: 12,
+                    color: color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Barras de horas
+          Expanded(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: List.generate(8, (index) {
+                final hourIndex = index + 1;
+                final isActive = hourIndex <= sleepHours;
+                return Expanded(
+                  child: Container(
+                    height: 12,
+                    margin: const EdgeInsets.symmetric(horizontal: 1),
+                    decoration: BoxDecoration(
+                      color: isActive ? color : color.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                );
+              }),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScreenTimeVisualizationV2(double hours, Color color) {
+    final maxHours = 12;
+    final intensity = (hours / maxHours).clamp(0.0, 1.0);
+    
+    return Container(
+      height: 32,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Teléfono con pantalla que se va llenando
+          Container(
+            width: 18,
+            height: 28,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(
+                color: color.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Column(
+              children: [
+                // Parte superior (vacía)
+                Expanded(
+                  flex: (100 - (intensity * 100)).toInt().clamp(1, 100),
+                  child: Container(),
+                ),
+                // Parte inferior (llena según uso)
+                if (intensity > 0)
+                  Expanded(
+                    flex: (intensity * 100).toInt().clamp(1, 100),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.7),
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(3),
+                          bottomRight: Radius.circular(3),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Ondas de radiación
+          ...List.generate(3, (index) {
+            final opacity = intensity * (1 - (index * 0.3));
+            return Padding(
+              padding: const EdgeInsets.only(right: 2),
+              child: Container(
+                width: 3,
+                height: (8 + index * 3).toDouble(),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(opacity.clamp(0.0, 1.0)),
+                  borderRadius: BorderRadius.circular(1.5),
+                ),
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// CUSTOM PAINTERS PARA VISUALIZACIONES V2
+// ============================================================================
+
+// Painter para ondas de ansiedad
+class AnxietyWavesPainter extends CustomPainter {
+  final double intensity;
+  final Color color;
+
+  AnxietyWavesPainter({required this.intensity, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    final waveHeight = size.height * 0.3 * intensity;
+    final waveCount = 3 + (intensity * 2).round();
+    
+    for (int i = 0; i < waveCount; i++) {
+      final x = (size.width / waveCount) * i;
+      if (i == 0) {
+        path.moveTo(x, size.height / 2);
+      } else {
+        path.lineTo(x, size.height / 2 + waveHeight * (i % 2 == 0 ? 1 : -1));
+      }
+    }
+    
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+// Painter para conexiones sociales
+class SocialConnectionsPainter extends CustomPainter {
+  final int connections;
+  final Color color;
+
+  SocialConnectionsPainter({required this.connections, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2;
+
+    final linePaint = Paint()
+      ..color = color.withValues(alpha: 0.5)
+      ..strokeWidth = 1;
+
+    // Dibujar círculos conectados
+    final radius = 4.0;
+    final spacing = size.width / (connections + 1);
+    
+    for (int i = 0; i < connections; i++) {
+      final x = spacing * (i + 1);
+      final y = size.height / 2;
+      
+      // Dibujar círculo
+      canvas.drawCircle(Offset(x, y), radius, paint);
+      
+      // Dibujar línea de conexión al siguiente
+      if (i < connections - 1) {
+        final nextX = spacing * (i + 2);
+        canvas.drawLine(
+          Offset(x + radius, y),
+          Offset(nextX - radius, y),
+          linePaint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class SleepArcPainterV2 extends CustomPainter {
+  final double progress;
+  final Color color;
+  final double strokeWidth;
+
+  SleepArcPainterV2({
+    required this.progress,
+    required this.color,
+    required this.strokeWidth,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = (size.width / 2) - (strokeWidth / 2);
+    final startAngle = -90 * (3.14159 / 180); // -90 grados en radianes
+    final sweepAngle = 360 * progress * (3.14159 / 180); // Progreso en radianes
+
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = strokeWidth
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawArc(
+      Rect.fromCircle(center: center, radius: radius),
+      startAngle,
+      sweepAngle,
+      false,
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 }

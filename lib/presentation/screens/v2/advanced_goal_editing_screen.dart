@@ -277,7 +277,7 @@ class _AdvancedGoalEditingScreenState extends State<AdvancedGoalEditingScreen>
 
   Widget _buildSectionTabs(BuildContext context) {
     final sections = [
-      {'title': 'Tu Objetivo', 'icon': Icons.flag},
+      {'title': 'cuantos dias vas', 'icon': Icons.flag},
       {'title': 'Seguimiento', 'icon': Icons.timeline},
       {'title': 'Personalización', 'icon': Icons.palette},
     ];
@@ -382,7 +382,7 @@ class _AdvancedGoalEditingScreenState extends State<AdvancedGoalEditingScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionHeader(
-          'Tu Objetivo',
+          'cuantos dias vas',
           'Define qué quieres lograr',
           Icons.flag,
         ),

@@ -586,7 +586,7 @@ class _AdvancedGoalCreationScreenState extends State<AdvancedGoalCreationScreen>
                       _getCategoryIcon(category),
                       size: 16,
                       color: isSelected 
-                          ? MinimalColors.textPrimary(context) 
+                          ? Colors.white 
                           : MinimalColors.textSecondary(context),
                     ),
                     const SizedBox(width: 6),
@@ -596,7 +596,7 @@ class _AdvancedGoalCreationScreenState extends State<AdvancedGoalCreationScreen>
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: isSelected 
-                            ? MinimalColors.textPrimary(context) 
+                            ? Colors.white 
                             : MinimalColors.textSecondary(context),
                       ),
                     ),
@@ -701,7 +701,7 @@ class _AdvancedGoalCreationScreenState extends State<AdvancedGoalCreationScreen>
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: isSelected 
-                        ? MinimalColors.textPrimary(context) 
+                        ? Colors.white 
                         : MinimalColors.textSecondary(context),
                   ),
                 ),
@@ -818,7 +818,7 @@ class _AdvancedGoalCreationScreenState extends State<AdvancedGoalCreationScreen>
                   _getIconFromCode(iconCode),
                   size: 24,
                   color: isSelected 
-                      ? MinimalColors.textPrimary(context) 
+                      ? Colors.white 
                       : MinimalColors.textSecondary(context),
                 ),
               ),
@@ -874,7 +874,7 @@ class _AdvancedGoalCreationScreenState extends State<AdvancedGoalCreationScreen>
                   ],
                 ),
                 child: isSelected
-                    ?  Icon(Icons.check, color: MinimalColors.textPrimary(context), size: 24)
+                    ?  Icon(Icons.check, color: Colors.white, size: 24)
                     : null,
               ),
             );
@@ -1020,7 +1020,7 @@ class _AdvancedGoalCreationScreenState extends State<AdvancedGoalCreationScreen>
                         style:  TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: MinimalColors.textPrimary(context),
+                          color: Colors.white,
                         ),
                       ),
               ),

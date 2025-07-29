@@ -7,9 +7,9 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:dotted_border/dotted_border.dart';
 import 'package:fl_chart/fl_chart.dart';
+import 'package:audioplayers/audioplayers.dart';
 
 // Core
-import '../../../core/themes/app_theme.dart';
 
 // Data Models
 import '../../../data/models/daily_entry_model.dart';
@@ -212,7 +212,7 @@ class _DailyDetailScreenV3State extends State<DailyDetailScreenV3>
     );
   }
 
-  Widget _buildGradientBackground(AppColors colors) {
+  Widget _buildGradientBackground(themes.AppColors colors) {
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
@@ -229,7 +229,7 @@ class _DailyDetailScreenV3State extends State<DailyDetailScreenV3>
     );
   }
 
-  Widget _buildContent(AppColors colors) {
+  Widget _buildContent(themes.AppColors colors) {
     return SafeArea(
       child: Column(
         children: [
@@ -709,11 +709,18 @@ class _DailyDetailScreenV3State extends State<DailyDetailScreenV3>
   }
 
   Widget _buildVoiceNotes(AppColors colors) {
-    return Consumer<OptimizedMomentsProvider>(
-      builder: (context, momentsProvider, child) {
-        final voiceNotes = momentsProvider.getVoiceNotesForDate(widget.date);
+    return Consumer<OptimizedDailyEntriesProvider>(
+      builder: (context, entriesProvider, child) {
+        final entry = entriesProvider.entries.isNotEmpty 
+            ? entriesProvider.entries.firstWhere(
+                (e) => e.entryDate.day == widget.date.day &&
+                       e.entryDate.month == widget.date.month &&
+                       e.entryDate.year == widget.date.year,
+                orElse: () => null,
+              )
+            : null;
         
-        if (voiceNotes.isEmpty) {
+        if (entry?.voiceRecordingPath == null || entry!.voiceRecordingPath!.isEmpty) {
           return _buildEmptyState(
             colors,
             '🎙️ Sin notas de voz',
@@ -726,7 +733,7 @@ class _DailyDetailScreenV3State extends State<DailyDetailScreenV3>
           children: [
             _buildSectionTitle(colors, '🎙️ Notas de Voz'),
             const SizedBox(height: 12),
-            ...voiceNotes.map((note) => _buildVoiceNoteCard(colors, note)),
+            _buildVoiceNoteCard(colors, entry),
           ],
         );
       },
@@ -734,63 +741,11 @@ class _DailyDetailScreenV3State extends State<DailyDetailScreenV3>
   }
 
   Widget _buildVoiceNoteCard(AppColors colors, dynamic voiceNote) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: colors.borderColor.withOpacity(0.3),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: colors.accentPrimary.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.play_arrow,
-              color: colors.accentPrimary,
-              size: 20,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Nota de voz',
-                  style: TextStyle(
-                    color: colors.textPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  _formatTime(voiceNote.createdAt),
-                  style: TextStyle(
-                    color: colors.textSecondary,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Text(
-            _formatDuration(voiceNote.duration ?? 0),
-            style: TextStyle(
-              color: colors.textHint,
-              fontSize: 10,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
+    return _VoiceNotePlaybackCard(
+      colors: colors,
+      voiceNote: voiceNote,
+      formatTime: _formatTime,
+      formatDuration: _formatDuration,
     );
   }
 
@@ -1069,11 +1024,10 @@ class _DailyDetailScreenV3State extends State<DailyDetailScreenV3>
               _selectedVoiceNote = path;
             });
           },
-          colors: colors,
           isExpanded: _isVoiceExpanded,
-          onExpandedChanged: (expanded) {
+          onExpand: () {
             setState(() {
-              _isVoiceExpanded = expanded;
+              _isVoiceExpanded = !_isVoiceExpanded;
             });
           },
         ),
@@ -1979,6 +1933,375 @@ class _DailyDetailScreenV3State extends State<DailyDetailScreenV3>
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ============================================================================
+// WIDGET DE REPRODUCCIÓN DE NOTAS DE VOZ
+// ============================================================================
+
+class _VoiceNotePlaybackCard extends StatefulWidget {
+  final themes.AppColors colors;
+  final dynamic voiceNote;
+  final String Function(DateTime) formatTime;
+  final String Function(int) formatDuration;
+
+  const _VoiceNotePlaybackCard({
+    required this.colors,
+    required this.voiceNote,
+    required this.formatTime,
+    required this.formatDuration,
+  });
+
+  @override
+  State<_VoiceNotePlaybackCard> createState() => _VoiceNotePlaybackCardState();
+}
+
+class _VoiceNotePlaybackCardState extends State<_VoiceNotePlaybackCard> {
+  AudioPlayer? _audioPlayer;
+  bool _isPlaying = false;
+  bool _isLoading = false;
+  Duration _duration = Duration.zero;
+  Duration _position = Duration.zero;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _initAudioPlayer();
+  }
+
+  @override
+  void dispose() {
+    _audioPlayer?.dispose();
+    super.dispose();
+  }
+
+  void _initAudioPlayer() {
+    _audioPlayer = AudioPlayer();
+    
+    _audioPlayer!.onDurationChanged.listen((duration) {
+      if (mounted) {
+        setState(() {
+          _duration = duration;
+        });
+      }
+    });
+
+    _audioPlayer!.onPositionChanged.listen((position) {
+      if (mounted) {
+        setState(() {
+          _position = position;
+        });
+      }
+    });
+
+    _audioPlayer!.onPlayerStateChanged.listen((state) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = state == PlayerState.playing;
+          _isLoading = state == PlayerState.playing && _position == Duration.zero;
+        });
+      }
+    });
+
+    _audioPlayer!.onPlayerComplete.listen((_) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = false;
+          _position = Duration.zero;
+        });
+      }
+    });
+  }
+
+  Future<void> _playPause() async {
+    if (_audioPlayer == null) return;
+    
+    try {
+      setState(() {
+        _errorMessage = null;
+        _isLoading = true;
+      });
+
+      if (_isPlaying) {
+        await _audioPlayer!.pause();
+      } else {
+        // Obtener la ruta del archivo de audio desde voiceNote
+        String? audioPath = widget.voiceNote.voiceRecordingPath;
+        
+        if (audioPath == null || audioPath.isEmpty) {
+          setState(() {
+            _errorMessage = 'Ruta de audio no encontrada';
+            _isLoading = false;
+          });
+          return;
+        }
+
+        if (_position == Duration.zero) {
+          await _audioPlayer!.play(DeviceFileSource(audioPath));
+        } else {
+          await _audioPlayer!.resume();
+        }
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error al reproducir audio: ${e.toString()}';
+        _isLoading = false;
+        _isPlaying = false;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _stop() async {
+    if (_audioPlayer == null) return;
+    
+    try {
+      await _audioPlayer!.stop();
+      setState(() {
+        _position = Duration.zero;
+        _isPlaying = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error al detener audio: ${e.toString()}';
+      });
+    }
+  }
+
+  void _seek(double value) {
+    if (_audioPlayer == null || _duration == Duration.zero) return;
+    
+    final position = Duration(milliseconds: (value * _duration.inMilliseconds).round());
+    _audioPlayer!.seek(position);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: widget.colors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: widget.colors.borderColor.withOpacity(0.3),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: widget.colors.shadowColor.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header de la nota de voz
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: _isPlaying 
+                      ? widget.colors.accentPrimary.withOpacity(0.2)
+                      : widget.colors.accentPrimary.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _isLoading 
+                      ? Icons.hourglass_empty 
+                      : _isPlaying 
+                          ? Icons.pause 
+                          : Icons.play_arrow,
+                  color: widget.colors.accentPrimary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Nota de voz',
+                      style: TextStyle(
+                        color: widget.colors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Text(
+                      widget.formatTime(widget.voiceNote.updatedAt),
+                      style: TextStyle(
+                        color: widget.colors.textSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                widget.formatDuration(_duration.inSeconds),
+                style: TextStyle(
+                  color: widget.colors.textHint,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+          
+          // Controles de reproducción
+          const SizedBox(height: 12),
+          
+          // Barra de progreso
+          if (_duration.inSeconds > 0) ...[
+            SliderTheme(
+              data: SliderThemeData(
+                thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                trackHeight: 3,
+                activeTrackColor: widget.colors.accentPrimary,
+                inactiveTrackColor: widget.colors.borderColor.withOpacity(0.3),
+                thumbColor: widget.colors.accentPrimary,
+                overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+              ),
+              child: Slider(
+                value: _duration.inMilliseconds > 0 
+                    ? _position.inMilliseconds / _duration.inMilliseconds 
+                    : 0.0,
+                onChanged: _seek,
+              ),
+            ),
+            
+            // Tiempo actual y total
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    widget.formatDuration(_position.inSeconds),
+                    style: TextStyle(
+                      color: widget.colors.textHint,
+                      fontSize: 10,
+                    ),
+                  ),
+                  Text(
+                    widget.formatDuration(_duration.inSeconds),
+                    style: TextStyle(
+                      color: widget.colors.textHint,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+          
+          // Botones de control
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              _buildControlButton(
+                icon: _isLoading 
+                    ? Icons.hourglass_empty 
+                    : _isPlaying 
+                        ? Icons.pause 
+                        : Icons.play_arrow,
+                onPressed: _isLoading ? null : _playPause,
+                isPrimary: true,
+              ),
+              const SizedBox(width: 12),
+              _buildControlButton(
+                icon: Icons.stop,
+                onPressed: _isPlaying || _position.inSeconds > 0 ? _stop : null,
+                isPrimary: false,
+              ),
+            ],
+          ),
+          
+          // Mensaje de error
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: Colors.red.withOpacity(0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    color: Colors.red,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _errorMessage!,
+                      style: const TextStyle(
+                        color: Colors.red,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildControlButton({
+    required IconData icon,
+    required VoidCallback? onPressed,
+    required bool isPrimary,
+  }) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: onPressed == null
+              ? widget.colors.borderColor.withOpacity(0.1)
+              : isPrimary
+                  ? widget.colors.accentPrimary.withOpacity(0.1)
+                  : widget.colors.surface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: onPressed == null
+                ? widget.colors.borderColor.withOpacity(0.3)
+                : isPrimary
+                    ? widget.colors.accentPrimary.withOpacity(0.3)
+                    : widget.colors.borderColor.withOpacity(0.3),
+          ),
+        ),
+        child: Icon(
+          icon,
+          color: onPressed == null
+              ? widget.colors.textHint
+              : isPrimary
+                  ? widget.colors.accentPrimary
+                  : widget.colors.textSecondary,
+          size: 18,
+        ),
       ),
     );
   }

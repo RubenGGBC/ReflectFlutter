@@ -360,7 +360,12 @@ class _VisualTimelineWidgetState extends State<VisualTimelineWidget>
     Widget dot = GestureDetector(
       onTap: () {
         HapticFeedback.lightImpact();
-        widget.onAddActivity(hour, 0);
+        final isHourInPast = _isHourInPast(hour);
+        if (isHourInPast) {
+          _showPastHourDetails(hour);
+        } else {
+          widget.onAddActivity(hour, 0);
+        }
       },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
@@ -558,39 +563,152 @@ class _VisualTimelineWidgetState extends State<VisualTimelineWidget>
     );
   }
 
+  /// Helper method to check if a given hour is in the past
+  bool _isHourInPast(int hour) {
+    final now = DateTime.now();
+    final selectedDate = widget.provider.selectedDate;
+    
+    // If selected date is in the past, all hours are in the past
+    if (selectedDate.isBefore(DateTime(now.year, now.month, now.day))) {
+      return true;
+    }
+    
+    // If selected date is today, check if hour has passed
+    if (selectedDate.day == now.day && 
+        selectedDate.month == now.month && 
+        selectedDate.year == now.year) {
+      return hour < now.hour;
+    }
+    
+    // If selected date is in the future, no hours are in the past
+    return false;
+  }
+
+  /// Show details for past hours instead of creating new activities
+  void _showPastHourDetails(int hour) {
+    final selectedDate = widget.provider.selectedDate;
+    final activities = widget.provider.currentRoadmap?.getActivitiesInHour(hour) ?? [];
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: surface,
+        title: Text(
+          'Hora ${hour.toString().padLeft(2, '0')}:00',
+          style: const TextStyle(color: textPrimary),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Fecha: ${selectedDate.day}/${selectedDate.month}/${selectedDate.year}',
+              style: TextStyle(color: textSecondary, fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            if (activities.isEmpty)
+              Text(
+                'No hubo actividades programadas para esta hora.',
+                style: TextStyle(color: textSecondary.withValues(alpha: 0.8)),
+              )
+            else ...[
+              Text(
+                'Actividades en esta hora:',
+                style: TextStyle(color: textPrimary, fontWeight: FontWeight.w500),
+              ),
+              const SizedBox(height: 8),
+              ...activities.map((activity) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Icon(
+                      activity.isCompleted ? Icons.check_circle : Icons.cancel,
+                      color: activity.isCompleted ? pastColor : Colors.orange,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            activity.title,
+                            style: TextStyle(
+                              color: textPrimary,
+                              fontSize: 13,
+                              decoration: activity.isCompleted 
+                                  ? TextDecoration.lineThrough 
+                                  : null,
+                            ),
+                          ),
+                          if (activity.description?.isNotEmpty == true)
+                            Text(
+                              activity.description!,
+                              style: TextStyle(
+                                color: textSecondary,
+                                fontSize: 11,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              )),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(
+              'Cerrar',
+              style: TextStyle(color: currentColor),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildEmptyHourSlot(int hour) {
+    final isHourInPast = _isHourInPast(hour);
+    
     return GestureDetector(
-      onTap: () => widget.onAddActivity(hour, 0),
+      onTap: () {
+        if (isHourInPast) {
+          // For past hours, show details or do nothing
+          _showPastHourDetails(hour);
+        } else {
+          // For current/future hours, allow creating new activities
+          widget.onAddActivity(hour, 0);
+        }
+      },
       child: Container(
         width: double.infinity,
         height: 40,
         margin: const EdgeInsets.symmetric(vertical: 8),
         decoration: BoxDecoration(
-          color: surface.withValues(alpha: 0.3),
+          color: isHourInPast 
+              ? pastColor.withValues(alpha: 0.1)
+              : surface.withValues(alpha: 0.3),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: Colors.grey.withValues(alpha: 0.2),
+            color: isHourInPast 
+                ? pastColor.withValues(alpha: 0.3)
+                : Colors.grey.withValues(alpha: 0.2),
             style: BorderStyle.solid,
           ),
         ),
         child: Center(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.add,
-                color: textSecondary.withValues(alpha: 0.6),
-                size: 16,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Agregar actividad',
-                style: TextStyle(
-                  color: textSecondary.withValues(alpha: 0.6),
-                  fontSize: 12,
-                ),
-              ),
-            ],
+          child: Text(
+            isHourInPast ? 'Hora pasada' : 'Agregar actividad',
+            style: TextStyle(
+              color: isHourInPast 
+                  ? pastColor.withValues(alpha: 0.7)
+                  : textSecondary.withValues(alpha: 0.6),
+              fontSize: 12,
+            ),
           ),
         ),
       ),
